@@ -1,0 +1,16 @@
+# Light is pinned rather than left to the viewer's OS setting. The charts are
+# rendered as images against a white surface, and a dark page would frame each
+# one in a bright rectangle. Research notes are also read and printed on white,
+# so this matches the medium rather than fighting it.
+[theme]
+base = "light"
+primaryColor = "#2a78d6"
+backgroundColor = "#ffffff"
+secondaryBackgroundColor = "#f6f6f4"
+textColor = "#0b0b0b"
+
+[server]
+headless = true
+
+[browser]
+gatherUsageStats = false

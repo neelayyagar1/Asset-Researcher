@@ -1,0 +1,34 @@
+### Secrets — never committed ###
+.env
+.env.*
+!.env.example
+.streamlit/secrets.toml
+*.pem
+*.key
+
+### Python ###
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+
+### Project data — caches and generated artifacts, not source ###
+# Everything under data/ is re-derivable from EDGAR and Finnhub, and grows
+# fast: stored filings alone reached 59MB after two companies. An earlier
+# version ignored only data/cache/, which would have committed every stored
+# filing in data/documents/.
+.cache/
+data/
+build/
+.coverage
+*.log
+
+### OS / editor / local tooling ###
+.DS_Store
+.vscode/
+.idea/
+.claude/
