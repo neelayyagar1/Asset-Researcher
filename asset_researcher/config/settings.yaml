@@ -1,0 +1,62 @@
+# Non-secret configuration. Secrets (API keys, EDGAR contact) come from .env, see
+# asset_researcher/config/loader.py. Nothing in this file should ever need to be hidden.
+
+llm:
+  model: claude-opus-5
+  # Call architecture per ARCHITECTURE.md §6, two calls per report, tiered effort.
+  effort:
+    narrative: medium # Call A, cited descriptive sections
+    reconciliation: high # Call B, thesis, variant hypotheses, disconfirming evidence
+    concept_resolution: low # XBRL tag -> canonical metric mapping (cached per company)
+    mandate_parsing: low # free text -> structured mandate (cached per user)
+
+edgar:
+  base_url: https://www.sec.gov
+  rate_limit_per_sec: 8 # SEC's documented ceiling is 10/sec; leave headroom
+  cache_dir: data/cache/edgar
+
+finnhub:
+  base_url: https://finnhub.io/api/v1
+  rate_limit_per_sec: 1 # free tier: 60/min
+  cache_dir: data/cache/finnhub
+
+quant:
+  # Concept resolution is cached forever per company once resolved, see
+  # ARCHITECTURE.md §6 ("Not per-report, do not re-run"). A stale mapping is
+  # fixed via config/overrides/{cik}.yaml, not by re-running resolution.
+  resolution_cache_dir: data/cache/concept_resolution
+
+bundle:
+  # Character budget per component. Sources are truncated to these, and the
+  # truncation is recorded as a gap rather than applied silently.
+  token_budget:
+    filing_items: 40000
+    proxy_extract: 12000
+    form_8k: 3000
+
+sectors:
+  # SIC code ranges -> sector class. Ranges are inclusive. First match wins,
+  # so put the narrower/more specific range before a broader one that
+  # overlaps it (see reit: 6798 is the actual REIT code and is listed before
+  # the broader real-estate-operators band it falls within).
+  # See asset_researcher/quant/sectors.py for the classifier.
+  ranges:
+    reit: [[6798, 6798], [6500, 6553]]
+    financial: [[6000, 6199], [6200, 6299], [6300, 6499]]
+    energy: [[1300, 1389], [2900, 2999]]
+    biotech: [[2830, 2836], [8731, 8734]]
+  default: standard
+
+hosting:
+  # A measured report costs ~$1.30; the estimator assumes $2.00. The session
+  # cap must exceed that or no run can start at all, it allows roughly three
+  # reports per visitor, and the daily cap roughly twelve across everyone.
+  spend_cap_daily_usd: 25
+  spend_cap_session_usd: 6
+
+report:
+  disclaimer: >
+    This report is generated research assistance, not investment advice. Every
+    figure is sourced from public filings and every narrative claim is cited to
+    its source. It presents scenarios and hypotheses for a human analyst to
+    evaluate, it does not issue a recommendation and should not be treated as one.

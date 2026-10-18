@@ -1,0 +1,49 @@
+# Starting points for the mandate profile, not a taxonomy.
+#
+# Real mandates are idiosyncratic, which is why the primary input is free text
+# (ARCHITECTURE.md §4). These exist because a stranger opening a hosted demo will
+# not write a thoughtful mandate description before seeing any output, they
+# will pick one or bounce. Each is editable after selection.
+#
+# The `description` is the text that pre-fills the box, so it is written the
+# way a PM would actually describe themselves, not as a label.
+
+presets:
+  - id: long_only_quality
+    name: Long-only, quality compounders
+    description: >
+      Long-only fundamental fund. We hold 20-30 names for three to five years
+      and look for durable businesses with pricing power, high returns on
+      invested capital, and management that allocates capital well. We care
+      most about free cash flow conversion, incremental ROIC, and whether
+      reinvestment is actually earning a return. We exit when the competitive
+      position deteriorates or capital allocation turns value-destructive.
+
+  - id: long_short_equity
+    name: Long/short equity
+    description: >
+      Long/short equity, one to four quarter horizon, 40-60 positions across
+      both books. We size to conviction and hedge sector exposure. On the
+      short side we look for deteriorating unit economics, aggressive revenue
+      recognition, inventory or receivables building faster than sales, and
+      management guidance that keeps slipping. Catalysts matter more than
+      terminal value to us.
+
+  - id: event_driven
+    name: Event-driven / special situations
+    description: >
+      Event-driven fund trading equities and options around identifiable
+      catalysts: earnings, spin-offs, divestitures, management changes,
+      regulatory decisions, and merger arbitrage. Horizon is typically one to
+      two quarters, sometimes weeks. We care about catalyst timing, the
+      probability-weighted payoff, and what breaks the setup. Long-run
+      terminal value is largely irrelevant to us.
+
+  - id: income_stability
+    name: Income and capital preservation
+    description: >
+      Income-oriented mandate with a multi-year horizon and low turnover.
+      Priorities are dividend safety and coverage, balance-sheet strength,
+      interest coverage, and the durability of cash flows through a downturn.
+      A dividend cut, covenant pressure, or leverage rising without a clear
+      path down are the things that make us sell.

@@ -1,0 +1,211 @@
+# Canonical metric taxonomy, what a metric MEANS, independent of any company's
+# XBRL tag names. Concept resolution (quant/resolve.py) maps a filer's actual
+# XBRL concepts onto these canonical names; everything downstream (derived
+# metrics, health scores, the financial table) reads canonical names only and
+# never touches a raw XBRL tag.
+#
+# sectors: which sector classes use this metric. "all" = every sector class.
+# kind: "line_item" = read directly from a resolved XBRL concept.
+#       "derived"    = computed from other canonical metrics (see derived.py).
+
+line_items:
+  revenue:
+    label: Revenue
+    sectors: [all]
+  cogs:
+    label: Cost of Goods Sold
+    sectors: [standard]
+  gross_profit:
+    label: Gross Profit
+    sectors: [standard]
+  operating_income:
+    label: Operating Income
+    sectors: [standard, energy]
+  net_income:
+    label: Net Income
+    sectors: [all]
+  total_assets:
+    label: Total Assets
+    sectors: [all]
+  total_liabilities:
+    label: Total Liabilities
+    sectors: [all]
+  total_equity:
+    label: Total Stockholders' Equity
+    sectors: [all]
+  current_assets:
+    label: Current Assets
+    sectors: [standard, energy]
+  current_liabilities:
+    label: Current Liabilities
+    sectors: [standard, energy]
+  cash_and_equivalents:
+    label: Cash & Equivalents
+    sectors: [all]
+  short_term_investments:
+    label: Short-term Investments
+    sectors: [all]
+  long_term_investments:
+    label: Long-term Marketable Securities
+    # Netted against debt only for non-financial filers. For a bank or an
+    # insurer the investment portfolio is the operating business, not a cash
+    # reserve, and netting it would understate leverage enormously.
+    sectors: [standard, energy, biotech]
+  total_debt:
+    label: Total Debt
+    sectors: [all]
+  retained_earnings:
+    label: Retained Earnings
+    sectors: [all]
+  depreciation_amortization:
+    label: Depreciation & Amortization
+    sectors: [standard, energy]
+  operating_cash_flow:
+    label: Operating Cash Flow
+    sectors: [all]
+  capital_expenditures:
+    label: Capital Expenditures
+    sectors: [all]
+  shares_diluted:
+    label: Diluted Shares Outstanding
+    sectors: [all]
+  interest_expense:
+    label: Interest Expense
+    sectors: [standard, financial, reit, energy]
+  accounts_receivable:
+    label: Accounts Receivable
+    sectors: [standard]
+
+  # Financial-sector line items, no non-financial equivalent.
+  net_interest_income:
+    label: Net Interest Income
+    sectors: [financial]
+  provision_for_loan_losses:
+    label: Provision for Loan Losses
+    sectors: [financial]
+  total_deposits:
+    label: Total Deposits
+    sectors: [financial]
+  tier1_capital:
+    label: Tier 1 Capital
+    sectors: [financial]
+  nonperforming_loans:
+    label: Nonperforming Loans
+    sectors: [financial]
+  noninterest_expense:
+    label: Noninterest Expense
+    sectors: [financial]
+  noninterest_income:
+    label: Noninterest Income
+    sectors: [financial]
+
+  # REIT line items.
+  real_estate_investments:
+    label: Real Estate Investments, at Cost
+    sectors: [reit]
+  ffo_reported:
+    label: FFO (as reported by the company, when tagged)
+    sectors: [reit]
+
+  # Energy line items.
+  proved_reserves:
+    label: Proved Reserves
+    sectors: [energy]
+  exploration_expense:
+    label: Exploration Expense
+    sectors: [energy]
+
+derived:
+  # name: canonical output name
+  # formula: human-readable; actual arithmetic lives in quant/derived.py,
+  #   kept here as the documented source of truth for what each computes.
+  ebitda:
+    label: EBITDA
+    sectors: [standard, energy]
+    formula: operating_income + depreciation_amortization
+  fcf:
+    label: Free Cash Flow
+    sectors: [all]
+    formula: operating_cash_flow - capital_expenditures
+  fcf_conversion:
+    label: FCF Conversion (FCF / Net Income)
+    sectors: [standard, energy]
+    formula: fcf / net_income
+  net_debt:
+    label: Net Debt
+    sectors: [standard, energy, reit]
+    formula: total_debt - cash_and_equivalents
+  net_debt_to_ebitda:
+    label: Net Debt / EBITDA
+    sectors: [standard, energy]
+    formula: net_debt / ebitda
+  interest_coverage:
+    label: Interest Coverage (EBIT / Interest Expense)
+    sectors: [standard, energy]
+    formula: operating_income / interest_expense
+  working_capital:
+    label: Working Capital
+    sectors: [standard]
+    formula: current_assets - current_liabilities
+  cash_conversion_cycle_days:
+    label: Cash Conversion Cycle (days)
+    sectors: [standard]
+    formula: dso + dio - dpo # requires multi-period inventory/payables data
+  roic:
+    label: Return on Invested Capital
+    sectors: [standard, energy]
+    formula: net_income / (total_debt + total_equity - cash_and_equivalents)
+  gross_margin:
+    label: Gross Margin
+    sectors: [standard]
+    formula: gross_profit / revenue
+  operating_margin:
+    label: Operating Margin
+    sectors: [standard, energy]
+    formula: operating_income / revenue
+  net_margin:
+    label: Net Margin
+    sectors: [all]
+    formula: net_income / revenue
+
+  # Financial-sector derived.
+  rotce:
+    label: Return on Tangible Common Equity
+    sectors: [financial]
+    formula: net_income / total_equity # tangible adjustment applied where goodwill is tagged
+  efficiency_ratio:
+    label: Efficiency Ratio
+    sectors: [financial]
+    formula: noninterest_expense / (net_interest_income + noninterest_income)
+  nim:
+    label: Net Interest Margin
+    sectors: [financial]
+    formula: net_interest_income / total_assets # earning-asset base approximated
+  npl_ratio:
+    label: Nonperforming Loan Ratio
+    sectors: [financial]
+    formula: nonperforming_loans / total_assets
+
+  # REIT derived.
+  ffo:
+    label: FFO (computed, when not directly tagged)
+    sectors: [reit]
+    formula: net_income + depreciation_amortization - gain_on_sale
+  affo:
+    label: AFFO
+    sectors: [reit]
+    formula: ffo - recurring_capex
+  payout_ratio:
+    label: Payout Ratio
+    sectors: [reit]
+    formula: dividends_paid / ffo
+
+  # Energy derived.
+  reserve_replacement_ratio:
+    label: Reserve Replacement Ratio
+    sectors: [energy]
+    formula: reserves_added / production
+  capex_intensity:
+    label: Capex Intensity (Capex / Revenue)
+    sectors: [energy]
+    formula: capital_expenditures / revenue

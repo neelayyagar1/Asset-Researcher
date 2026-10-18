@@ -1,0 +1,53 @@
+# Published deterministic health-score methodologies. sectors_applicable is
+# enforced by quant/scores.py, a score outside its listed sectors renders as
+# "not meaningful for this sector", never as a number (ARCHITECTURE.md §5).
+#
+# Coefficients and interpretation bands are the published academic formulas.
+# cited by name in the report output, not asserted as this project's own work.
+
+altman_z:
+  label: "Altman Z-Score"
+  citation: "Altman, E.I. (1968), 'Financial Ratios, Discriminant Analysis and the Prediction of Corporate Bankruptcy'"
+  sectors_applicable: [standard, energy]
+  # Standard public-standard formula (not the private-company or EM variants).
+  formula: "1.2*A + 1.4*B + 3.3*C + 0.6*D + 1.0*E"
+  components:
+    A: working_capital / total_assets
+    B: retained_earnings / total_assets
+    C: operating_income / total_assets
+    D: market_cap / total_liabilities
+    E: revenue / total_assets
+  bands:
+    distress: {max: 1.8}
+    grey: {min: 1.8, max: 2.99}
+    safe: {min: 2.99}
+
+piotroski_f:
+  label: "Piotroski F-Score"
+  citation: "Piotroski, J.D. (2000), 'Value Investing: The Use of Historical Financial Statement Information'"
+  sectors_applicable: [standard, energy]
+  # 9 binary tests, each worth 1 point. Requires two consecutive fiscal years.
+  formula: "sum of 9 binary tests, 0-9"
+  tests:
+    - positive_net_income
+    - positive_operating_cash_flow
+    - roa_improved_yoy
+    - cash_flow_exceeds_net_income # quality of earnings
+    - leverage_decreased_yoy
+    - current_ratio_improved_yoy
+    - no_new_shares_issued
+    - gross_margin_improved_yoy
+    - asset_turnover_improved_yoy
+  bands:
+    weak: {max: 3}
+    moderate: {min: 4, max: 6}
+    strong: {min: 7}
+
+beneish_m:
+  label: "Beneish M-Score"
+  citation: "Beneish, M.D. (1999), 'The Detection of Earnings Manipulation'"
+  sectors_applicable: [standard, energy]
+  # 8-variable model; threshold above which manipulation is more likely.
+  formula: "-4.84 + 0.92*DSRI + 0.528*GMI + 0.404*AQI + 0.892*SGI + 0.115*DEPI - 0.172*SGAI + 4.679*TATA - 0.327*LVGI"
+  threshold:
+    likely_manipulator: {min: -1.78}
