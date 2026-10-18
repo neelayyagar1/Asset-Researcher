@@ -1,0 +1,756 @@
+"""Charts, as inline SVG.
+
+These were matplotlib figures rendered to PNG. SVG replaces that for four
+reasons that all matter to how the page reads:
+
+1. **The chart inherits the page's typefaces.** A rasterised chart carries
+   whatever font the plotting library found on the host, so the same report
+   rendered on a laptop and on a Linux container showed two different faces
+   for the axis labels. Text in SVG is text.
+2. **It stays sharp.** A PNG at any fixed resolution is soft on a retina
+   display and blurred when a reader zooms to check a figure.
+3. **No grey rectangle.** A rasterised chart carries its own background and
+   sits on the page as a visible pasted tile.
+4. **No matplotlib.** Dropping it removes the project's heaviest dependency
+   and the only one needing a display-server workaround.
+
+Conventions, unchanged from the matplotlib version because they are about
+reading rather than drawing:
+
+- One axis per chart. Revenue and margin are two charts, never two scales on
+  one. A dual-axis chart lets the author choose where the lines cross.
+- The subject is the only coloured mark in a peer chart. Colour follows the
+  entity, not its rank, so filtering peers never repaints the survivors.
+- Direct labels, selectively. A number on every point is noise.
+- Horizontal gridlines only, recessive, behind the marks. No frame.
+"""
+
+from __future__ import annotations
+
+from html import escape
+
+from asset_researcher.quant.comps import CompsTable
+from asset_researcher.quant.series import MetricSeries
+from asset_researcher.quant.valuation import DcfInputs, DcfResult, ValuationCase
+from asset_researcher.ui import theme
+
+# Type sizes are in user units, and every chart is drawn at the pixel width
+# it will occupy, so a unit is a pixel and these are the rendered sizes.
+_LABEL = 9.5
+_TICK = 9.0
+_TITLE = 12.5
+
+# The normalisation window quant/valuation.py uses for its base figure.
+# The chart draws the same one so the rule and the model agree.
+_BASE_WINDOW = 3
+
+_MONO = theme.FONT_MONO
+_SANS = theme.FONT_SANS
+
+
+def _text(
+    x: float,
+    y: float,
+    body: str,
+    size: float = _LABEL,
+    fill: str = theme.INK,
+    anchor: str = "start",
+    weight: str = "400",
+    font: str = _MONO,
+    opacity: float = 1.0,
+) -> str:
+    return (
+        f'<text x="{x:.1f}" y="{y:.1f}" font-family="{font}" '
+        f'font-size="{size}" fill="{fill}" text-anchor="{anchor}" '
+        f'font-weight="{weight}" opacity="{opacity}" '
+        f'style="font-variant-numeric:tabular-nums">{escape(body)}</text>'
+    )
+
+
+def _frame(width: float, height: float, body: str) -> str:
+    """Scalable, but never beyond the width it was laid out for.
+
+    Without the cap a chart stretched to a wider container scales its type
+    with it, so the same 12.5px title renders at 22px in the export and at
+    12.5px on the page. Capping at the design width keeps a type size in a
+    chart equal to a type size on the page it sits on.
+    """
+    return (
+        f'<svg viewBox="0 0 {width:.0f} {height:.0f}" '
+        f'style="max-width:{width:.0f}px" '
+        f'xmlns="http://www.w3.org/2000/svg" role="img">{body}</svg>'
+    )
+
+
+def figure(svg: str | None, caption: str = "") -> str:
+    """Wrap a chart with its caption, or return nothing if there is no chart."""
+    if not svg:
+        return ""
+    foot = f"<figcaption>{escape(caption)}</figcaption>" if caption else ""
+    return f'<figure class="ar-figure">{svg}{foot}</figure>'
+
+
+def _title_block(x: float, title: str, subtitle: str) -> str:
+    out = _text(x, 13, title, _TITLE, theme.INK, weight="500", font=_SANS)
+    if subtitle:
+        out += _text(x, 27, subtitle, _TICK, theme.INK_MUTED, font=_SANS)
+    return out
+
+
+def _axis_top(maximum: float, step: float) -> float:
+    """The first gridline at or above the data.
+
+    `(int(maximum / step) + 1) * step` always adds a whole step, even when
+    the maximum already sits on one. Apple's revenue peaks at $416B against
+    a $100B step, so the axis ran to $600B and spent 44% of the plot on
+    nothing, which flattens the trend the chart exists to show.
+    """
+    if maximum <= 0:
+        return step
+    steps = maximum / step
+    # A small cushion so a direct label above the tallest bar has room.
+    return (int(steps) + 1) * step if steps > int(steps) * 1.001 else maximum
+
+
+def _nice_step(span: float, target: int = 4) -> float:
+    """A round gridline interval near `span / target`.
+
+    Axis labels at 1, 2, 2.5 or 5 times a power of ten are the ones a reader
+    can do arithmetic against; 0.37 intervals are not.
+    """
+    if span <= 0:
+        return 1.0
+    raw = span / max(target, 1)
+    magnitude = 10 ** _floor_log10(raw)
+    for multiple in (1, 2, 2.5, 5, 10):
+        if raw <= multiple * magnitude:
+            return multiple * magnitude
+    return 10 * magnitude
+
+
+def _floor_log10(value: float) -> int:
+    exponent = 0
+    while value >= 10:
+        value /= 10
+        exponent += 1
+    while value < 1:
+        value *= 10
+        exponent -= 1
+    return exponent
+
+
+def _money(value: float) -> str:
+    magnitude = abs(value)
+    if magnitude >= 1e9:
+        return f"${value / 1e9:,.0f}B"
+    if magnitude >= 1e6:
+        return f"${value / 1e6:,.0f}M"
+    if magnitude >= 1e3:
+        return f"${value / 1e3:,.0f}K"
+    return f"${value:,.0f}"
+
+
+def _money_precise(value: float) -> str:
+    """One decimal, negatives in parentheses.
+
+    The published convention, and the one the projection table already used.
+    A bridge printing "$-68.0B" next to a table printing "($68.0B)" for the
+    same figure undermines both.
+    """
+    if value < 0:
+        return f"({_money_precise(abs(value))})"
+    if value >= 1e9:
+        return f"${value / 1e9:,.1f}B"
+    if value >= 1e6:
+        return f"${value / 1e6:,.1f}M"
+    return f"${value:,.0f}"
+
+
+def _points(series: MetricSeries, metric: str):
+    return series.series.get(metric) or []
+
+
+# --------------------------------------------------------- filed trends
+
+
+def metric_bars(
+    series: MetricSeries,
+    metric: str,
+    title: str,
+    subtitle: str = "",
+    width: float = 548,
+    height: float = 232,
+) -> str | None:
+    """One filed metric by period, as bars with the value on each mark."""
+    points = _points(series, metric)
+    if len(points) < 2:
+        return None
+
+    labels = [p.frame_label for p in points]
+    values = [p.value for p in points]
+
+    pad_l, pad_r, pad_t, pad_b = 52.0, 10.0, 42.0, 26.0
+    plot_w = width - pad_l - pad_r
+    plot_h = height - pad_t - pad_b
+
+    top = max(max(values), 0.0)
+    bottom = min(min(values), 0.0)
+    step = _nice_step(top - bottom)
+    axis_top = _axis_top(top, step) if top else step
+    axis_bottom = (int(bottom / step) - 1) * step if bottom < 0 else 0.0
+    span = axis_top - axis_bottom or 1.0
+
+    def y_of(value: float) -> float:
+        return pad_t + plot_h - (value - axis_bottom) / span * plot_h
+
+    body = [_title_block(0, title, subtitle)]
+
+    tick = axis_bottom
+    while tick <= axis_top + step / 2:
+        y = y_of(tick)
+        # The zero line is drawn darker than the other gridlines: it is the
+        # baseline a reader measures a bar against, not another increment.
+        body.append(
+            f'<line x1="{pad_l}" y1="{y:.1f}" x2="{width - pad_r}" y2="{y:.1f}" '
+            f'stroke="{theme.INK_MUTED if tick == 0 else theme.RULE}" '
+            f'stroke-width="1"/>'
+        )
+        body.append(
+            _text(pad_l - 8, y + 3.2, _money(tick), _TICK, theme.INK_MUTED, "end")
+        )
+        tick += step
+
+    slot = plot_w / len(values)
+    bar_w = min(slot * 0.56, 44.0)
+    zero_y = y_of(0.0)
+
+    for index, (label, value) in enumerate(zip(labels, values)):
+        centre = pad_l + slot * (index + 0.5)
+        y = y_of(value)
+        top_y, bar_h = (y, zero_y - y) if value >= 0 else (zero_y, y - zero_y)
+        body.append(
+            f'<rect x="{centre - bar_w / 2:.1f}" y="{top_y:.1f}" '
+            f'width="{bar_w:.1f}" height="{max(bar_h, 0.6):.1f}" '
+            f'fill="{theme.ACCENT}"/>'
+        )
+        body.append(
+            _text(
+                centre,
+                (y - 6) if value >= 0 else (y + 12),
+                _money_precise(value),
+                _LABEL,
+                theme.INK,
+                "middle",
+                weight="500",
+            )
+        )
+        body.append(
+            _text(centre, height - 8, label, _TICK, theme.INK_MUTED, "middle")
+        )
+
+    return _frame(width, height, "".join(body))
+
+
+def margin_lines(
+    series: MetricSeries, width: float = 548, height: float = 232
+) -> str | None:
+    """Gross and operating margin on one percentage scale.
+
+    Both are percentages of the same denominator, which is the only
+    condition under which two measures belong on a single axis.
+    """
+    revenue = {p.frame_label: p.value for p in _points(series, "revenue")}
+    if len(revenue) < 2:
+        return None
+
+    lines = []
+    for metric, label, colour in (
+        ("gross_profit", "Gross margin", theme.ACCENT),
+        ("operating_income", "Operating margin", theme.ACCENT_2),
+    ):
+        pairs = [
+            (p.frame_label, p.value / revenue[p.frame_label] * 100)
+            for p in _points(series, metric)
+            if revenue.get(p.frame_label)
+        ]
+        if len(pairs) >= 2:
+            lines.append((label, colour, pairs))
+    if not lines:
+        return None
+
+    periods = [p.frame_label for p in _points(series, "revenue")]
+    all_values = [v for _, _, pairs in lines for _, v in pairs]
+
+    pad_l, pad_r, pad_t, pad_b = 46.0, 74.0, 42.0, 26.0
+    plot_w = width - pad_l - pad_r
+    plot_h = height - pad_t - pad_b
+
+    step = _nice_step(max(all_values) - min(all_values), 3)
+    axis_top = _axis_top(max(all_values), step)
+    axis_bottom = max(0.0, (int(min(all_values) / step) - 1) * step)
+    span = axis_top - axis_bottom or 1.0
+
+    def y_of(value: float) -> float:
+        return pad_t + plot_h - (value - axis_bottom) / span * plot_h
+
+    def x_of(period: str) -> float:
+        index = periods.index(period)
+        divisor = max(len(periods) - 1, 1)
+        return pad_l + plot_w * index / divisor
+
+    body = [_title_block(0, "Margin trend", "Percentage of revenue, as filed")]
+
+    tick = axis_bottom
+    while tick <= axis_top + step / 2:
+        y = y_of(tick)
+        body.append(
+            f'<line x1="{pad_l}" y1="{y:.1f}" x2="{width - pad_r}" '
+            f'y2="{y:.1f}" stroke="{theme.RULE}" stroke-width="1"/>'
+        )
+        body.append(
+            _text(pad_l - 8, y + 3.2, f"{tick:,.0f}%", _TICK, theme.INK_MUTED, "end")
+        )
+        tick += step
+
+    for period in periods:
+        body.append(
+            _text(x_of(period), height - 8, period, _TICK, theme.INK_MUTED, "middle")
+        )
+
+    for label, colour, pairs in lines:
+        path = " ".join(
+            f"{'M' if i == 0 else 'L'}{x_of(p):.1f},{y_of(v):.1f}"
+            for i, (p, v) in enumerate(pairs)
+        )
+        body.append(
+            f'<path d="{path}" fill="none" stroke="{colour}" '
+            f'stroke-width="1.9" stroke-linejoin="round"/>'
+        )
+        for period, value in pairs:
+            body.append(
+                f'<circle cx="{x_of(period):.1f}" cy="{y_of(value):.1f}" '
+                f'r="2.9" fill="{theme.SURFACE}" stroke="{colour}" '
+                f'stroke-width="1.6"/>'
+            )
+        # Label the series at its last point, which doubles as the legend.
+        last_period, last_value = pairs[-1]
+        body.append(
+            _text(
+                x_of(last_period) + 9,
+                y_of(last_value) - 3,
+                f"{last_value:,.1f}%",
+                _LABEL,
+                colour,
+                weight="500",
+            )
+        )
+        body.append(
+            _text(
+                x_of(last_period) + 9,
+                y_of(last_value) + 8,
+                label,
+                8.2,
+                theme.INK_MUTED,
+                font=_SANS,
+            )
+        )
+
+    return _frame(width, height, "".join(body))
+
+
+# ------------------------------------------------------------ peer context
+
+
+def peer_bars(
+    table: CompsTable, attribute: str, title: str, width: float = 548
+) -> str | None:
+    """Where the subject sits against its peer set on one multiple.
+
+    Peers are grey and the subject is the single coloured bar, so the eye
+    lands on the comparison. Extreme multiples are excluded: a 1,218x
+    trailing P/E compresses every other bar to nothing and says only that a
+    denominator collapsed.
+    """
+    if table is None or not table.rows:
+        return None
+
+    entries = [
+        (row.ticker, value, row.is_subject)
+        for row in table.rows
+        if (value := getattr(row, attribute, None)) is not None
+        and not (row.outlier_multiples and not row.is_subject)
+    ]
+    if len(entries) < 3:
+        return None
+
+    entries.sort(key=lambda e: e[1])
+
+    pad_l, pad_r, pad_t, pad_b = 44.0, 54.0, 42.0, 22.0
+    row_h = 21.0
+    height = pad_t + pad_b + row_h * len(entries)
+    plot_w = width - pad_l - pad_r
+
+    ceiling = max(v for _, v, _ in entries) * 1.06 or 1.0
+    body = [
+        _title_block(0, title, "Subject highlighted, extreme multiples excluded")
+    ]
+
+    median = table.median(attribute)
+    if median is not None and median <= ceiling:
+        x = pad_l + plot_w * median / ceiling
+        body.append(
+            f'<line x1="{x:.1f}" y1="{pad_t - 4:.1f}" x2="{x:.1f}" '
+            f'y2="{height - pad_b + 2:.1f}" stroke="{theme.INK_MUTED}" '
+            f'stroke-width="1" stroke-dasharray="3 3"/>'
+        )
+        body.append(
+            _text(
+                x,
+                height - 7,
+                f"Peer median {median:,.1f}x",
+                8.4,
+                theme.INK_MUTED,
+                "middle",
+                font=_SANS,
+            )
+        )
+
+    for index, (ticker, value, is_subject) in enumerate(entries):
+        y = pad_t + row_h * index
+        bar_h = row_h * 0.6
+        bar_w = max(plot_w * value / ceiling, 1.0)
+        colour = theme.ACCENT if is_subject else theme.NEUTRAL
+        body.append(
+            f'<rect x="{pad_l}" y="{y:.1f}" width="{bar_w:.1f}" '
+            f'height="{bar_h:.1f}" fill="{colour}"/>'
+        )
+        body.append(
+            _text(
+                pad_l - 8,
+                y + bar_h - 2.6,
+                ticker,
+                _TICK,
+                theme.INK if is_subject else theme.INK_MUTED,
+                "end",
+                weight="500" if is_subject else "400",
+            )
+        )
+        body.append(
+            _text(
+                pad_l + bar_w + 6,
+                y + bar_h - 2.6,
+                f"{value:,.1f}x",
+                _LABEL,
+                theme.INK if is_subject else theme.INK_MUTED,
+                weight="500" if is_subject else "400",
+            )
+        )
+
+    return _frame(width, height, "".join(body))
+
+
+# -------------------------------------------------------------- valuation
+
+
+def valuation_range(
+    cases: list[ValuationCase],
+    market_price: float | None,
+    width: float = 548,
+    height: float = 186,
+) -> str | None:
+    """Bear, base and bull against the traded price.
+
+    The spread is the analysis; a single point estimate hides it. The traded
+    price is drawn as a rule rather than a fourth marker, because it is the
+    benchmark the cases are read against rather than another case.
+    """
+    if not cases or not market_price:
+        return None
+
+    values = [c.value_per_share for c in cases]
+    low = min(min(values), market_price)
+    high = max(max(values), market_price)
+    cushion = (high - low) * 0.16 or max(high * 0.1, 1.0)
+    axis_low, axis_high = low - cushion, high + cushion
+    span = axis_high - axis_low or 1.0
+
+    pad_l, pad_r = 18.0, 18.0
+    plot_w = width - pad_l - pad_r
+    axis_y = 108.0
+
+    def x_of(value: float) -> float:
+        return pad_l + (value - axis_low) / span * plot_w
+
+    body = [
+        _title_block(
+            0,
+            "Modelled value per share against traded price",
+            "Each case is a full model run at the stated assumptions",
+        )
+    ]
+
+    # The band spanning bear to bull, with the cases marked on it.
+    body.append(
+        f'<line x1="{x_of(min(values)):.1f}" y1="{axis_y}" '
+        f'x2="{x_of(max(values)):.1f}" y2="{axis_y}" '
+        f'stroke="{theme.NEUTRAL}" stroke-width="7" opacity="0.4" '
+        f'stroke-linecap="butt"/>'
+    )
+
+    for case in sorted(cases, key=lambda c: c.value_per_share):
+        x = x_of(case.value_per_share)
+        body.append(
+            f'<circle cx="{x:.1f}" cy="{axis_y}" r="5.4" '
+            f'fill="{theme.ACCENT}"/>'
+        )
+        body.append(
+            _text(x, axis_y - 26, case.name, 9.0, theme.INK_MUTED, "middle",
+                  font=_SANS)
+        )
+        body.append(
+            _text(
+                x,
+                axis_y - 13,
+                f"${case.value_per_share:,.0f}",
+                11.0,
+                theme.INK,
+                "middle",
+                weight="500",
+            )
+        )
+
+    price_x = x_of(market_price)
+    body.append(
+        f'<line x1="{price_x:.1f}" y1="{axis_y - 40:.1f}" x2="{price_x:.1f}" '
+        f'y2="{axis_y + 20:.1f}" stroke="{theme.ACCENT_2}" stroke-width="1.8"/>'
+    )
+    # Anchored away from the rule and flipped near the right edge so the
+    # label is never printed over the line it describes.
+    on_right = price_x > width * 0.78
+    body.append(
+        _text(
+            price_x + (-8 if on_right else 8),
+            axis_y + 34,
+            f"Traded ${market_price:,.2f}",
+            9.6,
+            theme.ACCENT_2,
+            "end" if on_right else "start",
+            weight="500",
+        )
+    )
+
+    return _frame(width, height, "".join(body))
+
+
+def dcf_bridge(
+    dcf: DcfResult, inputs: DcfInputs, width: float = 548, height: float = 236
+) -> str | None:
+    """Forecast cash flows, terminal value, net debt, equity value.
+
+    The bridge every published model carries. It answers in one glance the
+    question the single output cannot: how much of this valuation is the
+    forecast and how much is the perpetuity assumption sitting behind it.
+    """
+    if dcf is None or inputs is None:
+        return None
+
+    bars = [
+        ("PV forecast", dcf.pv_forecast, theme.ACCENT, False),
+        ("PV terminal", dcf.pv_terminal, theme.NEUTRAL, False),
+        ("Enterprise value", dcf.enterprise_value, theme.ACCENT, True),
+        ("Net debt", -inputs.net_debt, theme.ACCENT_2, False),
+        ("Equity value", dcf.equity_value, theme.ACCENT, True),
+    ]
+
+    pad_l, pad_r, pad_t, pad_b = 54.0, 10.0, 44.0, 30.0
+    plot_w = width - pad_l - pad_r
+    plot_h = height - pad_t - pad_b
+
+    # Running cumulative positions, so the increments stack the way a
+    # waterfall reads, with the two totals drawn from the baseline.
+    running = 0.0
+    geometry = []
+    for label, value, colour, is_total in bars:
+        if is_total:
+            start, end = 0.0, value
+            running = value
+        else:
+            start, end = running, running + value
+            running = end
+        geometry.append((label, value, colour, is_total, start, end))
+
+    extremes = [v for _, _, _, _, s, e in geometry for v in (s, e)] + [0.0]
+    step = _nice_step(max(extremes) - min(extremes))
+    axis_top = _axis_top(max(extremes), step)
+    axis_bottom = min(0.0, (int(min(extremes) / step)) * step)
+    span = axis_top - axis_bottom or 1.0
+
+    def y_of(value: float) -> float:
+        return pad_t + plot_h - (value - axis_bottom) / span * plot_h
+
+    body = [
+        _title_block(
+            0,
+            "Valuation bridge",
+            "Forecast and terminal value to equity value, computed",
+        )
+    ]
+
+    tick = axis_bottom
+    while tick <= axis_top + step / 2:
+        y = y_of(tick)
+        body.append(
+            f'<line x1="{pad_l}" y1="{y:.1f}" x2="{width - pad_r}" '
+            f'y2="{y:.1f}" stroke="{theme.RULE}" stroke-width="1"/>'
+        )
+        body.append(
+            _text(pad_l - 8, y + 3.2, _money(tick), _TICK, theme.INK_MUTED, "end")
+        )
+        tick += step
+
+    slot = plot_w / len(geometry)
+    bar_w = min(slot * 0.52, 46.0)
+
+    for index, (label, value, colour, is_total, start, end) in enumerate(geometry):
+        centre = pad_l + slot * (index + 0.5)
+        top_y = y_of(max(start, end))
+        bar_h = abs(y_of(end) - y_of(start))
+        body.append(
+            f'<rect x="{centre - bar_w / 2:.1f}" y="{top_y:.1f}" '
+            f'width="{bar_w:.1f}" height="{max(bar_h, 0.8):.1f}" '
+            f'fill="{colour}" opacity="{1.0 if is_total else 0.86}"/>'
+        )
+        body.append(
+            _text(
+                centre,
+                top_y - 6,
+                _money_precise(value),
+                9.2,
+                theme.INK,
+                "middle",
+                weight="500" if is_total else "400",
+            )
+        )
+        # Two short lines: the labels are full phrases and will not fit on one.
+        words = label.split()
+        if len(words) > 1:
+            body.append(
+                _text(centre, height - 17, words[0], 8.4, theme.INK_MUTED,
+                      "middle", font=_SANS)
+            )
+            body.append(
+                _text(centre, height - 7, " ".join(words[1:]), 8.4,
+                      theme.INK_MUTED, "middle", font=_SANS)
+            )
+        else:
+            body.append(
+                _text(centre, height - 12, label, 8.4, theme.INK_MUTED,
+                      "middle", font=_SANS)
+            )
+
+    return _frame(width, height, "".join(body))
+
+
+def free_cash_flow_history(
+    series: MetricSeries, width: float = 548, height: float = 232
+) -> str | None:
+    """Operating cash flow less capital expenditure, by filed year.
+
+    Carried as its own chart because it is the series the valuation runs on,
+    and a reader comparing a modelled target against a traded price needs to
+    see whether the cash flow behind it has actually grown.
+    """
+    cash = _points(series, "operating_cash_flow")
+    if len(cash) < 2:
+        return None
+    capex = {
+        p.frame_label: abs(p.value)
+        for p in _points(series, "capital_expenditures")
+    }
+
+    labels = [p.frame_label for p in cash]
+    values = [p.value - capex.get(p.frame_label, 0.0) for p in cash]
+
+    pad_l, pad_r, pad_t, pad_b = 52.0, 10.0, 42.0, 26.0
+    plot_w = width - pad_l - pad_r
+    plot_h = height - pad_t - pad_b
+
+    step = _nice_step(max(values) - min(0.0, min(values)))
+    axis_top = _axis_top(max(values), step)
+    axis_bottom = min(0.0, (int(min(values) / step)) * step)
+    span = axis_top - axis_bottom or 1.0
+
+    def y_of(value: float) -> float:
+        return pad_t + plot_h - (value - axis_bottom) / span * plot_h
+
+    subtitle = "Operating cash flow less capital expenditure, as filed"
+    body = [_title_block(0, "Free cash flow", subtitle)]
+
+    tick = axis_bottom
+    while tick <= axis_top + step / 2:
+        y = y_of(tick)
+        body.append(
+            f'<line x1="{pad_l}" y1="{y:.1f}" x2="{width - pad_r}" '
+            f'y2="{y:.1f}" stroke="{theme.RULE}" stroke-width="1"/>'
+        )
+        body.append(
+            _text(pad_l - 8, y + 3.2, _money(tick), _TICK, theme.INK_MUTED, "end")
+        )
+        tick += step
+
+    slot = plot_w / len(values)
+    bar_w = min(slot * 0.56, 44.0)
+
+    # The same window the model takes its base from, labelled with the
+    # window. The rule used to be the mean of every filed year while the
+    # model normalises over three, which coincide on Apple and diverge on
+    # anyone with a longer or lumpier record.
+    window = min(_BASE_WINDOW, len(values))
+    mean = sum(values[-window:]) / window
+    mean_y = y_of(mean)
+    body.append(
+        f'<line x1="{pad_l}" y1="{mean_y:.1f}" x2="{width - pad_r}" '
+        f'y2="{mean_y:.1f}" stroke="{theme.ACCENT_2}" stroke-width="1.4" '
+        f'stroke-dasharray="4 3"/>'
+    )
+
+    for index, (label, value) in enumerate(zip(labels, values)):
+        centre = pad_l + slot * (index + 0.5)
+        y = y_of(value)
+        body.append(
+            f'<rect x="{centre - bar_w / 2:.1f}" y="{y:.1f}" '
+            f'width="{bar_w:.1f}" height="{max(y_of(0.0) - y, 0.6):.1f}" '
+            f'fill="{theme.ACCENT}"/>'
+        )
+        body.append(
+            _text(centre, y - 6, _money_precise(value), _LABEL, theme.INK,
+                  "middle", weight="500")
+        )
+        body.append(
+            _text(centre, height - 8, label, _TICK, theme.INK_MUTED, "middle")
+        )
+
+    # The mean label sits in the header rather than on its own rule. On the
+    # rule it collided with the last bar's value label whenever the final
+    # year landed near the average, which on Apple's filed record it does.
+    key_x = width - pad_r
+    body.append(
+        _text(
+            key_x,
+            pad_t - 7,
+            f"{window}-year mean {_money_precise(mean)}",
+            8.6,
+            theme.ACCENT_2,
+            "end",
+            font=_SANS,
+        )
+    )
+    label_width = 8.6 * 0.56 * len(
+        f"{window}-year mean {_money_precise(mean)}"
+    )
+    body.append(
+        f'<line x1="{key_x - label_width - 16:.1f}" y1="{pad_t - 10:.1f}" '
+        f'x2="{key_x - label_width - 4:.1f}" y2="{pad_t - 10:.1f}" '
+        f'stroke="{theme.ACCENT_2}" stroke-width="1.4" stroke-dasharray="4 3"/>'
+    )
+    return _frame(width, height, "".join(body))
