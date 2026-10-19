@@ -28,11 +28,27 @@ class FilingRef:
     items: str  # 8-K item codes, e.g. "2.02,9.01"; empty for other forms
 
     def document_url(self, cik: int) -> str:
+        return self.file_url(cik, self.primary_document)
+
+    def file_url(self, cik: int, filename: str) -> str:
         accession_nodash = self.accession_number.replace("-", "")
         return (
             f"https://www.sec.gov/Archives/edgar/data/{cik}/"
-            f"{accession_nodash}/{self.primary_document}"
+            f"{accession_nodash}/{filename}"
         )
+
+    @property
+    def item_codes(self) -> list[str]:
+        return [code.strip() for code in self.items.split(",") if code.strip()]
+
+    @property
+    def reports_results(self) -> bool:
+        """Item 2.02 is "Results of Operations and Financial Condition".
+
+        The body of one of these is almost always a cover page pointing at
+        an exhibit, so this is the signal to go and fetch it.
+        """
+        return "2.02" in self.item_codes
 
 
 @dataclass(frozen=True)
@@ -137,3 +153,60 @@ def get_filing_index(client: EdgarClient, cik: int) -> FilingIndex:
         sic_description=data.get("sicDescription", ""),
         all_filings=filings,
     )
+
+
+_INDEX_TTL_SECONDS = None  # an accession's file list never changes
+
+
+def exhibit_filename(
+    client: EdgarClient, cik: int, filing: FilingRef
+) -> str | None:
+    """The press-release exhibit in a filing, if it has one.
+
+    An earnings 8-K's primary document is a cover page: a few hundred
+    characters saying that results were announced and referring the reader
+    to Exhibit 99.1, which is where the quarterly financials actually live.
+    Ingesting only the primary document contributed boilerplate and nothing
+    else. Measured on Apple: two Item 2.02 filings at 1,188 and 1,193
+    characters, neither containing a figure.
+
+    Returns the EX-99.1 document where one is identifiable, falling back to
+    any EX-99. EX-99.1 is the press release by convention; later exhibits
+    are usually slides or schedules that do not extract usefully to text.
+
+    **The match is on a substring, not a prefix.** Filename conventions vary
+    by filer and the prefix assumption looked right and was wrong: Apple
+    names its exhibit `a8-kex991q3202606272026.htm`, so nothing beginning
+    "ex-99" was ever found and the fetch silently did nothing.
+    """
+    accession_nodash = filing.accession_number.replace("-", "")
+    url = (
+        f"https://www.sec.gov/Archives/edgar/data/{cik}/"
+        f"{accession_nodash}/index.json"
+    )
+    payload = client.get_json(
+        url,
+        cache_key=f"index/{cik}/{filing.accession_number}",
+        ttl_seconds=_INDEX_TTL_SECONDS,
+    )
+    items = (payload.get("directory") or {}).get("item") or []
+
+    def _key(name: str) -> str:
+        return name.lower().replace("-", "").replace("_", "")
+
+    primary = _key(filing.primary_document)
+    candidates = [
+        name
+        for item in items
+        if (name := item.get("name", ""))
+        and name.lower().endswith((".htm", ".html", ".txt"))
+        and "ex99" in _key(name)
+        and _key(name) != primary
+        and "index" not in _key(name)
+    ]
+    if not candidates:
+        return None
+
+    # Exhibit 99.1 is the press release; prefer it over any later exhibit.
+    first = [name for name in candidates if "ex991" in _key(name)]
+    return sorted(first or candidates)[0]

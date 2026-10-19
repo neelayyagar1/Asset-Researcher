@@ -77,6 +77,28 @@ EIGHTK_HTML = (
     + "</body></html>"
 )
 
+# An Item 2.02 results announcement. The body is a cover page referring the
+# reader to the exhibit; every figure is in the exhibit. Measured on Apple:
+# the cover extracts to 1,188 characters containing no figure at all.
+RESULTS_8K_HTML = (
+    "<html><body>"
+    + "<p>true</p><p>NASDAQ</p><p>0000320193</p>" * 40
+    + "<p>Item 2.02 Results of Operations and Financial Condition.</p>"
+    + "<p>On 30 July 2026, Testco issued a press release regarding its "
+      "results for the third fiscal quarter. A copy is furnished as "
+      "Exhibit 99.1.</p>"
+    + "</body></html>"
+)
+
+RESULTS_EXHIBIT_HTML = (
+    "<html><body><p>Exhibit 99.1</p>"
+    + "<p>Testco reports third quarter results. Quarterly revenue of "
+      "$94.0 billion, up 10 percent year over year, and quarterly diluted "
+      "earnings per share of $1.57.</p>"
+    + "<p>Services revenue reached an all-time high. </p>" * 30
+    + "</body></html>"
+)
+
 PROXY_HTML = (
     "<html><body>"
     + "<p>I. Summary compensation table</p><p>63</p>" * 20  # contents listing
@@ -144,14 +166,17 @@ SUBMISSIONS = {
     "sicDescription": "Electronic Computers",
     "filings": {
         "recent": {
-            "form": ["10-K", "DEF 14A", "8-K"],
-            "filingDate": ["2026-02-01", "2026-03-01", "2026-04-20"],
-            "reportDate": ["2025-12-27", "", ""],
+            "form": ["10-K", "DEF 14A", "8-K", "8-K"],
+            "filingDate": ["2026-02-01", "2026-03-01", "2026-04-20", "2026-07-30"],
+            "reportDate": ["2025-12-27", "", "", ""],
             "accessionNumber": [
-                "0000320193-26-000001", "0000320193-26-000002", "0000320193-26-000003",
+                "0000320193-26-000001", "0000320193-26-000002",
+                "0000320193-26-000003", "0000320193-26-000004",
             ],
-            "primaryDocument": ["tenk.htm", "proxy.htm", "eightk.htm"],
-            "items": ["", "", "5.02"],
+            "primaryDocument": [
+                "tenk.htm", "proxy.htm", "eightk.htm", "results8k.htm",
+            ],
+            "items": ["", "", "5.02", "2.02,9.01"],
         },
         "files": [],
     },
@@ -172,6 +197,22 @@ class FakeEdgarClient:
             return json.loads(json.dumps(SUBMISSIONS))
         if "companyfacts" in url:
             return json.loads(json.dumps(COMPANY_FACTS))
+        if url.endswith("/index.json"):
+            # An accession's file list. Named the way a real filer names an
+            # exhibit, which is not "ex-99.1.htm": Apple's is
+            # a8-kex991q3202606272026.htm.
+            if "000032019326000004" in url:
+                return {
+                    "directory": {
+                        "item": [
+                            {"name": "0000320193-26-000004-index.html"},
+                            {"name": "a8-kex991q3202607302026.htm"},
+                            {"name": "results8k.htm"},
+                            {"name": "results8k.xsd"},
+                        ]
+                    }
+                }
+            return {"directory": {"item": []}}
         raise AssertionError(f"unexpected JSON url: {url}")
 
     def get_text(self, url: str, cache_key: str, ttl_seconds: float | None) -> str:
@@ -182,6 +223,10 @@ class FakeEdgarClient:
             return PROXY_HTML
         if "eightk.htm" in url:
             return EIGHTK_HTML
+        if "results8k.htm" in url:
+            return RESULTS_8K_HTML
+        if "ex991" in url:
+            return RESULTS_EXHIBIT_HTML
         raise AssertionError(f"unexpected text url: {url}")
 
 

@@ -32,19 +32,27 @@ def fetch_filing_document(
     cik: int,
     filing: FilingRef,
     title: str | None = None,
+    filename: str | None = None,
 ) -> StoredDocument:
-    """Fetch, extract, and store one filing document. Returns the stored copy,
-    re-using it when already present."""
-    doc_id = make_doc_id(cik, filing.accession_number, filing.form)
+    """Fetch, extract, and store one filing document.
+
+    `filename` selects a document other than the primary one, which is how
+    an exhibit is retrieved. It is part of the stored id as well as the URL,
+    because a filing's cover page and its Exhibit 99.1 are two documents in
+    one accession and must not overwrite each other in the store.
+    """
+    document = filename or filing.primary_document
+    form_key = filing.form if filename is None else f"{filing.form}-{filename}"
+    doc_id = make_doc_id(cik, filing.accession_number, form_key)
 
     existing = store.load(doc_id)
     if existing is not None:
         return existing
 
-    url = filing.document_url(cik)
+    url = filing.file_url(cik, document)
     raw_html = client.get_text(
         url,
-        cache_key=f"doc/{cik}/{filing.accession_number}/{filing.primary_document}",
+        cache_key=f"doc/{cik}/{filing.accession_number}/{document}",
         ttl_seconds=_FILING_TTL_SECONDS,
     )
     text = html_to_text(raw_html)

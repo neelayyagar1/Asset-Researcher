@@ -43,7 +43,7 @@ from asset_researcher.quant.valuation import (
 )
 from asset_researcher.sources.edgar.client import EdgarClient
 from asset_researcher.sources.edgar.facts import get_raw_facts
-from asset_researcher.sources.edgar.filings import get_filing_index
+from asset_researcher.sources.edgar.filings import exhibit_filename, get_filing_index
 from asset_researcher.sources.edgar.resolve import resolve_ticker
 from asset_researcher.sources.finnhub import FinnhubClient
 
@@ -362,6 +362,8 @@ def _add_recent_events(
     budget = settings.bundle.token_budget.get("form_8k", 3_000) * 4
     recent_8k = index.recent("8-K", limit=4)
 
+    share = budget // max(len(recent_8k), 1)
+
     for filing in recent_8k:
         doc = _safe(lambda f=filing: fetch_filing_document(edgar, store, cik, f))
         if doc is None:
@@ -371,17 +373,28 @@ def _add_recent_events(
         # citations still resolve.
         content = extract_8k_content(doc.text)
         offset = len(doc.text) - len(content)
-        text = content[: budget // max(len(recent_8k), 1)]
-        bundle.passages.append(
-            _passage(
-                doc,
-                f"8-K filed {doc.filing_date}"
-                + (f" (items {filing.items})" if filing.items else ""),
-                offset,
-                offset + len(text),
-                text,
-            )
+        label = f"8-K filed {doc.filing_date}" + (
+            f" (items {filing.items})" if filing.items else ""
         )
+        bundle.passages.append(
+            _passage(doc, label, offset, offset + len(content[:share]),
+                     content[:share])
+        )
+
+        exhibit = _earnings_exhibit(edgar, store, cik, filing, bundle)
+        if exhibit is not None:
+            body = extract_8k_content(exhibit.text)
+            start = len(exhibit.text) - len(body)
+            bundle.passages.append(
+                _passage(
+                    exhibit,
+                    f"8-K exhibit filed {exhibit.filing_date} "
+                    f"(results announcement)",
+                    start,
+                    start + len(body[:share]),
+                    body[:share],
+                )
+            )
 
     if recent_8k:
         bundle.filing_dates["8-K"] = recent_8k[0].filing_date
@@ -392,6 +405,47 @@ def _add_recent_events(
     if not news:
         bundle.add_gap("news", "No recent news available.")
     bundle.news = news
+
+
+def _earnings_exhibit(edgar, store, cik, filing, bundle):
+    """The press release attached to a results announcement.
+
+    An Item 2.02 8-K's primary document is a cover page referring the reader
+    to Exhibit 99.1, where the quarterly figures actually are. Measured on
+    Apple: two such filings ingested at 1,188 and 1,193 characters, neither
+    containing a single figure, while the 10-K behind them was eleven
+    months old. The exhibit is the only current financial disclosure the
+    pipeline can reach.
+
+    Only fetched for filings that announce results, so this costs one extra
+    request on the filings where it pays and none anywhere else.
+    """
+    if not filing.reports_results:
+        return None
+
+    name = _safe(lambda: exhibit_filename(edgar, cik, filing))
+    if not name:
+        bundle.add_gap(
+            "8-K exhibit",
+            f"The results announcement filed {filing.filing_date} lists no "
+            f"readable exhibit, so only its cover page was read.",
+        )
+        return None
+
+    exhibit = _safe(
+        lambda: fetch_filing_document(
+            edgar, store, cik, filing,
+            title=f"8-K exhibit filed {filing.filing_date}",
+            filename=name,
+        )
+    )
+    if exhibit is None:
+        bundle.add_gap(
+            "8-K exhibit",
+            f"Exhibit {name} from the results announcement filed "
+            f"{filing.filing_date} could not be retrieved.",
+        )
+    return exhibit
 
 
 # --- comps --------------------------------------------------------------

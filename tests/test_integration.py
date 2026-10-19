@@ -65,7 +65,9 @@ def test_8k_cover_metadata_is_stripped_so_the_disclosure_survives(pipeline):
     """Regression for the bug that silently dropped a CEO succession: the
     inline-XBRL cover block extracts as 'true / NASDAQ / 0000320193'."""
     _, _, _, _, bundle = pipeline
-    eightk = next(p for p in bundle.passages if p.form == "8-K")
+    eightk = next(
+        p for p in bundle.passages if p.form == "8-K" and "5.02" in p.label
+    )
     assert "Executive Chair" in eightk.text
     assert "NASDAQ" not in eightk.text
     assert eightk.start > 0  # offsets stay relative to the stored document
@@ -248,3 +250,44 @@ def test_financials_table_is_empty_rather_than_fabricated_without_xbrl(pipeline)
     _, _, _, _, bundle = pipeline
     bundle.series = None
     assert build_statement(bundle.series, bundle.sector_class) == []
+
+
+# --- results announcements ----------------------------------------------
+
+
+def test_a_results_8k_brings_in_its_exhibit_not_just_the_cover_page(pipeline):
+    """An Item 2.02 filing's body is a cover page referring the reader to
+    Exhibit 99.1, where the quarterly figures actually are. Measured on
+    Apple: two such filings ingested at 1,188 and 1,193 characters,
+    containing no figure between them, while the 10-K behind them was
+    eleven months old."""
+    _, _, _, _, bundle = pipeline
+    exhibit = next(
+        (p for p in bundle.passages if "results announcement" in p.label), None
+    )
+    assert exhibit is not None, "the exhibit was never fetched"
+    assert "quarterly revenue of $94.0 billion" in exhibit.text.lower()
+    assert "1.57" in exhibit.text
+
+    cover = next(p for p in bundle.passages if "2.02" in p.label)
+    assert "$" not in cover.text
+    assert len(exhibit.text) > len(cover.text) * 2
+
+
+def test_the_exhibit_is_stored_separately_from_the_cover_page(pipeline):
+    """They are two documents in one accession and must not overwrite each
+    other in the store, or citation offsets resolve against the wrong one."""
+    _, _, _, _, bundle = pipeline
+    cover = next(p for p in bundle.passages if "2.02" in p.label)
+    exhibit = next(p for p in bundle.passages if "results announcement" in p.label)
+    assert cover.doc_id != exhibit.doc_id
+    assert cover.source_url != exhibit.source_url
+    assert "ex991" in exhibit.source_url
+
+
+def test_an_exhibit_is_only_fetched_for_a_filing_that_announces_results(pipeline):
+    """One extra request on the filings where it pays and none elsewhere."""
+    _, edgar, _, _, _ = pipeline
+    index_calls = [u for u in edgar.requested if u.endswith("/index.json")]
+    assert len(index_calls) == 1
+    assert "000032019326000004" in index_calls[0]
