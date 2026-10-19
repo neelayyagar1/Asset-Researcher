@@ -63,7 +63,14 @@ def test_revenue_precedes_every_other_income_statement_line():
 
 def test_sections_are_emitted_in_reading_order():
     sections = [r.label for r in build_statement(_apple_like()) if r.kind == SECTION]
-    assert sections == ["Income statement", "Cash flow", "Balance sheet"]
+    # The thinner fixture tags no per-share data, so that block drops out
+    # with its rows, which is the no-empty-sections rule working.
+    assert sections == [
+        "Income statement",
+        "Cash flow",
+        "Returns and earnings quality",
+        "Balance sheet",
+    ]
 
 
 def test_absent_metrics_do_not_produce_empty_rows():
@@ -254,6 +261,8 @@ def _full() -> MetricSeries:
         short_term_investments={"FY2024": 35_228e6, "FY2025": 35_200e6},
         long_term_investments={"FY2024": 91_479e6, "FY2025": 91_500e6},
         total_equity={"FY2024": 56_950e6, "FY2025": 73_700e6},
+        total_assets={"FY2024": 364_980e6, "FY2025": 359_241e6},
+        accounts_receivable={"FY2024": 33_410e6, "FY2025": 39_777e6},
     )
 
 
@@ -344,3 +353,47 @@ def test_the_earliest_column_still_shows_a_growth_rate():
     assert periods_of(wide, 5)[0] == "FY2021"
     assert growth.values["FY2021"] != ""
     assert growth.values["FY2021"] == "+5.0%"  # 21/20
+
+
+# --- returns and earnings quality ---------------------------------------
+
+
+def test_the_quality_block_surfaces_what_the_code_already_computed():
+    """Return on invested capital and the accrual ratio were both
+    computable from filed lines and rendered nowhere. A capital-
+    preservation reader asked for the first and a short-seller for the
+    second; the code had both."""
+    rows = {r.label: r for r in build_statement(_full())}
+
+    roic = rows["Return on invested capital"]
+    # NOPAT of 133,050 * (1 - 22,000/134,000) = 111,207, over invested
+    # capital of 98,657 + 73,700 - 35,935 = 136,422.
+    assert roic.values["FY2025"] == "81.5%"
+
+    assert rows["Operating cash flow / net income"].values["FY2025"] == "99.5%"
+    assert rows["Days sales outstanding"].values["FY2024"] == "31"
+
+
+def test_the_accrual_ratio_carries_a_sign_because_the_direction_is_the_point():
+    """Net income running ahead of operating cash flow is the signal; a
+    column of unsigned percentages hides which way it went."""
+    rows = {r.label: r for r in build_statement(_full())}
+    accrual = rows["Accrual ratio"]
+    # FY2024: net income below operating cash flow, so negative.
+    assert accrual.values["FY2024"].startswith("(")
+
+
+def test_return_on_invested_capital_is_absent_without_a_filed_tax_rate():
+    """A return computed at a guessed tax rate is a number nobody can
+    check."""
+    untaxed = _series(
+        revenue={"FY2024": 100e6, "FY2025": 110e6},
+        operating_income={"FY2024": 30e6, "FY2025": 33e6},
+        net_income={"FY2024": 20e6, "FY2025": 22e6},
+        total_debt={"FY2024": 50e6, "FY2025": 50e6},
+        total_equity={"FY2024": 40e6, "FY2025": 45e6},
+        total_assets={"FY2024": 200e6, "FY2025": 210e6},
+    )
+    assert "Return on invested capital" not in [
+        r.label for r in build_statement(untaxed)
+    ]

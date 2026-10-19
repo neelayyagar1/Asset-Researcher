@@ -87,6 +87,19 @@ _STANDARD: list[tuple[str, str, tuple]] = [
     (LINE, "Capital expenditure", ("outflow", "capital_expenditures")),
     (DERIVED, "Free cash flow", ("fcf",)),
     (DERIVED, "Free cash flow margin", ("fcf_ratio",)),
+    # Returns and earnings quality. Every row here was already computable
+    # from lines the filer tags, and none of it was shown anywhere: a
+    # capital-preservation reader asked for return on invested capital
+    # first and a short-seller asked for accruals first, and the code
+    # computed both and rendered neither.
+    (SECTION, "Returns and earnings quality", ("Computed from filed lines",)),
+    (DERIVED, "Return on invested capital", ("roic",)),
+    (DERIVED, "Operating cash flow / net income", ("ratio", "operating_cash_flow", "net_income")),
+    (DERIVED, "Free cash flow / net income", ("fcf_to_net_income",)),
+    (DERIVED, "Accrual ratio", ("accrual",)),
+    (DERIVED, "Days sales outstanding", ("days", "accounts_receivable", "revenue")),
+    (DERIVED, "Share-based comp / operating cash flow",
+     ("ratio", "share_based_compensation", "operating_cash_flow")),
     (SECTION, "Balance sheet", ("USD millions",)),
     (LINE, "Cash and equivalents", ("filed", "cash_and_equivalents")),
     (LINE, "Short-term investments", ("filed", "short_term_investments")),
@@ -318,6 +331,58 @@ def _evaluate(
 ) -> tuple[str, bool]:
     """One cell: its rendered text, and whether it holds a real value."""
     how = spec[0]
+
+    if how == "roic":
+        # NOPAT over invested capital, taxed at the filer's own effective
+        # rate. Net income would measure the capital structure as much as
+        # the business, and an assumed tax rate would be uncheckable.
+        operating = filed("operating_income", period)
+        pretax, tax = filed("pretax_income", period), filed("income_tax_expense", period)
+        debt = filed("total_debt", period)
+        equity = filed("total_equity", period)
+        cash = filed("cash_and_equivalents", period)
+        if None in (operating, pretax, tax, debt, equity) or pretax <= 0:
+            return ND, False
+        rate = tax / pretax
+        if not 0.0 <= rate < 1.0:
+            return NM, False
+        invested = debt + equity - (cash or 0.0)
+        assets = filed("total_assets", period) or 0.0
+        if invested <= 0 or (assets and invested < assets * 0.01):
+            # Invested capital near zero cannot carry a return: the ratio
+            # explodes rather than informing.
+            return NM, False
+        return _percent(operating * (1 - rate) / invested), True
+
+    if how == "fcf_to_net_income":
+        value = _free_cash_flow(filed, period)
+        net = filed("net_income", period)
+        if value is None or net is None:
+            return ND, False
+        if net <= 0:
+            return NM, False
+        return _percent(value / net), True
+
+    if how == "accrual":
+        # (Net income less operating cash flow) over total assets. The
+        # classic earnings-quality screen, and the one a short-seller
+        # reaches for first.
+        net = filed("net_income", period)
+        operating = filed("operating_cash_flow", period)
+        assets = filed("total_assets", period)
+        if None in (net, operating, assets):
+            return ND, False
+        if assets <= 0:
+            return NM, False
+        return _signed_percent((net - operating) / assets), True
+
+    if how == "days":
+        numerator, denominator = filed(spec[1], period), filed(spec[2], period)
+        if numerator is None or denominator is None:
+            return ND, False
+        if denominator <= 0:
+            return NM, False
+        return f"{_round(numerator / denominator * 365, 0):,.0f}", True
 
     if how == "per_share":
         value = filed(spec[1], period)
