@@ -19,6 +19,8 @@ the tables above them.
 
 from __future__ import annotations
 
+import os
+
 import streamlit as st
 
 from asset_researcher.analysis.assemble import assemble_bundle
@@ -44,6 +46,26 @@ from asset_researcher.ui import document, theme
 from asset_researcher.ui import components as ui
 from asset_researcher.ui.export import report_to_html, report_to_markdown
 from asset_researcher.ui.headline import headline_stats
+
+def _bridge_hosted_secrets() -> None:
+    """Make Streamlit Cloud's secrets look like a local .env.
+
+    The config loader reads os.environ and knows nothing about Streamlit,
+    which is what keeps it importable by the tests and the CLI. Streamlit
+    Community Cloud puts deployment secrets in st.secrets instead, so
+    without this bridge a deployed instance starts with no credentials and
+    fails on the first EDGAR call.
+    """
+    try:
+        secrets = st.secrets
+    except Exception:
+        return
+    for key in ("ANTHROPIC_API_KEY", "FINNHUB_API_KEY", "EDGAR_USER_AGENT"):
+        if key not in os.environ and key in secrets:
+            os.environ[key] = str(secrets[key])
+
+
+_bridge_hosted_secrets()
 
 st.set_page_config(
     page_title="Asset Researcher",
