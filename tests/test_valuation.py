@@ -318,3 +318,57 @@ def test_base_fcf_is_normalised_over_the_recent_window():
     normalised = normalised_base_fcf(series, window=3)
     assert normalised == pytest.approx((100e9 + 110e9 + 50e9) / 3)
     assert normalised > 50e9  # not dragged to the depressed year
+
+
+def _cash_series(interest_end: str | None) -> MetricSeries:
+    """Three years of cash flow, with interest expense tagged in one period
+    the caller chooses."""
+    series = MetricSeries(cik=1, sector="standard")
+    ends = ["2023-09-30", "2024-09-30", "2025-09-30"]
+    series.series["operating_cash_flow"] = [
+        MetricPeriod(e, f"FY{e[:4]}", 100e9, "a") for e in ends
+    ]
+    series.series["capital_expenditures"] = [
+        MetricPeriod(e, f"FY{e[:4]}", 10e9, "a") for e in ends
+    ]
+    if interest_end:
+        series.series["interest_expense"] = [
+            MetricPeriod(interest_end, f"FY{interest_end[:4]}", 4e9, "a")
+        ]
+    return series
+
+
+def test_the_interest_add_back_must_come_from_the_cash_flow_window():
+    """`_latest` returns the last period a metric has any value for. Apple
+    stopped tagging interest expense after FY2023, so an FY2023 figure was
+    added back to a base normalised over FY2023 to FY2025: a period
+    mismatch inside the adjustment meant to make the arithmetic consistent."""
+    from asset_researcher.quant.valuation import _unlever
+
+    value, basis = _unlever(_cash_series("2019-09-30"), 90e9)
+    assert value == 90e9
+    assert "does not tag interest expense over the same period" in basis
+
+    value, basis = _unlever(_cash_series("2025-09-30"), 90e9)
+    assert value == pytest.approx(90e9 + 4e9 * 0.79)
+    assert "after tax at 21%" in basis
+
+
+def test_an_unlevered_base_is_not_double_charged_for_debt():
+    """Operating cash flow is reported after interest, so discounting it at
+    a weighted average cost of capital and then subtracting net debt charges
+    the debt claim twice."""
+    from asset_researcher.quant.valuation import _unlever
+
+    levered, _ = _unlever(_cash_series(None), 90e9)
+    unlevered, _ = _unlever(_cash_series("2025-09-30"), 90e9)
+    assert unlevered > levered
+
+
+def test_a_negative_assumption_is_parenthesised_like_every_other_figure():
+    """A net-cash position printed "$-33.8B" in the assumptions table beside
+    a statement row reading "(33,763)" for the same figure."""
+    from asset_researcher.quant.valuation import Assumption
+
+    assert Assumption("Net debt", -33.8e9, "$", "x").display() == "($33.8B)"
+    assert Assumption("Net debt", 33.8e9, "$", "x").display() == "$33.8B"

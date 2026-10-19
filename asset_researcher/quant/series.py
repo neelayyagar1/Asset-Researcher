@@ -110,8 +110,6 @@ def build_metric_series(
 
         # end-date -> (summed value, accession of the primary component)
         combined: dict[str, tuple[float, str]] = {}
-        # end-date -> the fiscal year the filer itself assigned the period.
-        fiscal_years: dict[str, int | None] = {}
         primary_ends: set[str] | None = None
 
         for concept_name in concept_names:
@@ -130,7 +128,6 @@ def build_metric_series(
                 primary_ends = set(by_end)
                 for end, f in by_end.items():
                     combined[end] = (f.val, f.accn)
-                    fiscal_years[end] = f.fy
             else:
                 for end, f in by_end.items():
                     if end in combined:
@@ -142,7 +139,7 @@ def build_metric_series(
             continue
 
         ordered = sorted(combined.items())
-        labels = _fiscal_labels([end for end, _ in ordered], fiscal_years)
+        labels = _fiscal_labels([end for end, _ in ordered])
         result.series[canonical_name] = [
             MetricPeriod(end=end, frame_label=labels[end], value=value, accn=accn)
             for end, (value, accn) in ordered
@@ -151,9 +148,7 @@ def build_metric_series(
     return result
 
 
-def _fiscal_labels(
-    ends: list[str], fiscal_years: dict[str, int | None]
-) -> dict[str, str]:
+def _fiscal_labels(ends: list[str]) -> dict[str, str]:
     """A display label per period end, guaranteed unique.
 
     The label used to be the calendar year of the period end. That breaks on
@@ -164,18 +159,29 @@ def _fiscal_labels(
     and no validation warning. A table that is missing a year while looking
     complete is the worst failure mode available to this project.
 
-    Two defences. The filer's own `fy` from the XBRL fact is preferred over
-    anything inferred, and a January year-end falls back to the prior
-    calendar year. Then any label still colliding is disambiguated with its
-    end date, so a collision becomes visible rather than lossy.
+    **The fact's own `fy` field cannot be used for this.** It identifies the
+    fiscal year of the *filing* the fact appeared in, not of the period the
+    fact covers. Verified against HP: the year ending 2022-10-31 carries
+    fy=2022 in its own 10-K and fy=2023 when it reappears as the prior-year
+    comparative in the next one. Because the most recently filed fact wins,
+    taking `fy` labelled every period a year late, and every comparative
+    column in the report inherited the latest fiscal year.
+
+    So the label comes from the period end, with one adjustment. A year
+    ending in the first days of January closed a fiscal year that ran
+    through the previous calendar year, and the filer names it for that
+    year. A year ending late in January does not: a retailer's fiscal 2025
+    runs February 2024 to January 2025 and is called 2025. The cut is the
+    first week.
+
+    Any label still colliding is disambiguated with its end date, so a
+    collision becomes visible rather than lossy.
     """
     provisional: dict[str, str] = {}
     for end in ends:
-        year = fiscal_years.get(end)
-        if year is None:
-            # A year ending in January closed a fiscal year that ran almost
-            # entirely through the previous calendar year.
-            year = int(end[:4]) - 1 if end[5:7] == "01" else int(end[:4])
+        year = int(end[:4])
+        if end[5:7] == "01" and int(end[8:10]) <= 7:
+            year -= 1
         provisional[end] = f"FY{year}"
 
     counts: dict[str, int] = {}

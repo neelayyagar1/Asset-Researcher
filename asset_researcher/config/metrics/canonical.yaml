@@ -21,9 +21,21 @@ line_items:
   operating_income:
     label: Operating Income
     sectors: [standard, energy]
+  pretax_income:
+    label: Income Before Income Taxes
+    sectors: [standard, energy, financial, reit]
+  income_tax_expense:
+    label: Income Tax Expense
+    sectors: [standard, energy, financial, reit]
   net_income:
     label: Net Income
     sectors: [all]
+  eps_diluted:
+    label: Diluted Earnings per Share
+    sectors: [all]
+  share_based_compensation:
+    label: Share-based Compensation
+    sectors: [standard, biotech]
   total_assets:
     label: Total Assets
     sectors: [all]

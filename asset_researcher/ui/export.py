@@ -759,10 +759,17 @@ def report_to_markdown(report: Report, notice: str = "") -> str:
         ]
         for row in statement:
             if row.kind == "section":
-                lines.append(f"| **{_md(row.label)}** |" + " |" * len(periods))
+                heading = f"{row.label} ({row.note})" if row.note else row.label
+                lines.append(f"| **{_md(heading)}** |" + " |" * len(periods))
                 continue
             cells = " | ".join(_md(row.values.get(p, "")) for p in periods)
-            lines.append(f"| {_md(row.label)} | {cells} |")
+            # On screen a derived row is distinguished by weight and colour,
+            # neither of which survives a paste into a memo or a spreadsheet,
+            # so plain text says it in words.
+            label = _md(row.label)
+            if row.kind == "derived":
+                label += " (derived)"
+            lines.append(f"| {label} | {cells} |")
 
     if bundle.dcf_inputs is not None:
         lines += [

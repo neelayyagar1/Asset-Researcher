@@ -203,7 +203,11 @@ def _add_quantitative(bundle, settings, edgar, llm, cik, sector):
 
     mapping = resolve_concepts(llm, settings, cik, sector, facts)
     names = [li.name for li in line_items_for_sector(sector)]
-    series = build_metric_series(facts, mapping, sector, names, years=5)
+    # Six years retained, five displayed. The sixth is the lookback the
+    # earliest growth rate is computed against; without it the first column
+    # of every growth row printed blank. The facts are already downloaded,
+    # so the extra year costs nothing.
+    series = build_metric_series(facts, mapping, sector, names, years=6)
 
     bundle.series = series
     bundle.derived = compute_derived(series)

@@ -26,6 +26,7 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from decimal import ROUND_HALF_UP, Decimal
 
+from asset_researcher.quant.capital import net_debt_from_values
 from asset_researcher.quant.series import MetricSeries
 
 # Row kinds, in the order of visual weight the renderer gives them.
@@ -40,6 +41,10 @@ class StatementRow:
     label: str
     kind: str
     values: dict[str, str] = field(default_factory=dict)
+    # Section headings carry their unit. A single "USD millions" in the
+    # corner of the table sat above rows of percentages, per-share amounts
+    # and share counts, and described none of them.
+    note: str = ""
 
 
 # --- row specifications --------------------------------------------------
@@ -51,7 +56,7 @@ class StatementRow:
 #   ("fcf",)                         operating cash flow less capex
 
 _STANDARD: list[tuple[str, str, tuple]] = [
-    (SECTION, "Income statement", ()),
+    (SECTION, "Income statement", ("USD millions",)),
     (LINE, "Revenue", ("filed", "revenue")),
     (DERIVED, "Revenue growth", ("growth", "revenue")),
     (LINE, "Cost of goods sold", ("filed", "cogs")),
@@ -59,41 +64,64 @@ _STANDARD: list[tuple[str, str, tuple]] = [
     (DERIVED, "Gross margin", ("ratio", "gross_profit", "revenue")),
     (SUBTOTAL, "Operating income", ("filed", "operating_income")),
     (DERIVED, "Operating margin", ("ratio", "operating_income", "revenue")),
-    (LINE, "Depreciation and amortisation", ("filed", "depreciation_amortization")),
     (LINE, "Interest expense", ("filed", "interest_expense")),
+    (SUBTOTAL, "Pre-tax income", ("filed", "pretax_income")),
+    (LINE, "Income tax expense", ("filed", "income_tax_expense")),
+    (DERIVED, "Effective tax rate", ("ratio", "income_tax_expense", "pretax_income")),
     (SUBTOTAL, "Net income", ("filed", "net_income")),
     (DERIVED, "Net margin", ("ratio", "net_income", "revenue")),
-    (SECTION, "Cash flow", ()),
+    # Per share sits in its own block. Diluted share count used to appear
+    # under the balance sheet, which is not where anyone looks for it, and
+    # earnings per share did not appear at all despite being the single
+    # most-read line on a fundamentals screen.
+    (SECTION, "Per share", ("USD, and shares in millions",)),
+    (LINE, "Diluted earnings per share", ("per_share", "eps_diluted")),
+    (LINE, "Diluted shares outstanding", ("shares", "shares_diluted")),
+    # Depreciation sits here rather than in the income statement: for a
+    # filer reporting it only in the cash flow reconciliation, printing it
+    # among operating lines implies it was disclosed as one.
+    (SECTION, "Cash flow", ("USD millions",)),
     (LINE, "Operating cash flow", ("filed", "operating_cash_flow")),
+    (LINE, "Depreciation and amortisation", ("filed", "depreciation_amortization")),
+    (LINE, "Share-based compensation", ("filed", "share_based_compensation")),
     (LINE, "Capital expenditure", ("outflow", "capital_expenditures")),
     (DERIVED, "Free cash flow", ("fcf",)),
     (DERIVED, "Free cash flow margin", ("fcf_ratio",)),
-    (SECTION, "Balance sheet", ()),
+    (SECTION, "Balance sheet", ("USD millions",)),
     (LINE, "Cash and equivalents", ("filed", "cash_and_equivalents")),
+    (LINE, "Short-term investments", ("filed", "short_term_investments")),
+    (LINE, "Long-term marketable securities", ("filed", "long_term_investments")),
     (LINE, "Accounts receivable", ("filed", "accounts_receivable")),
     (LINE, "Current assets", ("filed", "current_assets")),
     (LINE, "Current liabilities", ("filed", "current_liabilities")),
     (LINE, "Total debt", ("filed", "total_debt")),
+    (DERIVED, "Net debt", ("net_debt",)),
+    (DERIVED, "Net debt / EBITDA", ("leverage",)),
     (LINE, "Total assets", ("filed", "total_assets")),
     (LINE, "Total liabilities", ("filed", "total_liabilities")),
     (SUBTOTAL, "Total equity", ("filed", "total_equity")),
-    (LINE, "Diluted shares outstanding", ("shares", "shares_diluted")),
 ]
 
 # A bank's income statement has no gross profit and no cost of goods, and
 # leading with revenue misstates how the business is read. Net interest
 # income is the top line that matters.
 _FINANCIAL: list[tuple[str, str, tuple]] = [
-    (SECTION, "Income statement", ()),
+    (SECTION, "Income statement", ("USD millions",)),
     (LINE, "Revenue", ("filed", "revenue")),
     (DERIVED, "Revenue growth", ("growth", "revenue")),
     (LINE, "Net interest income", ("filed", "net_interest_income")),
     (LINE, "Noninterest income", ("filed", "noninterest_income")),
     (LINE, "Noninterest expense", ("filed", "noninterest_expense")),
     (LINE, "Provision for loan losses", ("filed", "provision_for_loan_losses")),
+    (SUBTOTAL, "Pre-tax income", ("filed", "pretax_income")),
+    (LINE, "Income tax expense", ("filed", "income_tax_expense")),
+    (DERIVED, "Effective tax rate", ("ratio", "income_tax_expense", "pretax_income")),
     (SUBTOTAL, "Net income", ("filed", "net_income")),
     (DERIVED, "Net margin", ("ratio", "net_income", "revenue")),
-    (SECTION, "Balance sheet", ()),
+    (SECTION, "Per share", ("USD, and shares in millions",)),
+    (LINE, "Diluted earnings per share", ("per_share", "eps_diluted")),
+    (LINE, "Diluted shares outstanding", ("shares", "shares_diluted")),
+    (SECTION, "Balance sheet", ("USD millions",)),
     (LINE, "Total deposits", ("filed", "total_deposits")),
     (LINE, "Nonperforming loans", ("filed", "nonperforming_loans")),
     (LINE, "Tier 1 capital", ("filed", "tier1_capital")),
@@ -102,27 +130,29 @@ _FINANCIAL: list[tuple[str, str, tuple]] = [
     (LINE, "Total assets", ("filed", "total_assets")),
     (SUBTOTAL, "Total equity", ("filed", "total_equity")),
     (DERIVED, "Return on equity", ("ratio", "net_income", "total_equity")),
-    (LINE, "Diluted shares outstanding", ("shares", "shares_diluted")),
 ]
 
 _REIT: list[tuple[str, str, tuple]] = [
-    (SECTION, "Income statement", ()),
+    (SECTION, "Income statement", ("USD millions",)),
     (LINE, "Revenue", ("filed", "revenue")),
     (DERIVED, "Revenue growth", ("growth", "revenue")),
     (LINE, "Depreciation and amortisation", ("filed", "depreciation_amortization")),
     (LINE, "Interest expense", ("filed", "interest_expense")),
     (SUBTOTAL, "Net income", ("filed", "net_income")),
-    (SECTION, "Cash flow", ()),
+    (SECTION, "Per share", ("USD, and shares in millions",)),
+    (LINE, "Diluted earnings per share", ("per_share", "eps_diluted")),
+    (LINE, "Diluted shares outstanding", ("shares", "shares_diluted")),
+    (SECTION, "Cash flow", ("USD millions",)),
     (LINE, "Operating cash flow", ("filed", "operating_cash_flow")),
     (LINE, "Capital expenditure", ("outflow", "capital_expenditures")),
-    (SECTION, "Balance sheet", ()),
+    (SECTION, "Balance sheet", ("USD millions",)),
     (LINE, "Real estate investments, at cost", ("filed", "real_estate_investments")),
     (LINE, "Cash and equivalents", ("filed", "cash_and_equivalents")),
     (LINE, "Total debt", ("filed", "total_debt")),
+    (DERIVED, "Net debt", ("net_debt",)),
     (LINE, "Total assets", ("filed", "total_assets")),
     (SUBTOTAL, "Total equity", ("filed", "total_equity")),
     (DERIVED, "Debt to total assets", ("ratio", "total_debt", "total_assets")),
-    (LINE, "Diluted shares outstanding", ("shares", "shares_diluted")),
 ]
 
 _ORDERS = {
@@ -182,6 +212,17 @@ def _count_millions(value: float | None) -> str:
     return f"{_round(value / 1e6, 0):,.0f}"
 
 
+def _per_share(value: float | None) -> str:
+    """Two decimals, which is how every filer reports earnings per share and
+    the precision a reader compares against consensus."""
+    if value is None:
+        return ND
+    scaled = _round(value, 2)
+    if scaled < 0:
+        return f"(${abs(scaled):,.2f})"
+    return f"${scaled:,.2f}"
+
+
 def _percent(value: float | None) -> str:
     if value is None:
         return NM
@@ -226,7 +267,12 @@ def build_statement(
     if series is None or not series.series:
         return []
 
-    periods = periods_of(series, limit)
+    # One period wider than the table, so the earliest displayed column can
+    # still show a growth rate. It previously printed blank in that cell
+    # because the lookback ran after the window had been truncated, while
+    # the prior year was sitting in the series unused.
+    window = periods_of(series, limit + 1)
+    periods = window[-limit:]
     if not periods:
         return []
 
@@ -241,15 +287,17 @@ def build_statement(
     rows: list[StatementRow] = []
     for kind, label, spec in statement_order(sector_class):
         if kind == SECTION:
-            rows.append(StatementRow(label=label, kind=SECTION))
+            rows.append(
+                StatementRow(label=label, kind=SECTION, note=spec[0] if spec else "")
+            )
             continue
 
         values: dict[str, str] = {}
         present = False
 
-        for index, period in enumerate(periods):
+        for period in periods:
             rendered, has_value = _evaluate(
-                spec, period, periods, index, filed
+                spec, period, window, window.index(period), filed, sector_class
             )
             values[period] = rendered
             present = present or has_value
@@ -261,10 +309,56 @@ def build_statement(
 
 
 def _evaluate(
-    spec: tuple, period: str, periods: list[str], index: int, filed
+    spec: tuple,
+    period: str,
+    periods: list[str],
+    index: int,
+    filed,
+    sector_class: str = "standard",
 ) -> tuple[str, bool]:
     """One cell: its rendered text, and whether it holds a real value."""
     how = spec[0]
+
+    if how == "per_share":
+        value = filed(spec[1], period)
+        return _per_share(value), value is not None
+
+    if how == "net_debt":
+        if filed("total_debt", period) is None:
+            return ND, False
+        position = net_debt_from_values(
+            total_debt=filed("total_debt", period),
+            cash=filed("cash_and_equivalents", period),
+            short_term_investments=filed("short_term_investments", period),
+            long_term_investments=filed("long_term_investments", period),
+            sector_class=sector_class,
+        )
+        return _millions(position.value), True
+
+    if how == "leverage":
+        if filed("total_debt", period) is None:
+            return ND, False
+        operating = filed("operating_income", period)
+        d_and_a = filed("depreciation_amortization", period)
+        if operating is None:
+            return ND, False
+        ebitda = operating + (d_and_a or 0.0)
+        if ebitda <= 0:
+            # Leverage against negative EBITDA reads as net cash.
+            return NM, False
+        position = net_debt_from_values(
+            total_debt=filed("total_debt", period),
+            cash=filed("cash_and_equivalents", period),
+            short_term_investments=filed("short_term_investments", period),
+            long_term_investments=filed("long_term_investments", period),
+            sector_class=sector_class,
+        )
+        if position.value < 0:
+            # The convention. "-0.4x" scans as leverage with a typo, and a
+            # reader skimming the column reads the magnitude before the
+            # sign; "net cash" cannot be misread.
+            return "Net cash", True
+        return f"{position.value / ebitda:,.1f}x", True
 
     if how == "filed":
         value = filed(spec[1], period)

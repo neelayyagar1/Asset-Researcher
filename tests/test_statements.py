@@ -231,3 +231,116 @@ def test_share_counts_are_scaled_as_counts_not_dollars():
         r for r in build_statement(shares) if r.label == "Diluted shares outstanding"
     )
     assert row.values["FY2025"] == "15,200"
+
+
+# --- the lines a fundamentals screen leads with -------------------------
+
+
+def _full() -> MetricSeries:
+    return _series(
+        revenue={"FY2024": 391_035e6, "FY2025": 416_161e6},
+        gross_profit={"FY2024": 180_683e6, "FY2025": 195_201e6},
+        operating_income={"FY2024": 123_216e6, "FY2025": 133_050e6},
+        pretax_income={"FY2024": 123_485e6, "FY2025": 134_000e6},
+        income_tax_expense={"FY2024": 29_749e6, "FY2025": 22_000e6},
+        net_income={"FY2024": 93_736e6, "FY2025": 112_010e6},
+        eps_diluted={"FY2024": 6.08, "FY2025": 7.47},
+        shares_diluted={"FY2024": 15_408e6, "FY2025": 15_005e6},
+        depreciation_amortization={"FY2024": 11_445e6, "FY2025": 11_698e6},
+        operating_cash_flow={"FY2024": 118_254e6, "FY2025": 111_482e6},
+        capital_expenditures={"FY2024": 9_447e6, "FY2025": 12_715e6},
+        total_debt={"FY2024": 106_629e6, "FY2025": 98_657e6},
+        cash_and_equivalents={"FY2024": 29_943e6, "FY2025": 35_935e6},
+        short_term_investments={"FY2024": 35_228e6, "FY2025": 35_200e6},
+        long_term_investments={"FY2024": 91_479e6, "FY2025": 91_500e6},
+        total_equity={"FY2024": 56_950e6, "FY2025": 73_700e6},
+    )
+
+
+def test_earnings_per_share_is_present_and_in_its_own_block():
+    """The single most-read line on a fundamentals screen, and it was absent
+    entirely while the share count sat under the balance sheet."""
+    rows = build_statement(_full())
+    labels = [r.label for r in rows]
+    sections = [r.label for r in rows if r.kind == SECTION]
+
+    assert "Per share" in sections
+    eps = next(r for r in rows if r.label == "Diluted earnings per share")
+    assert eps.values["FY2025"] == "$7.47"
+    # The share count moved out of the balance sheet to sit beside it.
+    assert labels.index("Diluted shares outstanding") == labels.index(
+        "Diluted earnings per share"
+    ) + 1
+    assert labels.index("Diluted shares outstanding") < labels.index("Total debt")
+
+
+def test_the_tax_line_and_the_rate_it_implies_are_both_shown():
+    rows = build_statement(_full())
+    rate = next(r for r in rows if r.label == "Effective tax rate")
+    # 22,000 / 134,000
+    assert rate.values["FY2025"] == "16.4%"
+    assert rate.kind == DERIVED
+    assert next(r for r in rows if r.label == "Pre-tax income").kind == SUBTOTAL
+
+
+def test_net_debt_nets_the_securities_and_reads_as_net_cash():
+    """The statement row uses the one shared definition, so it cannot
+    disagree with the valuation bridge about what net debt means."""
+    rows = build_statement(_full())
+    net = next(r for r in rows if r.label == "Net debt")
+    # 98,657 less 35,935 + 35,200 + 91,500: comfortably net cash.
+    assert net.values["FY2025"].startswith("(")
+
+
+def test_leverage_is_not_meaningful_in_a_year_ebitda_turned_negative():
+    """Leverage against negative EBITDA reads as net cash, so the cell says
+    NM rather than printing a negative multiple."""
+    turned = _series(
+        revenue={"FY2024": 100e6, "FY2025": 90e6},
+        total_debt={"FY2024": 50e6, "FY2025": 50e6},
+        operating_income={"FY2024": 20e6, "FY2025": -20e6},
+    )
+    row = next(r for r in build_statement(turned) if r.label == "Net debt / EBITDA")
+    assert row.values["FY2024"] == "2.5x"
+    assert row.values["FY2025"] == "NM"
+
+
+def test_a_row_that_is_never_meaningful_is_dropped_rather_than_filled_with_nm():
+    """A column of NM adds nothing a reader cannot see from the operating
+    income line two rows above it."""
+    loss = _series(
+        revenue={"FY2024": 100e6, "FY2025": 90e6},
+        total_debt={"FY2024": 50e6, "FY2025": 50e6},
+        operating_income={"FY2024": -10e6, "FY2025": -20e6},
+    )
+    assert "Net debt / EBITDA" not in [r.label for r in build_statement(loss)]
+
+
+def test_depreciation_sits_in_the_cash_flow_block_not_the_income_statement():
+    """For a filer reporting it only in the cash flow reconciliation,
+    printing it among operating lines implies it was disclosed as one."""
+    rows = build_statement(_full())
+    labels = [r.label for r in rows]
+    cash_flow = labels.index("Operating cash flow")
+    assert labels.index("Depreciation and amortisation") > cash_flow
+
+
+def test_each_section_states_its_own_unit():
+    """One "USD millions" in the corner of the table sat above rows of
+    percentages, per-share amounts and share counts."""
+    sections = {r.label: r.note for r in build_statement(_full()) if r.kind == SECTION}
+    assert sections["Income statement"] == "USD millions"
+    assert "shares in millions" in sections["Per share"]
+
+
+def test_the_earliest_column_still_shows_a_growth_rate():
+    """The lookback ran after the window was truncated, so the first column
+    printed blank while the prior year sat in the series unused."""
+    wide = _series(
+        revenue={f"FY20{y}": float(y) * 1e9 for y in range(20, 26)}
+    )
+    rows = build_statement(wide, limit=5)
+    growth = next(r for r in rows if r.label == "Revenue growth")
+    assert periods_of(wide, 5)[0] == "FY2021"
+    assert growth.values["FY2021"] != ""
+    assert growth.values["FY2021"] == "+5.0%"  # 21/20

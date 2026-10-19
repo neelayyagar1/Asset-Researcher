@@ -250,6 +250,17 @@ class FakeLLM(LLMProvider):
                 "capital_expenditures": ["PaymentsToAcquirePropertyPlantAndEquipment"],
                 "interest_expense": ["InterestExpense"],
                 "shares_diluted": ["WeightedAverageNumberOfDilutedSharesOutstanding"],
+                "eps_diluted": ["EarningsPerShareDiluted"],
+                "pretax_income": [
+                    "IncomeLossFromContinuingOperationsBeforeIncomeTaxes"
+                    "ExtraordinaryItemsNoncontrollingInterest"
+                ],
+                "income_tax_expense": ["IncomeTaxExpenseBenefit"],
+                "share_based_compensation": ["ShareBasedCompensation"],
+                # The components that make net debt a real figure rather than
+                # debt less petty cash.
+                "short_term_investments": ["MarketableSecuritiesCurrent"],
+                "long_term_investments": ["MarketableSecuritiesNoncurrent"],
             }
             return output_model(
                 mappings=[

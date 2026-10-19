@@ -273,16 +273,23 @@ def statement_table(rows, periods: Sequence[str]) -> str:
     if not rows:
         return ""
 
-    head = '<th class="rowhead">USD millions</th>' + "".join(
+    head = '<th class="rowhead"></th>' + "".join(
         f'<th class="num">{_text(p)}</th>' for p in periods
     )
 
     body = []
     for row in rows:
         if row.kind == "section":
+            # The unit belongs with the section rather than in one corner
+            # cell: a single "USD millions" sat above rows of percentages,
+            # per-share amounts and share counts and described none of them.
+            unit = (
+                f'<span class="unit">{_text(row.note)}</span>' if row.note else ""
+            )
             body.append(
                 f'<tr class="statement-section">'
-                f'<td colspan="{len(periods) + 1}">{_text(row.label)}</td></tr>'
+                f'<td colspan="{len(periods) + 1}">{_text(row.label)}{unit}'
+                f"</td></tr>"
             )
             continue
         cells = [f'<td class="rowhead">{_text(row.label)}</td>']

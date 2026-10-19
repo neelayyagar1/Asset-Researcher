@@ -59,12 +59,17 @@ class Assumption:
         if self.unit == "x":
             return f"{self.value:.1f}x"
         if self.unit == "$":
+            # Parentheses for negatives, as everywhere else in the report. A
+            # net-cash position printed "$-33.8B" beside a statement row
+            # reading "(33,763)" for the same figure.
             magnitude = abs(self.value)
             if magnitude >= 1e9:
-                return f"${self.value / 1e9:,.1f}B"
-            if magnitude >= 1e6:
-                return f"${self.value / 1e6:,.1f}M"
-            return f"${self.value:,.0f}"
+                rendered = f"${magnitude / 1e9:,.1f}B"
+            elif magnitude >= 1e6:
+                rendered = f"${magnitude / 1e6:,.1f}M"
+            else:
+                rendered = f"${magnitude:,.0f}"
+            return f"({rendered})" if self.value < 0 else rendered
         if self.unit == "shares":
             return f"{self.value / 1e6:,.0f}M"
         if self.unit == "years":
@@ -316,14 +321,24 @@ def _unlever(series: MetricSeries, base_fcf: float) -> tuple[float, str]:
     interest expense, no add-back is possible and the convention is disclosed
     rather than applied silently.
     """
-    interest = _latest(series, "interest_expense")
+    # The interest must belong to the window the base cash flow came from.
+    # `_latest` returns the last period the metric has *any* value for, and
+    # Apple stopped tagging interest expense after FY2023, so an FY2023
+    # figure was being added back to a base normalised over FY2023 to
+    # FY2025: a period mismatch inside an adjustment meant to make the
+    # arithmetic consistent.
+    cash_periods = {end for end, _, _ in free_cash_flow_history(series)[-3:]}
+    interest_points = series.series.get("interest_expense") or []
+    recent = [p.value for p in interest_points if p.end in cash_periods]
+    interest = recent[-1] if recent else None
+
     if not interest or interest <= 0:
         return base_fcf, (
             "Three-year average of filed operating cash flow less capital "
-            "expenditure. This filer does not tag interest expense, so no "
-            "add-back was made and the figure remains levered; the bridge "
-            "below therefore charges debt once through the cash flow and "
-            "again through net debt"
+            "expenditure. This filer does not tag interest expense over the "
+            "same period, so no add-back was made and the figure remains "
+            "levered; the bridge below therefore charges debt once through "
+            "the cash flow and again through net debt"
         )
     add_back = interest * (1 - _UNLEVERING_TAX_RATE)
     return base_fcf + add_back, (

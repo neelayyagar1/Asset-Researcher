@@ -203,3 +203,56 @@ def test_component_reported_in_only_one_year_does_not_create_a_phantom_period():
     ends = [p.end for p in series.series["total_debt"]]
     assert "2019-09-28" not in ends
     assert series.series["total_debt"][-1].value == pytest.approx(98.7e9)
+
+
+# --- fiscal year labelling ----------------------------------------------
+
+
+def test_a_period_label_comes_from_its_end_not_from_the_filing():
+    """XBRL's `fy` identifies the fiscal year of the filing a fact appeared
+    in, not of the period it covers. Verified against HP: the year ending
+    2022-10-31 carries fy=2022 in its own 10-K and fy=2023 as the
+    comparative in the next one. Since the most recently filed fact wins,
+    trusting `fy` labelled every period a year late."""
+    from asset_researcher.quant.series import _fiscal_labels
+
+    labels = _fiscal_labels(["2023-10-31", "2024-10-31", "2025-10-31"])
+    assert list(labels.values()) == ["FY2023", "FY2024", "FY2025"]
+
+
+def test_a_year_end_in_the_first_days_of_january_belongs_to_the_prior_year():
+    """A 52/53-week filer whose year ends on the Friday nearest 31 December
+    calls the year ending 2021-01-01 fiscal 2020."""
+    from asset_researcher.quant.series import _fiscal_labels
+
+    assert _fiscal_labels(["2021-01-01"])["2021-01-01"] == "FY2020"
+
+
+def test_a_retailers_late_january_year_end_keeps_the_end_year():
+    """A fiscal year running February 2024 to January 2025 is called 2025 by
+    the filers that use it, so the January rule cuts at the first week."""
+    from asset_researcher.quant.series import _fiscal_labels
+
+    assert _fiscal_labels(["2025-01-31"])["2025-01-31"] == "FY2025"
+
+
+def test_a_52_week_year_crossing_new_year_does_not_collide_with_the_next():
+    """Fiscal 2020 ending 2021-01-01 and fiscal 2021 ending 2021-12-31 both
+    became "FY2021". Downstream code keys on the label, so the earlier year
+    was overwritten and vanished from the report with no warning."""
+    from asset_researcher.quant.series import _fiscal_labels
+
+    labels = _fiscal_labels(["2021-01-01", "2021-12-31"])
+    assert labels == {"2021-01-01": "FY2020", "2021-12-31": "FY2021"}
+
+
+def test_a_genuine_label_collision_is_disambiguated_rather_than_merged():
+    """A filer changing its year-end can report two annual periods ending in
+    one calendar year. Both map to the same label, so the end date is added
+    and the collision becomes visible rather than lossy."""
+    from asset_researcher.quant.series import _fiscal_labels
+
+    labels = _fiscal_labels(["2024-03-31", "2024-12-31"])
+    assert len(set(labels.values())) == 2
+    assert all(label.startswith("FY2024") for label in labels.values())
+    assert any("2024-03-31" in label for label in labels.values())

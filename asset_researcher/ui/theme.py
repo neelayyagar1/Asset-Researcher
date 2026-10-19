@@ -266,6 +266,9 @@ table.ar-statement tbody tr.statement-section td {
   text-transform: uppercase; color: var(--ink-muted); padding: 1.05rem 0.72rem 0.3rem;
   border-bottom: 1px solid var(--rule); }
 table.ar-statement tbody tr.statement-section:first-child td { padding-top: 0.3rem; }
+table.ar-statement tbody tr.statement-section .unit { text-transform: none;
+  letter-spacing: 0.01em; color: var(--ink-muted); font-family: var(--sans);
+  font-size: 0.72rem; float: right; font-weight: 400; }
 table.ar-statement tbody tr.statement-subtotal td {
   border-top: 1px solid var(--rule); color: var(--ink); font-weight: 500; }
 table.ar-statement tbody tr.statement-subtotal td.rowhead { font-weight: 600; }
