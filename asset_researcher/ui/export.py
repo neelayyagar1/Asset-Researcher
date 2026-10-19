@@ -34,31 +34,23 @@ from asset_researcher.quant.valuation import (
 )
 from asset_researcher.ui import charts, markdown, theme
 from asset_researcher.ui import components as ui
+from asset_researcher.ui import format as fmt
 from asset_researcher.ui import document
 from asset_researcher.ui.headline import headline_stats
 from asset_researcher.ui.components import Col, Stat
+from asset_researcher.ui.summary import summary_lines
 
 # Wider than the two-column screen layout, because the export is read as one
 # continuous document rather than a set of tabs.
 _CHART = 620
 
 
-def _pct(value: float | None, digits: int = 1) -> str:
-    return f"{value * 100:,.{digits}f}%" if value is not None else "NM"
 
 
-def _signed_pct(value: float | None) -> str:
-    if value is None:
-        return "NM"
-    return f"{'+' if value >= 0 else ''}{value * 100:,.1f}%"
 
 
-def _usd(value: float | None) -> str:
-    return f"${value:,.2f}" if value is not None else "NM"
 
 
-def _billions(value: float | None) -> str:
-    return f"${value / 1e9:,.0f}B" if value else "NM"
 
 
 # --------------------------------------------------------------------- HTML
@@ -92,29 +84,10 @@ def report_to_html(report: Report, notice: str = "") -> str:
                 f"Prepared for {report.mandate.summary()}",
             ],
         ),
+        ui.chips(document.provenance_items(report)),
         ui.stat_strip(headline_stats(report)),
     ]
 
-    level, message = report.verification_banner
-    body.append(
-        ui.status(
-            level,
-            {
-                "success": "Citations located",
-                "warning": "Citations partial",
-                "error": "Citations absent",
-            }[level],
-            message,
-        )
-    )
-    if bundle.implied is not None and bundle.implied.caveat:
-        body.append(ui.status("warning", "Model divergence", bundle.implied.caveat))
-    if bundle.staleness_note:
-        body.append(ui.status("info", "Source currency", bundle.staleness_note))
-
-    # One section list, rendered by both surfaces. They used to be built
-    # separately, which is how the sensitivity grid existed on screen for
-    # weeks while the file a reader actually forwards did not carry one.
     blocks = document.sections(report)
     body.append(ui.nav([section.label for section in blocks]))
     body.extend(section.html for section in blocks)
@@ -124,7 +97,10 @@ def report_to_html(report: Report, notice: str = "") -> str:
         f'var(--rule);padding-top:.9rem">{escape(_disclaimer(report))}</p>'
     )
 
-    title = f"{bundle.company_name} ({bundle.ticker}) research note"
+    # Through `_clean` as well as `escape`: the document title is the one
+    # string that bypasses the component layer, and a NUL here makes the
+    # whole document non-conforming.
+    title = _clean(f"{bundle.company_name} ({bundle.ticker}) research note")
     return (
         "<!doctype html>"
         '<html lang="en"><head><meta charset="utf-8">'
@@ -139,7 +115,19 @@ def report_to_html(report: Report, notice: str = "") -> str:
         "@media print{body{background:#fff}.ar-page{padding:0;max-width:none}"
         ".ar-finding,.ar-split{break-inside:avoid}"
         "table.ar-table{break-inside:auto}"
-        ".ar-sec{break-after:avoid}}"
+        ".ar-sec{break-after:avoid}"
+        # A horizontally scrolling table prints only the visible slice. The
+        # comparables table lost ten of sixteen columns, every multiple
+        # among them, with no cue that anything was missing.
+        ".ar-table-wrap,.ar-table-wrap:has(>.ar-table-scroll)"
+        "{overflow:visible!important}"
+        "table.ar-table.ar-table-scroll{width:100%;table-layout:fixed;"
+        "font-size:7.5pt}"
+        "table.ar-table.ar-table-scroll td,"
+        "table.ar-table.ar-table-scroll th{white-space:normal;"
+        "word-break:break-word;padding:3px 4px}"
+        "table.ar-table thead th{position:static}"
+        ".ar-nav{display:none}}"
         "</style></head>"
         f'<body><div class="ar-page">{"".join(body)}</div></body></html>'
     )
@@ -201,9 +189,9 @@ def _valuation_section(bundle, cases, price) -> list[str]:
                     ),
                     Stat(
                         "Free cash flow yield",
-                        _pct(context.fcf_yield) if context.fcf_yield else "NM",
+                        fmt.pct(context.fcf_yield) if context.fcf_yield else "NM",
                     ),
-                    Stat("Filed free cash flow CAGR", _pct(context.fcf_cagr)),
+                    Stat("Filed free cash flow CAGR", fmt.pct(context.fcf_cagr)),
                 ]
             )
         )
@@ -222,19 +210,19 @@ def _valuation_section(bundle, cases, price) -> list[str]:
             [
                 Stat(
                     "Implied annual FCF growth",
-                    _pct(implied.implied_growth)
+                    fmt.pct(implied.implied_growth)
                     if implied and implied.implied_growth is not None
                     else "Unsolvable",
                 ),
                 Stat(
                     "Implied discount rate",
-                    _pct(implied.implied_discount_rate)
+                    fmt.pct(implied.implied_discount_rate)
                     if implied and implied.implied_discount_rate is not None
                     else "NM",
                 ),
                 Stat(
                     "Terminal share of value",
-                    _pct(bundle.dcf.terminal_share_of_value, 0),
+                    fmt.pct(bundle.dcf.terminal_share_of_value, 0),
                 ),
             ]
         )
@@ -262,11 +250,11 @@ def _valuation_section(bundle, cases, price) -> list[str]:
             [
                 {
                     "case": c.name,
-                    "value": _usd(c.value_per_share),
-                    "growth": _pct(c.growth),
-                    "wacc": _pct(c.discount_rate),
-                    "probability": _pct(c.probability, 0),
-                    "upside": _signed_pct(c.upside_vs(price)) if price else "NM",
+                    "value": fmt.usd(c.value_per_share),
+                    "growth": fmt.pct(c.growth),
+                    "wacc": fmt.pct(c.discount_rate),
+                    "probability": fmt.pct(c.probability, 0),
+                    "upside": fmt.signed_pct(c.upside_vs(price)) if price else "NM",
                 }
                 for c in cases
             ],
@@ -377,7 +365,7 @@ def _reconciliation_section(rec) -> list[str]:
     out = [
         ui.section(
             "Narrative against reported figures",
-            f"{len(rec.divergences)} divergence(s), "
+            f"{ui.plural(len(rec.divergences), 'divergence')}, "
             f"{len(rec.corroborations)} corroborated",
         )
     ]
@@ -619,6 +607,30 @@ def _sources_section(report: Report) -> list[str]:
     return out
 
 
+_CONTROL = {c: None for c in range(32) if c not in (9, 10, 13)}
+_CONTROL[127] = None
+
+# Markdown gives these meaning at the start of a line, and model prose has
+# no business opening a heading, a list or a quote inside a research note.
+_STRUCTURAL = ("#", ">", "-", "+", "*", "=", "|")
+
+
+def _clean(text: str) -> str:
+    """Strip C0 control characters.
+
+    `html.escape` does not touch them, so a NUL in a company name made the
+    HTML non-conforming and the Markdown file binary to git and to every
+    wiki that would receive it.
+    """
+    return text.translate(_CONTROL).strip()
+
+
+def _defuse_leading(text: str) -> str:
+    if text[:1] in _STRUCTURAL:
+        return "\\" + text
+    return text
+
+
 def _md(text: object) -> str:
     """Model and filing text, made safe for a Markdown document.
 
@@ -633,16 +645,29 @@ def _md(text: object) -> str:
     """
     if text is None:
         return ""
-    out = str(text).strip()
+    out = _clean(str(text))
     out = out.replace("<", "&lt;").replace(">", "&gt;")
-    return out.replace("|", "\\|")
+    # Newlines collapse. A model sentence carrying "\n\n## Conclusion: SELL"
+    # opened a real heading inside the note, and an unterminated bold run
+    # across a line break corrupted every row after it.
+    out = " ".join(out.split())
+    out = out.replace("|", "\\|")
+    return _defuse_leading(out)
 
 
 def _md_block(text: object) -> str:
     """The same, for prose that may legitimately span lines."""
     if text is None:
         return ""
-    return str(text).strip().replace("<", "&lt;").replace(">", "&gt;")
+    out = _clean(str(text)).replace("<", "&lt;").replace(">", "&gt;")
+    # Paragraph breaks survive here, because this is prose; structural
+    # characters at the start of any line do not.
+    paragraphs = [
+        _defuse_leading(" ".join(block.split()))
+        for block in out.split("\n\n")
+        if block.strip()
+    ]
+    return "\n\n".join(paragraphs)
 
 
 # --------------------------------------------------------------- Markdown
@@ -668,29 +693,34 @@ def report_to_markdown(report: Report, notice: str = "") -> str:
         "",
         "## Headline",
         "",
-        f"- Traded price: {_usd(price)}",
-        f"- Market capitalisation: {_billions(bundle.market_cap)}",
-        f"- Probability-weighted target: {_usd(target)}",
-        f"- Implied upside: {_signed_pct(upside)}",
+        f"- Traded price: {fmt.usd(price)}",
+        f"- Market capitalisation: {fmt.scaled_usd(bundle.market_cap)}",
+        f"- Probability-weighted target: {fmt.usd(target)}",
+        f"- Implied upside: {fmt.signed_pct(upside)}",
     ]
     if bundle.implied:
         lines.append(
             f"- Price implies annual FCF growth: "
-            f"{_pct(bundle.implied.implied_growth)}"
+            f"{fmt.pct(bundle.implied.implied_growth)}"
         )
         lines.append(
             f"- Price implies a discount rate of "
-            f"{_pct(bundle.implied.implied_discount_rate)}"
+            f"{fmt.pct(bundle.implied.implied_discount_rate)}"
         )
     if bundle.cash_context and bundle.cash_context.multiple_of_fcf:
         lines.append(
             f"- Market capitalises free cash flow at "
             f"{bundle.cash_context.multiple_of_fcf:,.0f}x, against a filed "
-            f"CAGR of {_pct(bundle.cash_context.fcf_cagr)}"
+            f"CAGR of {fmt.pct(bundle.cash_context.fcf_cagr)}"
         )
 
+    # The summary is the block a reader of the plain-text version most
+    # needs, and it was the one the Markdown path did not carry.
+    lines += ["", "## Summary", ""]
+    lines += [_md_block(line) for line in summary_lines(report)]
+
     _, message = report.verification_banner
-    lines += ["", "## Verification", "", _md_block(message)]
+    lines += ["", "## Provenance", "", _md_block(message)]
     if bundle.implied and bundle.implied.caveat:
         lines += ["", _md_block(bundle.implied.caveat)]
 
@@ -738,8 +768,8 @@ def report_to_markdown(report: Report, notice: str = "") -> str:
         lines += ["", "## Cases", "", "| Case | Value per share | Upside |", "| --- | ---: | ---: |"]
         for case in cases:
             lines.append(
-                f"| {_md(case.name)} | {_usd(case.value_per_share)} | "
-                f"{_signed_pct(case.upside_vs(price)) if price else 'NM'} |"
+                f"| {_md(case.name)} | {fmt.usd(case.value_per_share)} | "
+                f"{fmt.signed_pct(case.upside_vs(price)) if price else 'NM'} |"
             )
 
     statement = build_statement(bundle.series, bundle.sector_class)

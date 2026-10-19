@@ -143,9 +143,11 @@ class SourceBundle:
             return None
         months = days // 30
         if months < 1:
-            return f"Primary filing (10-K) filed {filed}, {days} days ago."
+            unit = "day" if days == 1 else "days"
+            return f"Primary filing (10-K) filed {filed}, {days} {unit} ago."
+        unit = "month" if months == 1 else "months"
         return (
             f"Primary filing (10-K) filed {filed}, approximately {months} "
-            f"month(s) ago. Developments since then appear only via 8-K "
+            f"{unit} ago. Developments since then appear only via 8-K "
             f"filings and news."
         )

@@ -21,28 +21,20 @@ show it.
 
 from __future__ import annotations
 
+from dataclasses import replace
+
 from asset_researcher.analysis.report import Report
 from asset_researcher.quant.valuation import probability_weighted_target
+from asset_researcher.ui import format as fmt
 from asset_researcher.ui.components import Stat
 
 
-def _pct(value: float | None, digits: int = 1) -> str:
-    return f"{value * 100:,.{digits}f}%" if value is not None else "NM"
 
 
-def _signed_pct(value: float | None) -> str:
-    """Upside carries an explicit sign: the direction is the point."""
-    if value is None:
-        return "NM"
-    return f"{'+' if value >= 0 else ''}{value * 100:,.1f}%"
 
 
-def _usd(value: float | None) -> str:
-    return f"${value:,.2f}" if value is not None else "NM"
 
 
-def _billions(value: float | None) -> str:
-    return f"${value / 1e9:,.0f}B" if value else "NM"
 
 
 def headline_stats(report: Report) -> list[Stat]:
@@ -58,34 +50,39 @@ def headline_stats(report: Report) -> list[Stat]:
     if cases:
         low = min(c.value_per_share for c in cases)
         high = max(c.value_per_share for c in cases)
-        case_note = f"Bear {_usd(low)} to bull {_usd(high)}"
+        case_note = f"Bear {fmt.usd(low)} to bull {fmt.usd(high)}"
 
     price_stat = Stat(
-        "Traded price", _usd(price), f"Market cap {_billions(bundle.market_cap)}"
+        "Traded price", fmt.usd(price), f"Market cap {fmt.scaled_usd(bundle.market_cap)}"
     )
     cash_stat = Stat(
         "Market cap / free cash flow",
         f"{context.multiple_of_fcf:,.0f}x"
         if context and context.multiple_of_fcf
         else "NM",
-        f"Filed FCF CAGR {_pct(context.fcf_cagr)}"
+        f"Filed FCF CAGR {fmt.pct(context.fcf_cagr)}"
         if context and context.fcf_cagr is not None
         else "",
     )
     implied_growth_stat = Stat(
         "Price implies FCF growth",
-        _pct(implied.implied_growth) if implied else "NM",
+        fmt.pct(implied.implied_growth) if implied else "NM",
         "Solved back from the traded price",
     )
+
+    def leading(stat: Stat) -> Stat:
+        """The figure this report authored, set a rank above the handed ones."""
+        return replace(stat, lead=True)
 
     model_is_load_bearing = implied is None or implied.caveat is None
     if model_is_load_bearing:
         return [
             price_stat,
-            Stat("Probability-weighted target", _usd(target), case_note),
+            Stat("Probability-weighted target", fmt.usd(target), case_note,
+                 lead=True),
             Stat(
                 "Implied upside",
-                _signed_pct(upside),
+                fmt.signed_pct(upside),
                 "Target against traded price",
                 tone="pos" if (upside or 0) > 0 else "neg",
             ),
@@ -96,17 +93,17 @@ def headline_stats(report: Report) -> list[Stat]:
     return [
         price_stat,
         cash_stat,
-        implied_growth_stat,
+        leading(implied_growth_stat),
         Stat(
             "Price implies discount rate",
-            _pct(implied.implied_discount_rate)
+            fmt.pct(implied.implied_discount_rate)
             if implied and implied.implied_discount_rate is not None
             else "NM",
             "The return the price is priced to deliver",
         ),
         Stat(
             "Modelled value, illustrative",
-            _usd(target),
+            fmt.usd(target),
             f"{case_note}. See the divergence note below" if case_note else "",
         ),
     ]

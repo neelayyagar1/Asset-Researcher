@@ -115,7 +115,8 @@ class VerificationReport:
         return (
             f"{self.verified_citations}/{self.total_citations} citations verified, "
             f"{self.coverage:.0%} of prose cited, "
-            f"{len(self.unsupported_numbers)} unsupported figure(s)"
+            f"{len(self.unsupported_numbers)} unsupported "
+            f"{'figure' if len(self.unsupported_numbers) == 1 else 'figures'}"
         )
 
 

@@ -372,3 +372,12 @@ def test_a_negative_assumption_is_parenthesised_like_every_other_figure():
 
     assert Assumption("Net debt", -33.8e9, "$", "x").display() == "($33.8B)"
     assert Assumption("Net debt", 33.8e9, "$", "x").display() == "$33.8B"
+
+
+def test_a_non_positive_share_count_refuses_rather_than_inventing_a_price():
+    """Zero returned a $0.00 value per share and a -100% upside, both
+    presented as findings. A negative count returned a trillion-dollar
+    negative. The discount-rate guard refuses on the same grounds."""
+    for shares in (0.0, -1.0):
+        with pytest.raises(ValueError, match="positive"):
+            run_dcf(_inputs(shares_outstanding=shares))

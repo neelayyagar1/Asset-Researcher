@@ -264,29 +264,8 @@ write(
         [bundle.display_industry, f"Prepared for {report.mandate.summary()}"],
     )
 )
+write(ui.chips(document.provenance_items(report)))
 write(ui.stat_strip(headline_stats(report)))
-
-level, message = report.verification_banner
-write(
-    ui.block(
-        ui.status(
-            level,
-            {
-                "success": "Citations located",
-                "warning": "Citations partial",
-                "error": "Citations absent",
-            }[level],
-            message,
-        ),
-        ui.status("warning", "Model divergence", implied.caveat)
-        if implied is not None and implied.caveat
-        else "",
-        ui.status("info", "Source currency", bundle.staleness_note)
-        if bundle.staleness_note
-        else "",
-    )
-)
-
 
 # ------------------------------------------------------------- document
 

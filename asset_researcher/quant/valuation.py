@@ -174,7 +174,16 @@ def run_dcf(inputs: DcfInputs) -> DcfResult:
 
     enterprise_value = pv_forecast + pv_terminal
     equity_value = enterprise_value - inputs.net_debt
-    per_share = equity_value / inputs.shares_outstanding if inputs.shares_outstanding else 0.0
+    if inputs.shares_outstanding <= 0:
+        # Zero returned a $0.00 value per share and a -100% upside, both
+        # presented as findings; a negative count returned a trillion-dollar
+        # negative. The discount-rate guard above refuses on the same
+        # grounds, and so does this.
+        raise ValueError(
+            "Shares outstanding must be positive to compute a value per "
+            "share."
+        )
+    per_share = equity_value / inputs.shares_outstanding
 
     return DcfResult(
         enterprise_value=enterprise_value,

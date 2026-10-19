@@ -252,3 +252,37 @@ def test_a_fixture_run_can_stamp_the_file_so_it_cannot_be_forwarded_by_mistake(
 def test_a_normal_report_carries_no_such_banner(report):
     assert "Not a research note" not in report_to_html(report)
     assert "NOT A RESEARCH NOTE" not in report_to_markdown(report)
+
+
+def test_model_prose_cannot_open_a_heading_inside_the_markdown_note(report):
+    """A management claim carrying "\\n\\n## Conclusion: SELL" opened a real
+    top-level heading inside the reconciliation section, and an
+    unterminated bold run across a line break corrupted every row after
+    it."""
+    report.reconciliation.reconciliations[0].management_claim = (
+        "Margins improved\n\n## Conclusion: SELL\n\nTable row ends here"
+    )
+    report.reconciliation.catalysts[0].timeframe = (
+        "Q1\n| injected | table | row |\n#### Fake"
+    )
+    text = report_to_markdown(report)
+
+    # The property is that no line *opens* with a structural character, not
+    # that the characters never appear: escaped, they are literal text.
+    for line in text.splitlines():
+        assert not line.lstrip().startswith(("## ", "#### ")) or line.startswith("## ")
+    assert "\\## Conclusion: SELL" in text
+    # The content survives; only its structural power is removed.
+    assert "Conclusion: SELL" in text
+
+
+def test_control_characters_never_reach_either_export(report):
+    """html.escape does not touch C0 controls. A NUL made the HTML
+    non-conforming and the Markdown file binary to git and to every wiki
+    that would receive it."""
+    report.bundle.company_name = "Widget\x00 Co\x07"
+    html = report_to_html(report)
+    text = report_to_markdown(report)
+    for bad in ("\x00", "\x07"):
+        assert bad not in html
+        assert bad not in text

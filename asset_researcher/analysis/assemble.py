@@ -69,6 +69,7 @@ def assemble_bundle(
     finnhub: FinnhubClient,
     llm: LLMProvider,
     store: DocumentStore | None = None,
+    peer_override: list[str] | None = None,
 ) -> SourceBundle:
     store = store or DocumentStore(Path("data/documents"))
     ticker = ticker.strip().upper()
@@ -97,6 +98,7 @@ def assemble_bundle(
     _add_comps(
         bundle, settings, edgar, finnhub, llm, ticker, company_name, series,
         subject_sic=index.sic, subject_sic_description=index.sic_description,
+        peer_override=peer_override,
     )
     _add_valuation(bundle, series, profile)
 
@@ -214,18 +216,24 @@ def _add_quantitative(bundle, settings, edgar, llm, cik, sector):
     bundle.health_scores = compute_health_scores(series, sector, bundle.market_cap)
     bundle.validation = validate(series)
 
-    # Validation errors are load-bearing: a failed accounting identity means a
-    # mapping is wrong, and wrong numbers are worse than absent ones.
-    if bundle.validation and not bundle.validation.ok:
-        for issue in bundle.validation.errors:
+    # Every validation issue is surfaced, not only the fatal ones. Warnings
+    # were computed and discarded, so `check_period_alignment` was dead from
+    # the reader's point of view and a filer reporting zero revenue against
+    # a hundred billion of net income exported as a clean note carrying a
+    # price target. Nothing is silently missing is the first rule here, and
+    # a check that fires into a field nobody reads is worse than no check.
+    if bundle.validation:
+        for issue in bundle.validation.issues:
             bundle.add_gap(
-                f"xbrl:{issue.check}", issue.message, severity="error"
+                f"xbrl:{issue.check}", issue.message, severity=issue.severity
             )
 
     if series.unmapped:
         bundle.add_gap(
             "xbrl:unmapped",
-            f"Could not map {len(series.unmapped)} metric(s) for this filer: "
+            f"Could not map {len(series.unmapped)} "
+            f"{'metric' if len(series.unmapped) == 1 else 'metrics'} "
+            f"for this filer: "
             f"{', '.join(sorted(series.unmapped)[:6])}.",
         )
     return series
@@ -454,11 +462,26 @@ def _earnings_exhibit(edgar, store, cik, filing, bundle):
 def _add_comps(
     bundle, settings, edgar, finnhub, llm, ticker, company_name, series,
     subject_sic: str = "", subject_sic_description: str = "",
+    peer_override: list[str] | None = None,
 ) -> None:
-    peers = _safe(lambda: finnhub.get_peers(ticker)) or []
-    peers = [p for p in peers if p.upper() != ticker][:_MAX_PEERS]
+    """The comparables table.
 
-    table = CompsTable(subject_ticker=ticker, peer_source="Finnhub peer list")
+    `peer_override` pins the set. Choosing comparables is the analytical
+    judgment in relative valuation, and the vendor list is a starting point
+    rather than an answer: on Apple it returns Everpure at 158x EV/EBITDA
+    and Hewlett Packard Enterprise at 1,284x trailing earnings, and the
+    median is then computed across businesses nobody would pair. Every
+    reviewer who looked at that table asked to be able to replace it.
+    """
+    if peer_override:
+        peers = [p.upper() for p in peer_override if p.upper() != ticker]
+        source = "Analyst-specified peer set"
+    else:
+        peers = _safe(lambda: finnhub.get_peers(ticker)) or []
+        source = "Finnhub peer list, not screened"
+    peers = peers[:_MAX_PEERS]
+
+    table = CompsTable(subject_ticker=ticker, peer_source=source)
     subject_row = build_comp_row(
         ticker=ticker,
         company_name=company_name,
@@ -496,7 +519,9 @@ def _add_comps(
     if table.excluded:
         bundle.add_gap(
             "comps",
-            f"Excluded {len(table.excluded)} peer(s) with no usable data: "
+            f"Excluded {len(table.excluded)} "
+            f"{'peer' if len(table.excluded) == 1 else 'peers'} "
+            f"with no usable data: "
             f"{', '.join(table.excluded)}.",
         )
     if not peers:

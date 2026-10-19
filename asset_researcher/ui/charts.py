@@ -40,6 +40,11 @@ from asset_researcher.ui import theme
 _LABEL = theme.CHART_LABEL_PX
 _TICK = theme.CHART_TICK_PX
 _TITLE = theme.CHART_TITLE_PX
+# One step below the tick size, for a series name or a key sitting beside
+# the figure it names. Declared here because seven ad-hoc sizes inside a
+# 1.4px band had grown back inside this file, which is the same pathology
+# the page's type scale was built to end.
+_FINE = theme.CHART_FINE_PX
 
 # The normalisation window quant/valuation.py uses for its base figure.
 # The chart draws the same one so the rule and the model agree.
@@ -201,7 +206,10 @@ def metric_bars(
     bottom = min(min(values), 0.0)
     step = _nice_step(top - bottom)
     axis_top = _axis_top(top, step) if top else step
-    axis_bottom = (int(bottom / step) - 1) * step if bottom < 0 else 0.0
+    # Mirrors _axis_top: the old form subtracted a whole extra step below
+    # the minimum whenever any value was negative, wasting a full band and
+    # pushing the zero line up the plot.
+    axis_bottom = -_axis_top(-bottom, step) if bottom < 0 else 0.0
     span = axis_top - axis_bottom or 1.0
 
     def y_of(value: float) -> float:
@@ -353,7 +361,7 @@ def margin_lines(
                 x_of(last_period) + 9,
                 y_of(last_value) + 8,
                 label,
-                8.2,
+                _FINE,
                 theme.INK_MUTED,
                 font=_SANS,
             )
@@ -412,7 +420,7 @@ def peer_bars(
                 x,
                 height - 7,
                 f"Peer median {median:,.1f}x",
-                8.4,
+                _FINE,
                 theme.INK_MUTED,
                 "middle",
                 font=_SANS,
@@ -460,7 +468,7 @@ def valuation_range(
     cases: list[ValuationCase],
     market_price: float | None,
     width: float = 548,
-    height: float = 186,
+    height: float = 200,
 ) -> str | None:
     """Bear, base and bull against the traded price.
 
@@ -472,10 +480,15 @@ def valuation_range(
         return None
 
     values = [c.value_per_share for c in cases]
-    low = min(min(values), market_price)
     high = max(max(values), market_price)
-    cushion = (high - low) * 0.16 or max(high * 0.1, 1.0)
-    axis_low, axis_high = low - cushion, high + cushion
+
+    # A real scale anchored at zero, not a window fitted to the data. The
+    # axis used to be the data range plus 16% at each end, which means a
+    # three-fold spread and a five-percent spread drew identically: the one
+    # chart whose stated purpose is that the spread is the analysis was the
+    # one chart that could not show a spread.
+    step = _nice_step(high, 4)
+    axis_low, axis_high = 0.0, _axis_top(high, step)
     span = axis_high - axis_low or 1.0
 
     pad_l, pad_r = 18.0, 18.0
@@ -492,6 +505,21 @@ def valuation_range(
             "Each case is a full model run at the stated assumptions",
         )
     ]
+
+    # Gridlines and ticks, so the spread can be measured rather than
+    # inferred from where the marks happen to sit.
+    tick = 0.0
+    while tick <= axis_high + step / 2:
+        x = x_of(tick)
+        body.append(
+            f'<line x1="{x:.1f}" y1="{axis_y - 30:.1f}" x2="{x:.1f}" '
+            f'y2="{axis_y + 18:.1f}" stroke="{theme.RULE}" stroke-width="1"/>'
+        )
+        body.append(
+            _text(x, axis_y + 30, f"${tick:,.0f}", _TICK, theme.INK_MUTED,
+                  "middle")
+        )
+        tick += step
 
     # The band spanning bear to bull, with the cases marked on it.
     body.append(
@@ -511,7 +539,7 @@ def valuation_range(
             f'stroke-width="2.5"/>'
         )
         body.append(
-            _text(x, axis_y - 26, case.name, 9.0, theme.INK_MUTED, "middle",
+            _text(x, axis_y - 26, case.name, _TICK, theme.INK_MUTED, "middle",
                   font=_SANS)
         )
         body.append(
@@ -519,7 +547,7 @@ def valuation_range(
                 x,
                 axis_y - 13,
                 f"${case.value_per_share:,.0f}",
-                11.0,
+                _LABEL,
                 theme.INK,
                 "middle",
                 weight="500",
@@ -533,13 +561,13 @@ def valuation_range(
     )
     # Anchored away from the rule and flipped near the right edge so the
     # label is never printed over the line it describes.
-    on_right = price_x > width * 0.78
+    on_right = price_x > width * 0.72
     body.append(
         _text(
             price_x + (-8 if on_right else 8),
-            axis_y + 34,
+            axis_y + 46,
             f"Traded ${market_price:,.2f}",
-            9.6,
+            _LABEL,
             theme.ACCENT_2,
             "end" if on_right else "start",
             weight="500",
@@ -628,11 +656,24 @@ def dcf_bridge(
         centre = pad_l + slot * (index + 0.5)
         top_y = y_of(max(start, end))
         bar_h = abs(y_of(end) - y_of(start))
+        # A floor of two pixels, not nought point eight. A net-cash step is
+        # small against enterprise value and drew as a hairline, leaving its
+        # label floating in sienna above a bar nobody could see.
         body.append(
             f'<rect x="{centre - bar_w / 2:.1f}" y="{top_y:.1f}" '
-            f'width="{bar_w:.1f}" height="{max(bar_h, 0.8):.1f}" '
+            f'width="{bar_w:.1f}" height="{max(bar_h, 2.0):.1f}" '
             f'fill="{colour}" opacity="{1.0 if is_total else 0.86}"/>'
         )
+        # A connector to the next bar, so the bars read as a waterfall
+        # rather than as five unrelated columns.
+        if index < len(geometry) - 1:
+            y = y_of(end)
+            body.append(
+                f'<line x1="{centre + bar_w / 2:.1f}" y1="{y:.1f}" '
+                f'x2="{centre + slot - bar_w / 2:.1f}" y2="{y:.1f}" '
+                f'stroke="{theme.RULE}" stroke-width="1" '
+                f'stroke-dasharray="2 2"/>'
+            )
         body.append(
             _text(
                 centre,
@@ -648,7 +689,7 @@ def dcf_bridge(
         words = label.split()
         if len(words) > 1:
             body.append(
-                _text(centre, height - 17, words[0], 8.4, theme.INK_MUTED,
+                _text(centre, height - 17, words[0], _FINE, theme.INK_MUTED,
                       "middle", font=_SANS)
             )
             body.append(
@@ -657,7 +698,7 @@ def dcf_bridge(
             )
         else:
             body.append(
-                _text(centre, height - 12, label, 8.4, theme.INK_MUTED,
+                _text(centre, height - 12, label, _FINE, theme.INK_MUTED,
                       "middle", font=_SANS)
             )
 
@@ -758,7 +799,7 @@ def free_cash_flow_history(
             font=_SANS,
         )
     )
-    label_width = 8.6 * 0.56 * len(
+    label_width = _FINE * 0.56 * len(
         f"{window}-year mean {_money_precise(mean)}"
     )
     body.append(

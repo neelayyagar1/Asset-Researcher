@@ -127,7 +127,10 @@ def test_input_surfaces_gaps_rather_than_hiding_them():
 
 def test_input_includes_staleness_so_the_model_can_weigh_it():
     text = build_reconciliation_input(_bundle(), _narrative(), MandateProfile())
-    assert "month(s) ago" in text
+    assert "months ago" in text
+    # The parenthesised plural is the loudest machine-written signature a
+    # sentence can carry, and this string is rendered to the reader too.
+    assert "(s)" not in text
 
 
 def test_peer_comparison_reaches_the_model_with_its_caveat():

@@ -513,3 +513,165 @@ def test_the_bridge_names_net_cash_rather_than_calling_it_net_debt():
     out = charts.dcf_bridge(run_dcf(levered), levered)
     assert "net debt" in out and "Less" in out
     assert "net cash" not in out
+
+
+def test_counts_read_as_written_english_not_as_a_template():
+    """"1 divergence(s)" is the single most recognisable sign a sentence was
+    assembled by a program, and it was appearing in section notes and the
+    staleness line, both of which a reader meets in the first screen."""
+    assert components.plural(1, "divergence") == "1 divergence"
+    assert components.plural(2, "divergence") == "2 divergences"
+    assert components.plural(0, "view") == "0 views"
+    assert components.plural(1, "company", "companies") == "1 company"
+    assert components.plural(3, "company", "companies") == "3 companies"
+    assert components.plural(1500, "character") == "1,500 characters"
+
+
+def test_the_valuation_range_draws_a_spread_rather_than_normalising_it_away():
+    """The axis was the data range plus 16% at each end, so a three-fold
+    spread and a five-percent spread drew identically: the one chart whose
+    stated purpose is that the spread is the analysis was the one chart
+    that could not show a spread."""
+    import re
+
+    def marks(cases):
+        out = charts.valuation_range(cases, market_price=300.0)
+        return [
+            float(m) for m in re.findall(
+                rf'<line x1="([\d.]+)"[^>]*stroke="{theme.ACCENT}"', out
+            )
+        ]
+
+    wide = marks([
+        ValuationCase("Bear", 100.0, 0.01, 0.105, 0.25),
+        ValuationCase("Base", 200.0, 0.03, 0.085, 0.50),
+        ValuationCase("Bull", 300.0, 0.07, 0.075, 0.25),
+    ])
+    tight = marks([
+        ValuationCase("Bear", 195.0, 0.01, 0.105, 0.25),
+        ValuationCase("Base", 200.0, 0.03, 0.085, 0.50),
+        ValuationCase("Bull", 205.0, 0.07, 0.075, 0.25),
+    ])
+    assert max(wide) - min(wide) > (max(tight) - min(tight)) * 5
+
+
+def test_the_valuation_range_carries_a_measurable_axis():
+    cases = [ValuationCase("Base", 200.0, 0.03, 0.085, 1.0)]
+    out = charts.valuation_range(cases, market_price=300.0)
+    assert "$0" in out  # anchored at zero rather than fitted to the data
+    assert out.count(f'stroke="{theme.RULE}"') >= 3  # gridlines
+
+
+def test_the_bridge_draws_its_smallest_step():
+    """A net-cash step is small against enterprise value and drew as a
+    0.8px hairline, leaving its label floating above a bar nobody could
+    see."""
+    import re
+
+    from asset_researcher.quant.valuation import run_dcf
+
+    inputs = DcfInputs(
+        base_fcf=100e9, fcf_growth=0.03, discount_rate=0.085,
+        terminal_growth=0.025, forecast_years=10, net_debt=-2e9,
+        shares_outstanding=15e9, basis={},
+    )
+    out = charts.dcf_bridge(run_dcf(inputs), inputs)
+    heights = [float(h) for h in re.findall(r'<rect[^>]*height="([\d.]+)"', out)]
+    assert min(heights) >= 2.0
+    # And the bars are connected, so they read as a waterfall.
+    assert "stroke-dasharray" in out
+
+
+def test_a_negative_bar_does_not_waste_a_whole_band_below_the_axis():
+    """`(int(bottom/step) - 1) * step` subtracted a whole extra step below
+    the minimum, pushing the zero line up the plot."""
+    assert charts._axis_top(300e9, 100e9) == 300e9
+
+
+# ------------------------------------------------------------ formatting
+
+
+def test_zero_is_a_figure_and_absence_is_not():
+    """`if value else "NM"` reported a company with no market
+    capitalisation as unmeasurable, which is the one thing a financial
+    table must never do."""
+    from asset_researcher.ui import format as fmt
+
+    assert fmt.scaled_usd(0.0) == "$0"
+    assert fmt.scaled_usd(None) == "NM"
+
+
+def test_a_small_cap_does_not_round_to_zero_billion():
+    """A $499m company exported as "Market capitalisation: $0B"."""
+    from asset_researcher.ui import format as fmt
+
+    assert fmt.scaled_usd(4.99e8) == "$499M"
+    assert fmt.scaled_usd(1e6) == "$1M"
+    assert fmt.scaled_usd(5.013e12) == "$5,013.0B"
+
+
+def test_negative_zero_does_not_collect_two_signs():
+    from asset_researcher.ui import format as fmt
+
+    assert fmt.signed_pct(-0.0) == "0.0%"
+    assert fmt.signed_pct(0.0) == "0.0%"
+    assert fmt.signed_pct(0.05) == "+5.0%"
+    assert fmt.signed_pct(-0.05) == "(5.0%)" or fmt.signed_pct(-0.05) == "-5.0%"
+
+
+def test_a_non_finite_figure_never_reaches_the_page():
+    """Python's own JSON parser accepts a bare NaN literal, so a malformed
+    upstream payload can carry one all the way to a renderer."""
+    from asset_researcher.ui import format as fmt
+
+    for bad in (float("nan"), float("inf"), float("-inf")):
+        assert fmt.usd(bad) == "NM"
+        assert fmt.pct(bad) == "NM"
+        assert fmt.scaled_usd(bad) == "NM"
+        assert fmt.signed_pct(bad) == "NM"
+
+
+def test_an_absent_value_never_renders_as_an_empty_cell():
+    """An empty cell and a cell holding a missing value must not look
+    identical. Mutating this to return "" left the whole suite green."""
+    out = components.table(
+        [components.Col("a", "A"), components.Col("b", "B")],
+        [{"a": None, "b": ""}],
+    )
+    assert "&mdash;" in out
+    assert "&nbsp;" in out
+
+
+def test_markup_is_collapsed_so_a_markdown_renderer_cannot_break_it():
+    """Streamlit passes these through a Markdown renderer, which reads a
+    blank line as a paragraph break and four leading spaces as a code
+    block. The previous test used two short stats containing no whitespace
+    to collapse, so it passed with the collapsing removed."""
+    out = components.finding(
+        claim="A claim\n\n    with an indented second paragraph",
+        data="Figures\n\nin two blocks",
+        assessment="An assessment",
+        agrees=False,
+        materiality="high",
+    )
+    assert "\n" not in out
+    assert "    " not in out
+
+
+def test_the_note_is_wrapped_so_it_gets_the_reading_measure():
+    """Returning the markdown unwrapped dropped the measure, the type size
+    and the citation styling, and no test noticed."""
+    out = components.prose("<p>Body.</p>")
+    assert out.startswith('<div class="ar-prose">')
+    assert out.endswith("</div>")
+
+
+def test_a_source_url_is_attribute_escaped():
+    """These are assembled from filing metadata rather than typed here, and
+    removing the escaping left the suite green."""
+    out = components.table(
+        [components.Col("link", "Source", link=True)],
+        [{"link": 'https://sec.gov/a.htm?x="><script>alert(1)</script>'}],
+    )
+    assert "<script>" not in out
+    assert "&quot;" in out

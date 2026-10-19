@@ -29,10 +29,35 @@ from asset_researcher.ui import theme
 _WS_BETWEEN_TAGS = re.compile(r">\s+<")
 _RUNS = re.compile(r"\s{2,}")
 
+# Tab, newline and carriage return survive; the rest of C0 does not.
+_CONTROL = {c: None for c in range(32) if c not in (9, 10, 13)}
+_CONTROL[127] = None
+
 
 def _one_line(markup: str) -> str:
     """Collapse the whitespace a Markdown renderer would misread."""
     return _RUNS.sub(" ", _WS_BETWEEN_TAGS.sub("><", markup.strip()))
+
+
+def escape_text(value: str) -> str:
+    """Escape a composed sentence for the page.
+
+    Composed sentences mix filed figures with model judgements, so they are
+    escaped like anything else that passes through a model.
+    """
+    return escape(str(value))
+
+
+def plural(count: int, noun: str, plural_form: str | None = None) -> str:
+    """"1 divergence", "2 divergences". Never "1 divergence(s)".
+
+    The parenthesised plural is the single most recognisable sign that a
+    sentence was assembled by a program rather than written, and it was
+    appearing in the section notes and the staleness line, both of which a
+    reader meets in the first screen.
+    """
+    word = noun if count == 1 else (plural_form or noun + "s")
+    return f"{count:,} {word}"
 
 
 def _text(value: object) -> str:
@@ -44,7 +69,9 @@ def _text(value: object) -> str:
     """
     if value is None:
         return "&mdash;"
-    rendered = str(value).strip()
+    # C0 control characters survive html.escape, and a NUL makes the
+    # document non-conforming: browsers substitute U+FFFD.
+    rendered = str(value).translate(_CONTROL).strip()
     return escape(rendered) if rendered else "&nbsp;"
 
 
@@ -85,6 +112,9 @@ class Stat:
     value: str
     note: str = ""
     tone: str = ""  # "" | "pos" | "neg"
+    # The one figure in a strip that this report authored, set a rank
+    # larger than the ones it was handed.
+    lead: bool = False
 
 
 def stat_strip(stats: Iterable[Stat]) -> str:
@@ -104,7 +134,7 @@ def stat_strip(stats: Iterable[Stat]) -> str:
         # cells; a missing note pulls the next stat's label up a row and
         # the whole strip staircases.
         cells.append(
-            f'<div class="ar-stat">'
+            f'<div class="ar-stat{" lead" if stat.lead else ""}">'
             f'<div class="ar-stat-label">{_text(stat.label)}</div>'
             f'<div class="ar-stat-value {tone}">{_text(stat.value)}</div>'
             f'<div class="ar-stat-note">{_text(stat.note) if stat.note else "&nbsp;"}</div>'
@@ -159,6 +189,21 @@ def block(*parts: str) -> str:
     """Content aligned under the section rule, leaving the rail empty."""
     body = "".join(part for part in parts if part)
     return f'<div class="ar-block">{body}</div>' if body else ""
+
+
+def chips(items: Sequence[tuple[str, str]]) -> str:
+    """Provenance in a line beside the company name.
+
+    Each chip links to the note at the foot carrying the full wording. The
+    three states these replace (citations located, model divergence, filing
+    age) are real and belong on the page; they do not belong in the most
+    valuable space on it.
+    """
+    links = "".join(
+        f'<a class="{tone}" href="#s-provenance">{_text(label)}</a>'
+        for label, tone in items
+    )
+    return _one_line(f'<div class="ar-chips">{links}</div>') if links else ""
 
 
 def nav(labels: Sequence[str]) -> str:

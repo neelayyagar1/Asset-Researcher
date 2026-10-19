@@ -92,7 +92,9 @@ class Report:
             shown = ", ".join(sorted(v.unsupported_numbers)[:5])
             return (
                 "warning",
-                f"{len(v.unsupported_numbers)} figure(s) in the prose could "
+                f"{len(v.unsupported_numbers)} "
+                f"{'figure' if len(v.unsupported_numbers) == 1 else 'figures'} "
+                f"in the prose could "
                 f"not be matched to a filed value ({shown}). Figures in the "
                 f"tables are as filed; treat any number in the prose as "
                 f"unsupported. {scope}",

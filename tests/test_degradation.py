@@ -222,3 +222,29 @@ def test_truncated_sections_are_disclosed_with_the_amount_lost(tmp_path):
     truncation = [g for g in bundle.gaps if "Truncated" in g.reason]
     assert truncation, "an oversized section was truncated without saying so"
     assert "characters" in truncation[0].reason
+
+
+def test_a_validation_warning_reaches_the_reader_not_just_the_bundle():
+    """Warnings were computed and discarded, so `check_period_alignment`
+    was dead from the reader's point of view and a filer reporting zero
+    revenue against a hundred billion of net income exported as a clean
+    note carrying a price target."""
+    from asset_researcher.analysis.bundle import SourceBundle
+    from asset_researcher.quant.validate import ValidationResult
+
+    bundle = SourceBundle(
+        ticker="T", cik=1, company_name="T", sector_class="standard",
+        display_industry="x", as_of="2026-01-01",
+    )
+    result = ValidationResult()
+    result.add("revenue_vs_net_income", "Revenue is less than net income.",
+               severity="warning")
+    result.add("accounting_identity", "Assets do not equal liabilities "
+               "plus equity.", severity="error")
+
+    for issue in result.issues:
+        bundle.add_gap(f"xbrl:{issue.check}", issue.message, issue.severity)
+
+    severities = {g.severity for g in bundle.gaps}
+    assert severities == {"warning", "error"}
+    assert any("less than net income" in g.reason for g in bundle.gaps)

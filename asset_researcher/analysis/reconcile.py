@@ -20,6 +20,8 @@ from asset_researcher.analysis.bundle import SourceBundle
 from asset_researcher.config.prompt_loader import load_prompt
 from asset_researcher.analysis.mandate import MandateProfile
 from asset_researcher.analysis.narrative import NarrativeResult
+from asset_researcher.analysis.statements import periods_of
+from asset_researcher.quant.derived import compute_derived
 from asset_researcher.llm.provider import LLMProvider
 
 
@@ -126,12 +128,25 @@ def _format_series(bundle: SourceBundle) -> str:
         )
         lines.append(f"  {metric}: {rendered}")
 
-    if bundle.derived:
+    if bundle.derived and bundle.series:
+        # Across periods, not just the latest. The model was handed a
+        # single column of derived metrics, so a deteriorating accrual
+        # ratio or a falling cash conversion was invisible to it even
+        # where the figures were computed: it could see the level and
+        # never the direction, which is where the finding usually is.
+        periods = periods_of(bundle.series, 4)
+        history: dict[str, list[tuple[str, float]]] = {}
+        for offset, label in enumerate(periods):
+            index = offset - len(periods)
+            for name, value in compute_derived(bundle.series, index).items():
+                if value is not None:
+                    history.setdefault(name, []).append((label, value))
+
         lines.append("")
-        lines.append("Derived (computed, not filed):")
-        for name, value in sorted(bundle.derived.items()):
-            if value is not None:
-                lines.append(f"  {name}: {value:,.4g}")
+        lines.append("Derived (computed, not filed), by period:")
+        for name, points in sorted(history.items()):
+            rendered = ", ".join(f"{label}={value:,.4g}" for label, value in points)
+            lines.append(f"  {name}: {rendered}")
 
     if bundle.health_scores:
         lines.append("")

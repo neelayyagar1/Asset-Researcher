@@ -71,6 +71,8 @@ FONT_MONO = "'Spline Sans Mono', ui-monospace, Menlo, monospace"
 CHART_TICK_PX = 10.0
 CHART_LABEL_PX = 11.0
 CHART_TITLE_PX = 13.0
+# One step below the tick, for a series name beside the figure it names.
+CHART_FINE_PX = 9.0
 
 _FONT_IMPORT = (
     "@import url('https://fonts.googleapis.com/css2?"
@@ -95,6 +97,7 @@ _SCALE = """
   --s1: 4px; --s2: 8px; --s3: 12px; --s4: 16px;
   --s5: 24px; --s6: 32px; --s7: 48px; --s8: 72px;
   --rail: 9rem;
+  --nav-h: 41px;
   --ease: cubic-bezier(.2,.6,.2,1);
 """
 
@@ -208,10 +211,15 @@ table.ar-table thead th, .ar-status .tag, .ar-finding-grid .lbl {
   padding: var(--s4) 0 var(--s5); margin: 0 0 var(--s6); align-items: start; }
 .ar-stat { display: contents; }
 .ar-stat-label { color: var(--ink-muted); }
-.ar-stat-value { font-family: var(--sans); font-size: var(--t-d2);
-  font-weight: 500; letter-spacing: var(--t-d2-ls);
-  line-height: var(--t-d2-lh); color: var(--ink); margin-top: var(--s2);
+/* Two ranks, not one. The strip set the traded price, the market multiple
+   and the modelled value at identical size, so the only figure this
+   product authored tied with four it was handed. */
+.ar-stat-value { font-family: var(--sans); font-size: var(--t-h1);
+  font-weight: 500; letter-spacing: var(--t-h1-ls);
+  line-height: var(--t-h1-lh); color: var(--ink); margin-top: var(--s2);
   font-variant-numeric: tabular-nums lining-nums; }
+.ar-stat.lead .ar-stat-value { font-size: var(--t-d2);
+  letter-spacing: var(--t-d2-ls); line-height: var(--t-d2-lh); }
 .ar-stat-value.pos { color: var(--positive); }
 .ar-stat-value.neg { color: var(--negative); }
 .ar-stat-value.nm { color: var(--ink-muted); font-size: var(--t-h2);
@@ -226,7 +234,8 @@ table.ar-table thead th, .ar-status .tag, .ar-finding-grid .lbl {
    structural rather than decorative. */
 .ar-sec { display: grid; grid-template-columns: var(--rail) minmax(0, 1fr);
   column-gap: var(--s5); align-items: baseline;
-  margin: var(--s7) 0 var(--s4); scroll-margin-top: var(--s5); }
+  margin: var(--s8) 0 var(--s5);
+  scroll-margin-top: calc(var(--nav-h) + var(--s3)); }
 .ar-sec-label { color: var(--ink); }
 .ar-sec-body { display: flex; align-items: center; gap: var(--s3); }
 .ar-sec-rule { flex: 1; height: 1px;
@@ -249,7 +258,12 @@ table.ar-table thead th, .ar-status .tag, .ar-finding-grid .lbl {
 
 /* -------------------------------------------------------------- tables */
 
-.ar-table-wrap { overflow-x: auto; margin-bottom: var(--s2);
+/* Only a table that actually overflows becomes a scroll container.
+   `overflow-x: auto` on every wrap also forces `overflow-y: auto`, which
+   made the wrap the scrollport and meant a sticky table header left with
+   the table instead of staying put. */
+.ar-table-wrap { margin-bottom: var(--s2); }
+.ar-table-wrap:has(> .ar-table-scroll) { overflow-x: auto;
   scrollbar-width: thin; }
 table.ar-table { width: 100%; border-collapse: collapse;
   font-size: var(--t-data); line-height: var(--t-data-lh);
@@ -258,7 +272,7 @@ table.ar-table thead th { color: var(--ink-muted); text-align: left;
   padding: var(--s2) var(--s3) var(--s1); vertical-align: bottom;
   border-top: 1px solid var(--ink); border-bottom: 1px solid var(--rule);
   white-space: nowrap; background: var(--surface);
-  position: sticky; top: 0; z-index: 2; }
+  position: sticky; top: var(--nav-h); z-index: 2; }
 table.ar-table thead th.num { text-align: right; }
 table.ar-table tbody td { padding: 6px var(--s3);
   border-bottom: 1px solid var(--rule-soft); color: var(--ink-soft);
@@ -324,6 +338,35 @@ table.ar-statement tbody tr.statement-derived td.rowhead {
   color: var(--ink-muted); padding-left: var(--s5); }
 table.ar-statement tbody tr.statement-line td { border-bottom: none; }
 table.ar-statement tbody td.rowhead { white-space: nowrap; }
+
+/* ---------------------------------------------------------- summary */
+
+/* Directly under the headline figures, which is the most valuable space on
+   the page. It used to hold three provenance notices: how many citations
+   resolved, how far the model sits from the market, how old the filing is.
+   All true, none of it analysis. */
+.ar-summary { max-width: 72ch; margin: 0 0 var(--s7);
+  border-left: 1px solid var(--accent); padding-left: var(--s4); }
+.ar-summary p { font-size: var(--t-read); line-height: 1.58;
+  color: var(--ink); margin: 0 0 var(--s3); }
+.ar-summary p:first-child { font-size: var(--t-h2); line-height: 1.45;
+  color: var(--ink); }
+.ar-summary p:last-child { margin-bottom: 0; font-size: var(--t-micro);
+  line-height: 1.45; color: var(--ink-muted); }
+
+/* The provenance chips beside the company name, each a jump to the note
+   at the foot that carries the full wording. */
+.ar-chips { display: flex; gap: var(--s2); flex-wrap: wrap;
+  margin-top: var(--s3); }
+.ar-chips a { font-family: var(--sans); font-size: var(--t-label);
+  letter-spacing: var(--t-label-ls); text-transform: uppercase;
+  font-weight: 600; text-decoration: none; color: var(--ink-muted);
+  border: 1px solid var(--rule); padding: 0.25em 0.5em;
+  transition: color 120ms var(--ease), border-color 120ms var(--ease); }
+.ar-chips a:hover { color: var(--ink); border-color: var(--ink); }
+.ar-chips a.ok { color: var(--positive); border-color: var(--positive); }
+.ar-chips a.warn { color: var(--caution); border-color: var(--caution); }
+.ar-chips a.bad { color: var(--negative); border-color: var(--negative); }
 
 /* ---------------------------------------------------------- status bar */
 
@@ -395,11 +438,22 @@ table.ar-statement tbody td.rowhead { white-space: nowrap; }
    the scroll, which is exactly where a list that only exists at the top of
    the page is useless. Scrolls horizontally on a narrow screen rather than
    wrapping to three lines and eating the viewport. */
+/* Streamlit wraps every markdown block in two divs whose height is the
+   block's own, so a sticky child has zero travel and scrolls away. These
+   two are dissolved so the nav's containing block is the scrollport. */
+[data-testid="stElementContainer"]:has(nav.ar-nav),
+[data-testid="stMarkdownContainer"]:has(> nav.ar-nav) { display: contents; }
+
 .ar-nav { position: sticky; top: 0; z-index: 40; display: flex;
   gap: var(--s4); overflow-x: auto; scrollbar-width: none;
   background: var(--paper); border-top: 1px solid var(--rule);
-  border-bottom: 1px solid var(--ink); margin: 0 0 var(--s6);
-  padding: var(--s3) 0; }
+  border-bottom: 1px solid var(--ink); margin: 0 0 var(--s7);
+  padding: var(--s3) var(--s6) var(--s3) 0;
+  /* Seventeen sections overflow the measure at any realistic width. The
+     mask says so: without it the last label was cut mid-word and 600px of
+     navigation was invisible and unsignalled. */
+  mask-image: linear-gradient(90deg, #000 calc(100% - 44px), transparent);
+  -webkit-mask-image: linear-gradient(90deg, #000 calc(100% - 44px), transparent); }
 .ar-nav::-webkit-scrollbar { display: none; }
 .ar-nav a { font-family: var(--sans); font-size: var(--t-label);
   line-height: var(--t-label-lh); letter-spacing: var(--t-label-ls);
@@ -445,6 +499,10 @@ table.ar-statement tbody td.rowhead { white-space: nowrap; }
   .ar-split > div + div { border-left: none; padding-left: 0;
     border-top: 1px solid var(--rule); }
   .ar-title { font-size: var(--t-d2); }
+  /* A nowrap section note measured 359px inside a 390px viewport and
+     pushed the entire document into horizontal scroll. */
+  .ar-sec-note { white-space: normal; }
+  table.ar-table thead th { position: static; }
 }
 """
 
@@ -507,10 +565,15 @@ button[data-testid="stExpandSidebarButton"]:hover,
   font-family: var(--sans); font-size: var(--t-body); background: var(--paper);
   border: 1px solid var(--rule); border-radius: 0; color: var(--ink);
   box-shadow: none; transition: border-color 120ms var(--ease); }
-.stTextInput input:focus, .stTextArea textarea:focus {
-  border-color: var(--accent); box-shadow: none; outline: none; }
+/* The ring is on the wrapper, because that is where the visible border
+   is; `outline: none` on the inner input beat the global focus-visible
+   rule and left keyboard users with no indication at all. */
+.stTextInput [data-baseweb="input"]:focus-within,
+.stTextArea [data-baseweb="textarea"]:focus-within {
+  border-color: var(--accent); outline: 2px solid var(--accent);
+  outline-offset: 1px; }
 .stTextInput input::placeholder, .stTextArea textarea::placeholder {
-  color: var(--neutral); }
+  color: var(--ink-muted); opacity: 1; }
 
 .stButton > button, .stDownloadButton > button {
   font-family: var(--sans); font-size: var(--t-label);

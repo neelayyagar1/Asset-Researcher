@@ -23,6 +23,7 @@ from asset_researcher.quant.valuation import sensitivity_grid
 from asset_researcher.ui import charts, markdown
 from asset_researcher.ui import components as ui
 from asset_researcher.ui.components import Col, Stat
+from asset_researcher.ui.summary import summary_block
 
 # Charts are drawn at the pixel width they will occupy, so a type size in an
 # SVG is the type size beside it. HALF is one of two columns inside the
@@ -57,6 +58,27 @@ def usd(value: float | None) -> str:
     return f"${value:,.2f}" if value is not None else "NM"
 
 
+def provenance_items(report: Report) -> list[tuple[str, str]]:
+    """The three provenance states, compressed to chips."""
+    verification = report.narrative.verification
+    level, _ = report.verification_banner
+    tone = {"success": "ok", "warning": "warn", "error": "bad"}[level]
+
+    items = [
+        (
+            f"{verification.verified_citations}/"
+            f"{verification.total_citations} cited",
+            tone,
+        )
+    ]
+    implied = report.bundle.implied
+    if implied is not None and implied.caveat and implied.model_vs_market:
+        items.append((f"Model {implied.model_vs_market:+.0%}", "warn"))
+    if report.bundle.filing_dates.get("10-K"):
+        items.append((f"Filed {report.bundle.filing_dates['10-K']}", ""))
+    return items
+
+
 def sections(report: Report) -> list[Section]:
     """Every section of the note, in reading order."""
     out: list[Section] = []
@@ -77,12 +99,16 @@ def sections(report: Report) -> list[Section]:
     table = bundle.comps
     management = rec.management
 
+    emit("Summary", "What the price requires, and where this departs")
+    add(ui.block(summary_block(report)))
+
     # -------------------------------------------------------- variant view
 
     emit(
         "Variant view",
         "Where this analysis departs from consensus"
-        + (f", {len(rec.variant_views)} view(s)" if rec.variant_views else ""),
+        + (f", {ui.plural(len(rec.variant_views), 'view')}"
+       if rec.variant_views else ""),
     )
     if rec.variant_views:
         for view in rec.variant_views:
@@ -318,8 +344,9 @@ def sections(report: Report) -> list[Section]:
 
     emit(
         "Reconciliation",
-        f"Narrative against reported figures, {len(rec.divergences)} "
-        f"divergence(s) and {len(rec.corroborations)} corroborated",
+        f"Narrative against reported figures: "
+        f"{ui.plural(len(rec.divergences), 'divergence')}, "
+        f"{len(rec.corroborations)} corroborated",
     )
     add(
         ui.block(
@@ -640,5 +667,29 @@ def sections(report: Report) -> list[Section]:
         )
     )
 
+
+    # The provenance the summary displaced, in full, at the foot where a
+    # reader goes to check rather than to decide.
+    emit("Provenance", "What was read, what was checked, what was missing")
+    level, message = report.verification_banner
+    add(
+        ui.block(
+            ui.status(
+                level,
+                {
+                    "success": "Citations located",
+                    "warning": "Citations partial",
+                    "error": "Citations absent",
+                }[level],
+                message,
+            ),
+            ui.status("warning", "Model divergence", report.bundle.implied.caveat)
+            if report.bundle.implied is not None and report.bundle.implied.caveat
+            else "",
+            ui.status("info", "Source currency", report.bundle.staleness_note)
+            if report.bundle.staleness_note
+            else "",
+        )
+    )
 
     return out
