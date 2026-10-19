@@ -368,10 +368,16 @@ $600B against a $416B maximum.
 
 ## 11. What a review found
 
-Five reviewer profiles went through the product and the code: a fundamental
-PM, a quantitative PM auditing the data, an equity research associate, a
-compliance officer, and a staff engineer. Most of what is described above as
-"an earlier version did X" came out of that pass. The ones worth naming:
+Eleven reviewer profiles went through the product and the code across two
+passes. First a fundamental PM, a quantitative PM auditing the data, an
+equity research associate, a compliance officer and a staff engineer. Then,
+because one kind of investor is not a panel: a capital-preservation
+long-only PM, a dedicated short-seller, a market-neutral relative-value PM,
+a design director, an interaction and accessibility engineer, and an
+adversarial QA engineer who reproduced every defect before reporting it.
+
+Most of what is described above as "an earlier version did X" came out of
+those passes. The ones worth naming:
 
 - Net debt ignored marketable securities, reporting a net-cash company as
   levered. Fixing it moved the Apple target from $133 to $210.
