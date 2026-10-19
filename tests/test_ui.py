@@ -167,17 +167,28 @@ def test_summary_rows_are_ruled_off_beneath_the_peers():
     )
 
 
-def test_the_sensitivity_grid_is_shaded_against_the_traded_price():
-    """The reader's question is which assumptions would justify the price,
-    so the fill marks the boundary rather than the magnitude."""
+def test_only_the_cells_that_clear_the_traded_price_are_shaded():
+    """The reader's question is which assumptions would justify the price.
+    Shading both directions restated the sign of every cell: on a model
+    diverging far from the market, nineteen of twenty came out tinted and
+    the grid read as a wash rather than a boundary."""
     grid = [
         {"WACC": "8.0%", "2.0%": "$400.00", "2.5%": "$200.00"},
         {"WACC": "9.0%", "2.0%": "$100.00", "2.5%": "NM"},
     ]
     out = components.sensitivity_table(grid, reference_price=300.0)
-    assert theme.POSITIVE in out  # the $400 cell clears the price
-    assert theme.NEGATIVE in out  # the $100 cell does not
+    assert out.count("color-mix") == 1  # only the $400 cell
+    assert theme.POSITIVE in out
+    assert theme.NEGATIVE not in out
     assert "NM" in out
+
+
+def test_a_grid_where_nothing_clears_the_price_is_left_clean():
+    """And that is the finding: no assumption in this range gets you
+    there."""
+    grid = [{"WACC": "9.0%", "2.0%": "$100.00", "2.5%": "$120.00"}]
+    out = components.sensitivity_table(grid, reference_price=300.0)
+    assert "color-mix" not in out
 
 
 def test_a_sensitivity_grid_without_a_price_is_rendered_unshaded():
@@ -313,8 +324,13 @@ def test_valuation_range_marks_the_traded_price_separately_from_the_cases():
     ]
     out = charts.valuation_range(cases, market_price=313.45)
     assert "Traded $313.45" in out
+    # Sienna is the market everywhere in this report: the traded price here,
+    # the prevailing view in a split.
     assert theme.ACCENT_2 in out
-    assert out.count("<circle") == 3
+    # Ticks, not filled dots on a track. A dot on a track is a slider, and
+    # nothing on this scale is draggable.
+    assert "<circle" not in out
+    assert out.count(f'stroke="{theme.ACCENT}"') == 3
 
 
 def test_valuation_range_without_a_price_is_not_drawn():
@@ -474,3 +490,26 @@ def test_the_page_and_the_export_build_one_headline():
     from asset_researcher.ui import export
 
     assert "headline_stats(report)" in inspect.getsource(export.report_to_html)
+
+
+def test_the_bridge_names_net_cash_rather_than_calling_it_net_debt():
+    """The bridge step is minus net debt, so a net-cash filer adds here. It
+    was labelled "Net debt $33.8B" on a company holding net cash, which
+    reads as debt being added to enterprise value."""
+    from asset_researcher.quant.valuation import run_dcf
+
+    cash_rich = DcfInputs(
+        base_fcf=100e9, fcf_growth=0.03, discount_rate=0.085,
+        terminal_growth=0.025, forecast_years=10, net_debt=-33.8e9,
+        shares_outstanding=15e9, basis={},
+    )
+    # Multi-word bar labels are drawn as two stacked lines, so the words
+    # are asserted rather than the joined string.
+    out = charts.dcf_bridge(run_dcf(cash_rich), cash_rich)
+    assert "net cash" in out and "Plus" in out
+    assert "net debt" not in out
+
+    levered = DcfInputs(**{**cash_rich.__dict__, "net_debt": 60e9})
+    out = charts.dcf_bridge(run_dcf(levered), levered)
+    assert "net debt" in out and "Less" in out
+    assert "net cash" not in out

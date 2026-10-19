@@ -82,7 +82,10 @@ def test_the_export_carries_the_verification_state_and_the_counter_case(report):
     """A circulated note detached from the application is exactly where a
     reader most needs the caveats, so they travel with it."""
     html = report_to_html(report)
-    assert "Citations verified" in html or "Citations partial" in html
+    # "Located", not "verified": the check establishes that the quoted text
+    # sits where the citation says, not that it supports the claim.
+    assert "Citations located" in html or "Citations partial" in html
+    assert "Citations verified" not in html
     assert "Disconfirming evidence" in html
     assert "Against this thesis" in html
 
@@ -95,7 +98,7 @@ def test_the_disclaimer_travels_with_the_file(report):
 
 def test_the_export_carries_its_sources_and_citations(report):
     html = report_to_html(report)
-    assert "Documents used" in html
+    assert "Sources" in html
     assert "Citations" in html
     assert "sec.gov" in html or "example" in html
 
@@ -140,8 +143,10 @@ def test_the_export_carries_the_sensitivity_grid(report):
     """A model review does not pass without one, and it existed only on the
     screen while the file is the thing that gets circulated."""
     html = report_to_html(report)
-    assert "Sensitivity" in html
+    # The grid sits inside the Valuation section rather than carrying its
+    # own rail label, so assert on the grid itself.
     assert "WACC" in html
+    assert "which assumptions would justify" in html
 
 
 def test_the_export_and_the_page_read_one_disclaimer(report):

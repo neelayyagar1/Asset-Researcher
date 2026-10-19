@@ -34,6 +34,7 @@ from asset_researcher.quant.valuation import (
 )
 from asset_researcher.ui import charts, markdown, theme
 from asset_researcher.ui import components as ui
+from asset_researcher.ui import document
 from asset_researcher.ui.headline import headline_stats
 from asset_researcher.ui.components import Col, Stat
 
@@ -85,10 +86,9 @@ def report_to_html(report: Report, notice: str = "") -> str:
         ui.masthead(
             bundle.company_name,
             bundle.ticker,
-            "Equity research note",
+            bundle.as_of,
             [
                 bundle.display_industry,
-                f"As of {bundle.as_of}",
                 f"Prepared for {report.mandate.summary()}",
             ],
         ),
@@ -100,7 +100,7 @@ def report_to_html(report: Report, notice: str = "") -> str:
         ui.status(
             level,
             {
-                "success": "Citations verified",
+                "success": "Citations located",
                 "warning": "Citations partial",
                 "error": "Citations absent",
             }[level],
@@ -112,15 +112,10 @@ def report_to_html(report: Report, notice: str = "") -> str:
     if bundle.staleness_note:
         body.append(ui.status("info", "Source currency", bundle.staleness_note))
 
-    body.extend(_variant_section(rec))
-    body.extend(_valuation_section(bundle, cases, price))
-    body.extend(_thesis_section(rec))
-    body.extend(_reconciliation_section(rec))
-    body.extend(_financials_section(bundle))
-    body.extend(_peers_section(bundle))
-    body.extend(_management_section(rec))
-    body.extend(_note_section(report))
-    body.extend(_sources_section(report))
+    # One section list, rendered by both surfaces. They used to be built
+    # separately, which is how the sensitivity grid existed on screen for
+    # weeks while the file a reader actually forwards did not carry one.
+    body.extend(section.html for section in document.sections(report))
 
     body.append(
         '<p class="ar-foot" style="margin-top:2.6rem;border-top:1px solid '
@@ -133,7 +128,7 @@ def report_to_html(report: Report, notice: str = "") -> str:
         '<html lang="en"><head><meta charset="utf-8">'
         '<meta name="viewport" content="width=device-width,initial-scale=1">'
         f"<title>{escape(title)}</title>"
-        f"{theme.stylesheet()}"
+        f"{theme.document_stylesheet()}"
         "<style>"
         "body{margin:0;background:var(--paper);color:var(--ink);"
         "font-family:var(--sans);font-size:14.5px;line-height:1.62;"

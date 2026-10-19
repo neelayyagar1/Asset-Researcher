@@ -52,19 +52,27 @@ def _text(value: object) -> str:
 
 
 def masthead(
-    title: str, ticker: str, eyebrow: str, subline: Sequence[str]
+    title: str, ticker: str, provenance: str, subline: Sequence[str]
 ) -> str:
-    """Company name, ticker and the provenance line beneath it."""
+    """Company name, ticker, and the provenance line beneath it.
+
+    The eyebrow above the title is gone. A small tracked label announcing
+    "EQUITY RESEARCH NOTE" above a heading that already says what it is adds
+    a rank to the hierarchy and carries no information; the heading speaks
+    for itself. The report date moves into the left rail, where the rest of
+    the page keeps its quiet provenance.
+    """
     parts = '<span class="sep">/</span>'.join(
         f"<span>{_text(p)}</span>" for p in subline if p
     )
     return _one_line(
         f'<div class="ar-masthead">'
-        f'<div class="ar-eyebrow">{_text(eyebrow)}</div>'
-        f'<div class="ar-title">{_text(title)}'
-        f'<span class="ar-ticker">{_text(ticker)}</span></div>'
+        f'<div class="rail">{_text(provenance)}</div>'
+        f"<div>"
+        f'<h1 class="ar-title">{_text(title)}'
+        f'<span class="ar-ticker">{_text(ticker)}</span></h1>'
         f'<div class="ar-subline">{parts}</div>'
-        f"</div>"
+        f"</div></div>"
     )
 
 
@@ -91,16 +99,16 @@ def stat_strip(stats: Iterable[Stat]) -> str:
         tone = stat.tone
         if stat.value.strip() in {"NM", "Unsolvable", "n/a", "&mdash;"}:
             tone = "nm"
-        note = (
-            f'<div class="ar-stat-note">{_text(stat.note)}</div>'
-            if stat.note
-            else ""
-        )
+        # The note cell is always emitted, even when empty. `.ar-stat` is
+        # `display: contents`, so each stat must occupy exactly three grid
+        # cells; a missing note pulls the next stat's label up a row and
+        # the whole strip staircases.
         cells.append(
             f'<div class="ar-stat">'
             f'<div class="ar-stat-label">{_text(stat.label)}</div>'
             f'<div class="ar-stat-value {tone}">{_text(stat.value)}</div>'
-            f"{note}</div>"
+            f'<div class="ar-stat-note">{_text(stat.note) if stat.note else "&nbsp;"}</div>'
+            f"</div>"
         )
     return _one_line(f'<div class="ar-stats">{"".join(cells)}</div>')
 
@@ -108,14 +116,62 @@ def stat_strip(stats: Iterable[Stat]) -> str:
 # ---------------------------------------------------------------- framing
 
 
+def slug(label: str) -> str:
+    """A stable anchor id for a section, so the index can reach it."""
+    return "s-" + re.sub(r"[^a-z0-9]+", "-", label.lower()).strip("-")
+
+
 def section(label: str, note: str = "") -> str:
-    """A section label with a rule running to the right margin."""
+    """A section label in the left rail, with a rule across the content
+    column that fades toward the margin.
+
+    The label sits in the rail rather than above the content because that
+    is what gives the page a second axis. Everything in one centred column
+    with even vertical rhythm is the shape of a template.
+    """
     trailing = f'<div class="ar-sec-note">{_text(note)}</div>' if note else ""
     return _one_line(
-        f'<div class="ar-sec">'
+        f'<div class="ar-sec" id="{slug(label)}">'
         f'<div class="ar-sec-label">{_text(label)}</div>'
-        f'<div class="ar-sec-rule"></div>{trailing}</div>'
+        f'<div class="ar-sec-body"><div class="ar-sec-rule"></div>'
+        f"{trailing}</div></div>"
     )
+
+
+def row(*parts: str) -> str:
+    """Two or more pieces side by side, inside the content column.
+
+    Laid out here rather than with Streamlit columns, because a Streamlit
+    column is its own full-width block outside this grid: charts placed in
+    one escaped the content column and stopped lining up with the tables
+    above them. Doing it in our own markup is also what lets the screen and
+    the exported file be the same object.
+    """
+    kept = [part for part in parts if part]
+    if not kept:
+        return ""
+    if len(kept) == 1:
+        return kept[0]
+    return f'<div class="ar-row">{"".join(kept)}</div>'
+
+
+def block(*parts: str) -> str:
+    """Content aligned under the section rule, leaving the rail empty."""
+    body = "".join(part for part in parts if part)
+    return f'<div class="ar-block">{body}</div>' if body else ""
+
+
+def index(labels: Sequence[str]) -> str:
+    """The sticky section index.
+
+    The report is one continuous document rather than nine tabs, because a
+    research note is read top to bottom and then jumped back through. This
+    is the jumping back.
+    """
+    links = "".join(
+        f'<a href="#{slug(label)}">{_text(label)}</a>' for label in labels
+    )
+    return _one_line(f'<nav class="ar-index">{links}</nav>')
 
 
 def caption(text: str) -> str:
@@ -383,15 +439,21 @@ def _parse_money(text: str) -> float | None:
 
 
 def _tint(ratio: float) -> str:
-    """A fill whose strength tracks distance from the traded price.
+    """Fill only the cells that clear the traded price.
 
-    Capped at 30% divergence so one extreme corner does not saturate the
-    whole grid, and kept pale: the number has to stay the most legible thing
-    in the cell.
+    The question a reader brings to this grid is which assumptions would
+    justify the price, so the fill answers that and nothing else. Shading
+    both directions restated the sign of every cell: on a model diverging
+    far from the market, nineteen of twenty cells came out tinted and the
+    reader saw a wash rather than a boundary.
+
+    When no cell clears the price the grid is clean, and that is the
+    finding: no assumption in this range gets you there.
     """
-    strength = min(abs(ratio) / 0.30, 1.0) * 0.17
-    base = theme.POSITIVE if ratio >= 0 else theme.NEGATIVE
-    return f"color-mix(in srgb, {base} {strength * 100:.0f}%, transparent)"
+    if ratio <= 0:
+        return "transparent"
+    strength = 0.05 + min(ratio / 0.40, 1.0) * 0.14
+    return f"color-mix(in srgb, {theme.POSITIVE} {strength * 100:.0f}%, transparent)"
 
 
 # --------------------------------------------------------------- findings
@@ -457,20 +519,20 @@ def bullets(items: Sequence[str]) -> str:
 # ------------------------------------------------------------- cover page
 
 
-def cover(headline: str, lede: str, pillars: Sequence[tuple[str, str]]) -> str:
-    """The pre-report state.
+def open_state(headline: str, lede: str, hint: str) -> str:
+    """What the application shows before a report exists.
 
-    An empty application is the first thing anyone sees, and "enter a ticker"
-    in a grey box says nothing about what the tool guarantees. This states
-    the three claims the engine is built to make good on.
+    Not a cover page. The previous version was a marketing headline over a
+    three-up 01/02/03 pillar grid, which is a landing page for a product
+    with one user and was the first thing any reader saw. Numbered pillars
+    of heading-plus-paragraph are also the single most recognisable
+    generated-page pattern there is.
+
+    What replaces it is the instrument: a rule, the name, what comes out,
+    and where to start.
     """
-    blocks = "".join(
-        f'<div><div class="n">{index:02d}</div>'
-        f'<div class="h">{_text(title)}</div><p>{_text(body)}</p></div>'
-        for index, (title, body) in enumerate(pillars, start=1)
-    )
     return _one_line(
-        f'<div class="ar-cover"><h1>{_text(headline)}</h1>'
-        f'<p class="lede">{_text(lede)}</p></div>'
-        f'<div class="ar-guarantee">{blocks}</div>'
+        f'<div class="ar-open"><h1>{_text(headline)}</h1>'
+        f'<p class="lede">{_text(lede)}</p>'
+        f'<p class="hint">{_text(hint)}</p></div>'
     )

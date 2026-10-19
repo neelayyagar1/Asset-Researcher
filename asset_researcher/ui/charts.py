@@ -34,11 +34,12 @@ from asset_researcher.quant.series import MetricSeries
 from asset_researcher.quant.valuation import DcfInputs, DcfResult, ValuationCase
 from asset_researcher.ui import theme
 
-# Type sizes are in user units, and every chart is drawn at the pixel width
-# it will occupy, so a unit is a pixel and these are the rendered sizes.
-_LABEL = 9.5
-_TICK = 9.0
-_TITLE = 12.5
+# Pegged to the page's type scale rather than chosen per chart, so a size
+# inside an SVG is the same size beside it. Every chart is drawn at the
+# pixel width it will occupy, so a user unit is a pixel.
+_LABEL = theme.CHART_LABEL_PX
+_TICK = theme.CHART_TICK_PX
+_TITLE = theme.CHART_TITLE_PX
 
 # The normalisation window quant/valuation.py uses for its base figure.
 # The chart draws the same one so the rule and the model agree.
@@ -46,6 +47,9 @@ _BASE_WINDOW = 3
 
 _MONO = theme.FONT_MONO
 _SANS = theme.FONT_SANS
+# Chart titles are set in the display face, which ties them to the
+# masthead rather than letting each figure float free of the page.
+_DISPLAY = theme.FONT_DISPLAY
 
 
 def _text(
@@ -91,7 +95,7 @@ def figure(svg: str | None, caption: str = "") -> str:
 
 
 def _title_block(x: float, title: str, subtitle: str) -> str:
-    out = _text(x, 13, title, _TITLE, theme.INK, weight="500", font=_SANS)
+    out = _text(x, 13, title, _TITLE, theme.INK, weight="500", font=_DISPLAY)
     if subtitle:
         out += _text(x, 27, subtitle, _TICK, theme.INK_MUTED, font=_SANS)
     return out
@@ -499,9 +503,12 @@ def valuation_range(
 
     for case in sorted(cases, key=lambda c: c.value_per_share):
         x = x_of(case.value_per_share)
+        # A tick, not a filled dot. A dot on a track is a slider, which is a
+        # control, and nothing on this scale is draggable.
         body.append(
-            f'<circle cx="{x:.1f}" cy="{axis_y}" r="5.4" '
-            f'fill="{theme.ACCENT}"/>'
+            f'<line x1="{x:.1f}" y1="{axis_y - 7:.1f}" x2="{x:.1f}" '
+            f'y2="{axis_y + 7:.1f}" stroke="{theme.ACCENT}" '
+            f'stroke-width="2.5"/>'
         )
         body.append(
             _text(x, axis_y - 26, case.name, 9.0, theme.INK_MUTED, "middle",
@@ -554,11 +561,17 @@ def dcf_bridge(
     if dcf is None or inputs is None:
         return None
 
+    # The bridge step is minus net debt, so a net-cash filer adds here. It
+    # was labelled "Net debt $33.8B" on a company holding net cash, which
+    # reads as debt being added to enterprise value and is nonsense.
+    bridge_step = -inputs.net_debt
+    bridge_label = "Less net debt" if bridge_step < 0 else "Plus net cash"
+
     bars = [
         ("PV forecast", dcf.pv_forecast, theme.ACCENT, False),
         ("PV terminal", dcf.pv_terminal, theme.NEUTRAL, False),
         ("Enterprise value", dcf.enterprise_value, theme.ACCENT, True),
-        ("Net debt", -inputs.net_debt, theme.ACCENT_2, False),
+        (bridge_label, bridge_step, theme.ACCENT_2, False),
         ("Equity value", dcf.equity_value, theme.ACCENT, True),
     ]
 
