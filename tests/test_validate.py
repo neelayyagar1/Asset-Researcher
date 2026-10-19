@@ -256,3 +256,76 @@ def test_a_genuine_label_collision_is_disambiguated_rather_than_merged():
     assert len(set(labels.values())) == 2
     assert all(label.startswith("FY2024") for label in labels.values())
     assert any("2024-03-31" in label for label in labels.values())
+
+
+# --- the derived metrics mean what they are named ------------------------
+
+
+def test_every_declared_derived_metric_is_actually_computed():
+    """canonical.yaml calls itself the documented source of truth for what
+    each metric computes, so a declaration nothing implements is a false
+    entry in the one file a reader would check."""
+    from pathlib import Path
+
+    import yaml
+
+    from asset_researcher.quant.derived import compute_derived
+    from asset_researcher.quant.series import MetricPeriod, MetricSeries
+
+    declared = set(
+        yaml.safe_load(
+            Path("asset_researcher/config/metrics/canonical.yaml").read_text()
+        )["derived"]
+    )
+
+    rich = MetricSeries(cik=1, sector="standard")
+    for name in (
+        "revenue", "cogs", "gross_profit", "operating_income", "net_income",
+        "pretax_income", "income_tax_expense", "total_assets", "total_equity",
+        "total_debt", "cash_and_equivalents", "current_assets",
+        "current_liabilities", "operating_cash_flow", "capital_expenditures",
+        "depreciation_amortization", "interest_expense",
+        "net_interest_income", "noninterest_income", "noninterest_expense",
+        "nonperforming_loans",
+    ):
+        rich.series[name] = [
+            MetricPeriod("2025-09-30", "FY2025", 100e6, "a"),
+            MetricPeriod("2024-09-30", "FY2024", 90e6, "a"),
+        ]
+
+    computed = set(compute_derived(rich))
+    assert declared - computed == set(), (
+        f"declared but never computed: {sorted(declared - computed)}"
+    )
+
+
+def test_return_on_invested_capital_is_unavailable_without_a_filed_tax_rate():
+    """A return computed at a guessed tax rate is a number nobody can check,
+    and the point of this layer is that every figure traces to a filing."""
+    from asset_researcher.quant.derived import compute_derived
+    from asset_researcher.quant.series import MetricPeriod, MetricSeries
+
+    def _series(**metrics):
+        s = MetricSeries(cik=1, sector="standard")
+        for name, value in metrics.items():
+            s.series[name] = [MetricPeriod("2025-09-30", "FY2025", value, "a")]
+        return s
+
+    untaxed = _series(
+        operating_income=130e9, net_income=110e9,
+        total_debt=100e9, total_equity=70e9, cash_and_equivalents=30e9,
+        total_assets=360e9,
+    )
+    assert compute_derived(untaxed)["roic"] is None
+
+    taxed = _series(
+        operating_income=130e9, net_income=110e9,
+        pretax_income=132e9, income_tax_expense=22e9,
+        total_debt=100e9, total_equity=70e9, cash_and_equivalents=30e9,
+        total_assets=360e9,
+    )
+    roic = compute_derived(taxed)["roic"]
+    # NOPAT of 130 * (1 - 22/132) over invested capital of 140.
+    assert roic == pytest.approx(130e9 * (1 - 22 / 132) / 140e9)
+    # Measurably different from the net income version it replaced.
+    assert roic != pytest.approx(110e9 / 140e9)

@@ -159,14 +159,15 @@ derived:
     label: Working Capital
     sectors: [standard]
     formula: current_assets - current_liabilities
-  cash_conversion_cycle_days:
-    label: Cash Conversion Cycle (days)
-    sectors: [standard]
-    formula: dso + dio - dpo # requires multi-period inventory/payables data
   roic:
     label: Return on Invested Capital
     sectors: [standard, energy]
-    formula: net_income / (total_debt + total_equity - cash_and_equivalents)
+    # NOPAT, not net income: net income is after interest, so dividing it by
+    # capital that includes debt measures the capital structure as much as
+    # the business. The tax rate is the filer's own, from pre-tax income and
+    # tax expense, and the metric is unavailable where either is untagged.
+    formula: operating_income * (1 - income_tax_expense / pretax_income) /
+      (total_debt + total_equity - cash_and_equivalents)
   gross_margin:
     label: Gross Margin
     sectors: [standard]
@@ -181,42 +182,40 @@ derived:
     formula: net_income / revenue
 
   # Financial-sector derived.
-  rotce:
-    label: Return on Tangible Common Equity
+  roe:
+    label: Return on Equity
     sectors: [financial]
-    formula: net_income / total_equity # tangible adjustment applied where goodwill is tagged
+    # Named for what it computes. It was labelled return on tangible common
+    # equity, and no tangible adjustment exists: goodwill is not a metric
+    # here, so there is nothing to deduct.
+    formula: net_income / total_equity
   efficiency_ratio:
     label: Efficiency Ratio
     sectors: [financial]
     formula: noninterest_expense / (net_interest_income + noninterest_income)
-  nim:
-    label: Net Interest Margin
+  nim_on_assets:
+    label: Net Interest Income / Total Assets
     sectors: [financial]
-    formula: net_interest_income / total_assets # earning-asset base approximated
+    # The textbook denominator is average earning assets, which needs a loan
+    # and securities balance this taxonomy does not carry. Total assets
+    # stands in, so the result reads slightly low; the name says which
+    # denominator was used rather than claiming the standard one.
+    formula: net_interest_income / total_assets
   npl_ratio:
     label: Nonperforming Loan Ratio
     sectors: [financial]
     formula: nonperforming_loans / total_assets
 
   # REIT derived.
-  ffo:
-    label: FFO (computed, when not directly tagged)
+  ffo_before_disposals:
+    label: FFO before gains on disposal
     sectors: [reit]
-    formula: net_income + depreciation_amortization - gain_on_sale
-  affo:
-    label: AFFO
-    sectors: [reit]
-    formula: ffo - recurring_capex
-  payout_ratio:
-    label: Payout Ratio
-    sectors: [reit]
-    formula: dividends_paid / ffo
+    # Without the gain-on-sale deduction the NAREIT definition carries:
+    # gains on property sales are not a metric here, so for a REIT that sold
+    # property during the year this runs high. Named for what it computes.
+    formula: net_income + depreciation_amortization
 
   # Energy derived.
-  reserve_replacement_ratio:
-    label: Reserve Replacement Ratio
-    sectors: [energy]
-    formula: reserves_added / production
   capex_intensity:
     label: Capex Intensity (Capex / Revenue)
     sectors: [energy]

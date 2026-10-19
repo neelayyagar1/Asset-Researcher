@@ -61,6 +61,26 @@ def _safe_div(
     return numerator / denominator
 
 
+def _nopat(g) -> float | None:
+    """Operating income after the filer's own effective tax rate.
+
+    Returns None rather than falling back to an assumed rate: a return on
+    invested capital computed at a guessed tax rate is a number nobody can
+    check, and the point of this layer is that every figure traces to a
+    filing.
+    """
+    operating = g("operating_income")
+    pretax, tax = g("pretax_income"), g("income_tax_expense")
+    if operating is None or pretax is None or tax is None or pretax <= 0:
+        return None
+    rate = tax / pretax
+    if not 0.0 <= rate < 1.0:
+        # A credit, or a rate above 100%, means the year carried something
+        # the ratio cannot absorb.
+        return None
+    return operating * (1 - rate)
+
+
 def _safe_sub(a: float | None, b: float | None) -> float | None:
     if a is None or b is None:
         return None
@@ -112,8 +132,15 @@ def compute_derived(series: MetricSeries, index: int = -1) -> dict[str, float | 
         "working_capital": working_capital,
         # Invested capital within 1% of total assets of zero cannot carry a
         # return: the ratio explodes rather than informing.
+        # NOPAT over invested capital, not net income. Net income is after
+        # interest and after non-operating items, so dividing it by capital
+        # that includes debt measures the capital structure as much as the
+        # business. The effective tax rate comes from the filer's own
+        # pre-tax income and tax expense; where either is untagged, the
+        # return is reported as unavailable rather than silently falling
+        # back to net income.
         "roic": _safe_div(
-            g("net_income"),
+            _nopat(g),
             invested_capital,
             require_positive=True,
             floor=(g("total_assets") or 0.0) * 0.01 or None,
@@ -121,16 +148,37 @@ def compute_derived(series: MetricSeries, index: int = -1) -> dict[str, float | 
         "gross_margin": _safe_div(g("gross_profit"), g("revenue")),
         "operating_margin": _safe_div(g("operating_income"), g("revenue")),
         "net_margin": _safe_div(g("net_income"), g("revenue")),
-        # Financial-sector
-        "rotce": _safe_div(g("net_income"), g("total_equity")),
+        # Financial-sector.
+        #
+        # Return on equity, named for what it computes. It was labelled
+        # return on tangible common equity, and no tangible adjustment
+        # exists anywhere in this codebase: goodwill is not a canonical
+        # metric, so there is nothing to deduct. For a bank carrying
+        # material goodwill the label overstated the denominator and
+        # understated the metric, which is the wrong direction to be wrong
+        # about a bank.
+        "roe": _safe_div(g("net_income"), g("total_equity"), require_positive=True),
         "efficiency_ratio": _safe_div(
             g("noninterest_expense"),
             _safe_add(g("net_interest_income"), g("noninterest_income")),
         ),
-        "nim": _safe_div(g("net_interest_income"), g("total_assets")),
+        # Net interest income over total assets. The textbook denominator is
+        # average earning assets, which needs a loan and securities balance
+        # this taxonomy does not carry, so total assets stands in and the
+        # result reads slightly low. Labelled as an approximation wherever
+        # it is displayed.
+        "nim_on_assets": _safe_div(
+            g("net_interest_income"), g("total_assets"), require_positive=True
+        ),
         "npl_ratio": _safe_div(g("nonperforming_loans"), g("total_assets")),
-        # REIT
-        "ffo": _safe_add(g("net_income"), g("depreciation_amortization")),
+        # REIT. Net income plus depreciation, without the gain-on-sale
+        # deduction the NAREIT definition carries: gains on property sales
+        # are not a canonical metric here, so for a REIT that sold property
+        # during the year this runs high. Named and documented for what it
+        # computes rather than for the standard it approximates.
+        "ffo_before_disposals": _safe_add(
+            g("net_income"), g("depreciation_amortization")
+        ),
         # Energy
         "capex_intensity": _safe_div(g("capital_expenditures"), g("revenue")),
     }
