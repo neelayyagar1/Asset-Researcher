@@ -161,17 +161,23 @@ def block(*parts: str) -> str:
     return f'<div class="ar-block">{body}</div>' if body else ""
 
 
-def index(labels: Sequence[str]) -> str:
-    """The sticky section index.
+def nav(labels: Sequence[str]) -> str:
+    """The section bar, stuck to the top of the viewport.
 
     The report is one continuous document rather than nine tabs, because a
-    research note is read top to bottom and then jumped back through. This
-    is the jumping back.
+    research note is read top to bottom and then jumped back through, and
+    this is the jumping back. It sticks because the need to jump arises
+    deep in the scroll, which is exactly where a list that only exists at
+    the top of the page is useless.
+
+    It was previously a column in a collapsible drawer, below four input
+    widgets, which made the one control a reader uses constantly the
+    hardest thing on the page to reach.
     """
     links = "".join(
         f'<a href="#{slug(label)}">{_text(label)}</a>' for label in labels
     )
-    return _one_line(f'<nav class="ar-index">{links}</nav>')
+    return _one_line(f'<nav class="ar-nav">{links}</nav>')
 
 
 def caption(text: str) -> str:

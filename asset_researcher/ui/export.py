@@ -115,7 +115,9 @@ def report_to_html(report: Report, notice: str = "") -> str:
     # One section list, rendered by both surfaces. They used to be built
     # separately, which is how the sensitivity grid existed on screen for
     # weeks while the file a reader actually forwards did not carry one.
-    body.extend(section.html for section in document.sections(report))
+    blocks = document.sections(report)
+    body.append(ui.nav([section.label for section in blocks]))
+    body.extend(section.html for section in blocks)
 
     body.append(
         '<p class="ar-foot" style="margin-top:2.6rem;border-top:1px solid '

@@ -48,7 +48,7 @@ from asset_researcher.ui.headline import headline_stats
 st.set_page_config(
     page_title="Asset Researcher",
     layout="wide",
-    initial_sidebar_state="expanded",
+    initial_sidebar_state="collapsed",
 )
 st.markdown(theme.stylesheet(), unsafe_allow_html=True)
 
@@ -89,43 +89,58 @@ st.session_state.setdefault("report", None)
 
 # ------------------------------------------------------------------ controls
 
-with st.sidebar:
-    write(
-        '<div class="ar-field" style="border-top:2px solid var(--ink);'
-        'padding-top:var(--s3);color:var(--ink)">Asset Researcher</div>'
-        '<p style="margin:var(--s2) 0 var(--s5)">Equity research from '
-        "primary filings.</p>"
-    )
+# No sidebar. The controls that matter sit at the top of the page where
+# they are visible, and the section index is a sticky bar the reader can
+# reach at any scroll depth. Burying the index under four input widgets in
+# a collapsible drawer made the one thing a reader needs constantly the
+# hardest thing on the page to reach, and collapsing that drawer used to
+# hide the entire input surface.
+presets = load_presets()
+report = st.session_state.get("report")
 
-    ticker = st.text_input("Ticker", value="AAPL", max_chars=8).strip().upper()
+controls = st.columns([1.1, 2.4, 1.2, 1.1, 0.9] if report else [1.1, 2.4, 1.2])
+ticker = controls[0].text_input("Ticker", value="AAPL", max_chars=8).strip().upper()
+choice = controls[1].selectbox(
+    "Mandate", ["Describe my own"] + [p.name for p in presets], index=1
+)
+controls[2].markdown('<div style="height:1.62rem"></div>', unsafe_allow_html=True)
+run = controls[2].button("Generate report", type="primary", use_container_width=True)
 
-    presets = load_presets()
-    choice = st.selectbox(
-        "Mandate template",
-        ["Describe my own"] + [p.name for p in presets],
-        index=1,
-    )
-    prefill = (
-        ""
-        if choice == "Describe my own"
-        else next(p.description for p in presets if p.name == choice)
-    )
-    mandate_text = st.text_area(
-        "Mandate", value=prefill, height=120, label_visibility="collapsed"
-    )
+prefill = (
+    ""
+    if choice == "Describe my own"
+    else next(p.description for p in presets if p.name == choice)
+)
+
+with st.expander("Mandate detail and additional sources"):
+    mandate_text = st.text_area("Mandate description", value=prefill, height=110)
     st.caption(
         "Sets emphasis and ordering only. It does not change the reported "
         "figures, the citations, or which divergences are disclosed."
     )
-
     urls_text = st.text_area("Additional sources", height=70, placeholder="https://")
-    st.caption("Public URLs. Classified as secondary and attributed as opinion.")
+    st.caption(
+        "Public URLs. Classified as secondary and attributed as opinion. "
+        f"Demo budget remaining today: ${spend.remaining_today():,.2f}"
+    )
 
-    run = st.button("Generate report", type="primary", use_container_width=True)
-    st.caption(f"Demo budget remaining today: ${spend.remaining_today():,.2f}")
-
-    index_slot = st.empty()
-    export_slot = st.container()
+if report is not None:
+    controls[3].markdown('<div style="height:1.62rem"></div>', unsafe_allow_html=True)
+    controls[3].download_button(
+        "HTML",
+        data=report_to_html(report),
+        file_name=f"{report.ticker}-research-note.html",
+        mime="text/html",
+        use_container_width=True,
+    )
+    controls[4].markdown('<div style="height:1.62rem"></div>', unsafe_allow_html=True)
+    controls[4].download_button(
+        "Markdown",
+        data=report_to_markdown(report),
+        file_name=f"{report.ticker}-research-note.md",
+        mime="text/markdown",
+        use_container_width=True,
+    )
 
 
 def generate(ticker: str, mandate_text: str, urls: list[str]):
@@ -226,7 +241,7 @@ if report is None:
             "company's own submissions to the SEC, every claim carries a "
             "citation back to the source text, and every report states the "
             "strongest case against its own thesis.",
-            "Enter a ticker on the left. About a minute.",
+            "Enter a ticker above. About a minute.",
         )
     )
     st.stop()
@@ -278,8 +293,9 @@ write(
 # The sections come from asset_researcher/ui/document.py, which the export
 # also renders. They used to be built here and again there, which is how the
 # screen came to show one set of section labels and the file another.
-sections = [s.label for s in document.sections(report)]
-for block in document.sections(report):
+blocks = document.sections(report)
+write(ui.nav([s.label for s in blocks]))
+for block in blocks:
     write(block.html)
 
 write(
@@ -287,23 +303,3 @@ write(
     f'var(--rule);padding-top:var(--s3)">{settings.report.disclaimer}</p>'
 )
 
-# The index and the exports are written last, because the index is built
-# from the sections the document actually emitted.
-index_slot.markdown(ui.index(sections), unsafe_allow_html=True)
-with export_slot:
-    st.divider()
-    write('<div class="ar-field">Export</div>')
-    st.download_button(
-        "Standalone HTML",
-        data=report_to_html(report),
-        file_name=f"{report.ticker}-research-note.html",
-        mime="text/html",
-        use_container_width=True,
-    )
-    st.download_button(
-        "Markdown",
-        data=report_to_markdown(report),
-        file_name=f"{report.ticker}-research-note.md",
-        mime="text/markdown",
-        use_container_width=True,
-    )

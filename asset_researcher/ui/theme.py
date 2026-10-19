@@ -389,6 +389,28 @@ table.ar-statement tbody td.rowhead { white-space: nowrap; }
   vertical-align: 0.3em; text-decoration: none; padding: 0 0.1em; }
 .ar-prose a:hover { background: var(--accent-soft); }
 
+/* ----------------------------------------------------------- section bar */
+
+/* Stuck to the top of the viewport, because the need to jump arises deep in
+   the scroll, which is exactly where a list that only exists at the top of
+   the page is useless. Scrolls horizontally on a narrow screen rather than
+   wrapping to three lines and eating the viewport. */
+.ar-nav { position: sticky; top: 0; z-index: 40; display: flex;
+  gap: var(--s4); overflow-x: auto; scrollbar-width: none;
+  background: var(--paper); border-top: 1px solid var(--rule);
+  border-bottom: 1px solid var(--ink); margin: 0 0 var(--s6);
+  padding: var(--s3) 0; }
+.ar-nav::-webkit-scrollbar { display: none; }
+.ar-nav a { font-family: var(--sans); font-size: var(--t-label);
+  line-height: var(--t-label-lh); letter-spacing: var(--t-label-ls);
+  font-weight: 600; text-transform: uppercase; color: var(--ink-muted);
+  text-decoration: none; white-space: nowrap;
+  border-bottom: 2px solid transparent; padding-bottom: 2px;
+  transition: color 120ms var(--ease), border-color 120ms var(--ease); }
+.ar-nav a:hover { color: var(--ink); border-bottom-color: var(--accent); }
+/* The section the reader jumped to stays marked while they read it. */
+.ar-sec:target .ar-sec-label { color: var(--accent); }
+
 /* -------------------------------------------------------------- charts */
 
 .ar-figure { margin: 0 0 var(--s4); }
@@ -517,16 +539,6 @@ hr, [data-testid="stDivider"] { border-color: var(--rule);
 [data-testid="stAlert"], [data-testid="stVerticalBlockBorderWrapper"] {
   border-radius: 0; }
 
-/* ----------------------------------------------------------- index rail */
-
-/* The document is one scroll, so this is how a reader jumps back to a
-   section they have already passed. It lives in the left rail and sticks. */
-.ar-index { position: sticky; top: var(--s4); }
-.ar-index a { display: block; font-size: var(--t-micro); line-height: 1.45;
-  color: var(--ink-muted); text-decoration: none; padding: 3px 0 3px var(--s2);
-  border-left: 1px solid var(--rule-soft);
-  transition: color 120ms var(--ease), border-color 120ms var(--ease); }
-.ar-index a:hover { color: var(--ink); border-left-color: var(--accent); }
 
 /* ---------------------------------------------------------- open state */
 
