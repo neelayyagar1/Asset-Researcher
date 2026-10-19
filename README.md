@@ -66,10 +66,10 @@ marketing.
 - **Segment revenue is not broken out.** The SEC's `companyfacts` API is
   undimensioned, so segment detail needs the dimensional XBRL instance. The
   revenue build is consolidated.
-- **Quarterly data is retrieved but unused.** Series construction filters to
-  annual periods, so every multiple is on the last reported fiscal year, not
-  trailing twelve months. On a filer eleven months past its year end that is
-  stale, and the report says how stale in its header.
+- **Multiples are on the last reported fiscal year, not trailing twelve
+  months.** Series construction filters to annual periods. The most recent
+  results announcement is read, so the narrative is current, but the
+  comparables table is not, and the report says how stale in its header.
 - **The discount rate is a convention**, not a derivation from the filer's
   capital structure. The assumptions table labels it as such, along with every
   other input that is not a filing.
@@ -124,7 +124,7 @@ about a listed company.
 .venv/bin/python -m pytest -q
 ```
 
-314 tests, about four seconds, no network. The view layer is pure functions
+339 tests, about five seconds, no network. The view layer is pure functions
 from data to strings and nothing outside `app.py` imports Streamlit, which is
 what lets the whole suite run without a server.
 

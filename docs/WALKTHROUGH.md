@@ -374,7 +374,7 @@ compliance officer, and a staff engineer. Most of what is described above as
 "an earlier version did X" came out of that pass. The ones worth naming:
 
 - Net debt ignored marketable securities, reporting a net-cash company as
-  levered.
+  levered. Fixing it moved the Apple target from $133 to $210.
 - Three different peer medians appeared in one document.
 - Fiscal-year labels were derived from the calendar year of the period end, so
   a 52/53-week filer whose year-end crossed 31 December had two fiscal years
@@ -393,6 +393,14 @@ compliance officer, and a staff engineer. Most of what is described above as
   bound.
 - The assumptions table omitted the three inputs that set the answer and
   listed one the model never read.
+- Earnings per share was absent entirely, and the diluted share count sat
+  under the balance sheet.
+- Results announcements were ingested as cover pages: 1,188 characters
+  carrying no figure, while the exhibit behind them held the quarter.
+- Four formulas declared in the metric taxonomy were never computed, and
+  return on tangible common equity had no tangible adjustment behind it.
+- Comparables rows carried no period, so a January filer sat beside a
+  September filer with nothing saying so.
 
 Each is fixed, and most carry a regression test naming the case that produced
 them.
@@ -400,8 +408,9 @@ them.
 ## 12. What is still open
 
 - Segment revenue, which needs the dimensional XBRL instance.
-- Trailing-twelve-month figures: quarterly data is retrieved and unused, so
-  multiples are on the last reported fiscal year.
+- Trailing-twelve-month figures. The most recent results announcement is now
+  read, so the narrative is current, but the comparables table still rests on
+  the last reported fiscal year.
 - A discount rate derived from the filer's own capital structure.
 - Semantic citation checking. Provenance is verified; inference is not.
 - Persisting a run for reconstruction: model, prompt versions and source

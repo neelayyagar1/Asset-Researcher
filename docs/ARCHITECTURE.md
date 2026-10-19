@@ -574,9 +574,12 @@ Stated because a roadmap that omits them is marketing.
 - **Segment revenue is not broken out.** `companyfacts` is undimensioned, so
   segment detail requires parsing the dimensional XBRL instance. The revenue
   build in the financial summary is therefore consolidated.
-- **Quarterly data is retrieved but not used.** Series construction filters
-  to annual periods. Relaxing the filter is a change to one predicate, not a
-  new fetch.
+- **Quarterly data is retrieved but not used in the series.** Series
+  construction filters to annual periods, so every multiple rests on the last
+  reported fiscal year. The most recent results announcement is read for its
+  narrative (§6), which is what keeps the note current, but the figures behind
+  the comparables table are not. Relaxing the filter is a change to one
+  predicate, not a new fetch.
 - **Semantic citation support is unverified.** See §2.
 - **The discount rate is a convention, not a derivation.** Deriving it from
   the filer's own capital structure is the obvious next step and is labelled
