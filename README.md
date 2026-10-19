@@ -102,6 +102,13 @@ Then:
 .venv/bin/streamlit run app.py
 ```
 
+Check the credentials before a demo rather than discovering a dead key
+part-way through a report:
+
+```bash
+.venv/bin/python scripts/check-credentials.py
+```
+
 ### Front-end work without spending anything
 
 A live report costs an API call and about a minute, which is too slow a loop
@@ -124,7 +131,7 @@ about a listed company.
 .venv/bin/python -m pytest -q
 ```
 
-339 tests, about five seconds, no network. The view layer is pure functions
+361 tests, about five seconds, no network. The view layer is pure functions
 from data to strings and nothing outside `app.py` imports Streamlit, which is
 what lets the whole suite run without a server.
 
@@ -142,7 +149,8 @@ asset_researcher/
   analysis/     the bundle, the two model calls, the finished report
   grounding/    citation verification against stored source text
   llm/          the provider interface; only claude.py imports the SDK
-  ui/           tokens, HTML components, SVG charts, the export writer
+  ui/           tokens, HTML components, SVG charts, the composed summary,
+                the ordered document both surfaces render, the export writer
   config/       prompts, metric taxonomy, settings, per-filer overrides
 app.py          the Streamlit view, which computes nothing
 ```
@@ -158,6 +166,12 @@ enabling both citations and structured output. The first produces the cited
 descriptive sections; the second reasons over that output plus the filed
 series and produces the analysis.
 
+The report is one continuous document rather than a set of tabs, and
+`ui/document.py` is the single ordered section list that both the running
+page and the exported file render. They used to build their own, which is
+how the screen came to show one set of section labels and the file
+another.
+
 ---
 
 ## Reading further
@@ -169,6 +183,11 @@ series and produces the analysis.
   the output rather than maintaining the code. No programming assumed.
 - **[docs/WALKTHROUGH.md](docs/WALKTHROUGH.md)** walks the product end to end
   and gives the reasoning behind each design and engineering choice.
+- **[docs/DEPLOY.md](docs/DEPLOY.md)** covers hosting: a static sample note on
+  Cloudflare Pages and the live tool on Streamlit Community Cloud, and why
+  Cloudflare Workers cannot run the second one.
+- **[DESIGN.md](DESIGN.md)** is the visual system as built: tokens, the type
+  scale, the component inventory and the chart conventions.
 
 ## Data and licensing
 
