@@ -92,13 +92,40 @@ _CSS = """
 
 /* ---------------------------------------------------- page and chrome */
 
-/* Streamlit's own header is a floating toolbar with a hamburger and a
-   running-man icon. It is the single clearest sign of the framework, and
-   nothing in it is needed once the sidebar carries the controls. */
-header[data-testid="stHeader"] { display: none; }
-[data-testid="stToolbar"] { display: none; }
-#MainMenu, footer { display: none; }
-[data-testid="stDecoration"] { display: none; }
+/* Streamlit's header is a floating toolbar with a hamburger and a
+   running-man icon, and it is the clearest sign of the framework.
+   It is emptied rather than removed: `display: none` on the header also
+   hid the button that reopens a collapsed sidebar, which lives inside it,
+   so collapsing the sidebar hid the entire input surface with no way back. */
+header[data-testid="stHeader"] { background: transparent; }
+
+/* Only the toolbar's *actions* go: Deploy, the hamburger, the status
+   widget. The toolbar itself stays, because the button that reopens a
+   collapsed sidebar is rendered inside it, and hiding the toolbar left the
+   sidebar unrecoverable once closed. */
+[data-testid="stToolbarActions"], [data-testid="stAppDeployButton"],
+[data-testid="stMainMenu"], [data-testid="stMainMenuButton"],
+[data-testid="stStatusWidget"], [data-testid="stDecoration"],
+#MainMenu, footer { display: none !important; }
+
+/* The two controls that open and close the sidebar. Both are kept
+   deliberately visible and styled to match the page. */
+button[data-testid="stExpandSidebarButton"],
+button[data-testid="stSidebarCollapseButton"],
+[data-testid="stSidebarCollapseButton"] button {
+  background: var(--surface); border: 1px solid var(--rule);
+  border-radius: 0; color: var(--ink-muted); box-shadow: none; }
+button[data-testid="stExpandSidebarButton"]:hover,
+button[data-testid="stSidebarCollapseButton"]:hover,
+[data-testid="stSidebarCollapseButton"] button:hover {
+  background: var(--ink); color: var(--paper); border-color: var(--ink); }
+
+/* Streamlit appends an anchor link to every heading it renders, shown on
+   hover. On a heading inside our own markup it points at a fragment that
+   does not exist, so it is a link to nowhere sitting next to the title. */
+[data-testid="stHeaderActionElements"] { display: none !important; }
+.stMarkdown h1 > a, .stMarkdown h2 > a, .stMarkdown h3 > a,
+.ar-cover h1 > a, .ar-prose h2 > a, .ar-prose h3 > a { display: none; }
 
 html, body, .stApp, [data-testid="stAppViewContainer"] {
   background: var(--paper);
