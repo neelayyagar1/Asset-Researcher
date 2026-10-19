@@ -834,6 +834,7 @@ with tabs[5]:
                 [
                     Col("Company", "Company", emphasis=True),
                     Col("Ticker", "Ticker"),
+                    Col("FYE", "FYE"),
                     Col("Share price", "Share price", num=True),
                     Col("Equity value", "Equity value", num=True),
                     Col("Net debt", "Net debt", num=True),

@@ -461,6 +461,7 @@ def _peers_section(bundle) -> list[str]:
             [
                 Col("Company", "Company", emphasis=True),
                 Col("Ticker", "Ticker"),
+                Col("FYE", "FYE"),
                 Col("Share price", "Share price", num=True),
                 Col("Equity value", "Equity value", num=True),
                 Col("Net debt", "Net debt", num=True),
@@ -803,7 +804,7 @@ def report_to_markdown(report: Report, notice: str = "") -> str:
         # Markdown is what gets pasted into a memo, and a memo without the
         # comparables has lost the relative-valuation half of the argument.
         columns = [
-            "Company", "Ticker", "Share price", "Equity value",
+            "Company", "Ticker", "FYE", "Share price", "Equity value",
             "Enterprise value", "Revenue", "EBITDA", "EBITDA margin",
             "EV/EBITDA", "P/E",
         ]

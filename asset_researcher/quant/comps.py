@@ -21,6 +21,7 @@ is dropped from the table rather than blocking the report.
 from __future__ import annotations
 
 from dataclasses import dataclass, field
+from datetime import date
 
 from asset_researcher.quant.capital import net_debt_from_values
 from asset_researcher.quant.series import MetricSeries
@@ -59,6 +60,11 @@ class CompRow:
     ebitda: float | None = None
 
     note: str | None = None  # why a row is thin, shown rather than hidden
+
+    # The period these fundamentals came from. Peers have different fiscal
+    # year ends, so without it a January filer and a September filer sit in
+    # one table up to twelve months apart with nothing saying so.
+    period_end: str = ""
 
     # Basis for inclusion. A peer list with no stated rationale is just a
     # list; an analyst cannot accept or reject it.
@@ -266,6 +272,34 @@ class CompsTable:
             return None
         return own / median
 
+    def misaligned_peers(self, quarters: int = 2) -> list[str]:
+        """Peers whose fiscal year end is far enough from the subject's that
+        their multiples rest on a materially different trading period.
+
+        Two quarters is the threshold at which a comparison stops being a
+        comparison: a peer reporting six months earlier than the subject is
+        being valued on a different half of the cycle.
+        """
+        subject = self.subject
+        if subject is None or not subject.period_end:
+            return []
+        try:
+            anchor = date.fromisoformat(subject.period_end)
+        except ValueError:
+            return []
+
+        drifted = []
+        for row in self.peers:
+            if not row.period_end:
+                continue
+            try:
+                end = date.fromisoformat(row.period_end)
+            except ValueError:
+                continue
+            if abs((end - anchor).days) > quarters * 92:
+                drifted.append(row.ticker)
+        return drifted
+
     @property
     def coverage_note(self) -> str | None:
         """One-line caveats when the table should not be leaned on."""
@@ -277,20 +311,24 @@ class CompsTable:
         if usable == 0:
             return "No peer had usable multiples; relative valuation unavailable."
         if usable < 3:
+            noun = "peer had" if usable == 1 else "peers had"
             notes.append(
-                f"Only {usable} peer(s) had usable multiples, treat the median "
-                f"as indicative rather than representative."
+                f"Only {usable} {noun} usable multiples, so the median is "
+                f"indicative rather than representative."
             )
 
         for label, attribute in (("P/E", "pe"), ("EV/EBITDA", "ev_to_ebitda")):
             excluded = self.excluded_from(attribute)
             if excluded:
+                verb = _subject_verb(excluded, "is", "are")
+                whose = _subject_verb(excluded, "Its value remains", "Their values remain")
+                included = _subject_verb(excluded, "it is", "they are")
                 notes.append(
-                    f"{', '.join(excluded)} are excluded from the {label} "
+                    f"{', '.join(excluded)} {verb} excluded from the {label} "
                     f"statistics, where a collapsed denominator produces a "
-                    f"multiple that describes the earnings rather than the "
-                    f"valuation. Their values remain in the table body, and "
-                    f"they are included in every other column."
+                    f"multiple describing the earnings rather than the "
+                    f"valuation. {whose} in the table body, and {included} "
+                    f"included in every other column."
                 )
 
         # The subject and its peers do not come from the same concept
@@ -303,17 +341,30 @@ class CompsTable:
             "enterprise-value multiples as indicative across the set."
         )
 
+        misaligned = self.misaligned_peers()
+        if misaligned:
+            verb = _subject_verb(misaligned, "reports", "report")
+            whose = _subject_verb(misaligned, "its multiples rest", "their multiples rest")
+            notes.append(
+                f"{', '.join(misaligned)} {verb} on a fiscal year ending more "
+                f"than two quarters from the subject's, so {whose} on a "
+                f"different trading period. The FYE column dates every row."
+            )
+
         impossible = [
             r.ticker for r in self.peers
             if r.net_margin is not None and r.ebitda_margin is not None
             and r.net_margin > r.ebitda_margin
         ]
         if impossible:
+            verb = _subject_verb(impossible, "reports", "report")
+            whose = _subject_verb(impossible, "its", "their")
+            margins = _subject_verb(impossible, "That margin", "Those margins")
             notes.append(
-                f"{', '.join(impossible)} report a net margin above their "
+                f"{', '.join(impossible)} {verb} a net margin above {whose} "
                 f"EBITDA margin, which means the two lines come from "
                 f"different periods or the year carried a material one-off. "
-                f"Their margins should not be read as operating performance."
+                f"{margins} should not be read as operating performance."
             )
 
         negative = [
@@ -322,12 +373,34 @@ class CompsTable:
             if r.net_income is not None and r.net_income <= 0
         ]
         if negative:
+            verb = _subject_verb(negative, "had", "had")
+            whom = _subject_verb(negative, "it", "them")
             notes.append(
-                f"{', '.join(negative)} had non-positive trailing earnings, so "
-                f"no P/E is shown for them."
+                f"{', '.join(negative)} {verb} non-positive trailing earnings, "
+                f"so no P/E is shown for {whom}."
             )
 
         return " ".join(notes) if notes else None
+
+
+def _subject_verb(tickers: list[str], singular: str, plural: str) -> str:
+    """One ticker takes a singular verb. "P are excluded" and "WDC report a
+    net margin" are the kind of slip that reads as machine-written."""
+    return singular if len(tickers) == 1 else plural
+
+
+def _latest_period_end(series: MetricSeries) -> str:
+    """The most recent period end anywhere in the series.
+
+    Taken from revenue where available, since that is the line every row's
+    multiples ultimately rest on, and falling back to the latest end across
+    all metrics for a filer that does not report one.
+    """
+    revenue = series.series.get("revenue")
+    if revenue:
+        return revenue[-1].end
+    ends = [p.end for points in series.series.values() for p in points]
+    return max(ends) if ends else ""
 
 
 def _latest(series: MetricSeries, metric: str) -> float | None:
@@ -371,6 +444,7 @@ def build_comp_row(
         is_subject=is_subject,
         market_cap=market_cap,
         price=price,
+        period_end=_latest_period_end(series),
         revenue=_latest(series, "revenue"),
         net_income=_latest(series, "net_income"),
         total_equity=_latest(series, "total_equity"),
@@ -423,9 +497,29 @@ def _percent(value: float | None) -> str:
 def _price(value: float | None) -> str:
     return f"${value:,.2f}" if value is not None else NM
 
+
+_MONTHS = (
+    "Jan", "Feb", "Mar", "Apr", "May", "Jun",
+    "Jul", "Aug", "Sep", "Oct", "Nov", "Dec",
+)
+
+
+def _fiscal_year_end(period_end: str) -> str:
+    """The month and year of the period these figures came from.
+
+    Abbreviated because the column exists to let a reader spot a mismatch
+    at a glance, not to date the figures to the day.
+    """
+    if not period_end or len(period_end) < 7:
+        return NM
+    try:
+        return f"{_MONTHS[int(period_end[5:7]) - 1]} {period_end[:4]}"
+    except (ValueError, IndexError):
+        return NM
+
 # Column order is fixed and mirrors the standard layout.
 COMP_COLUMNS = [
-    "Company", "Ticker", "Share price", "Equity value", "Net debt",
+    "Company", "Ticker", "FYE", "Share price", "Equity value", "Net debt",
     "Enterprise value", "Revenue", "EBITDA", "EBITDA margin", "Net margin",
     "EV/Revenue", "EV/EBITDA", "P/E", "P/B", "Basis for inclusion",
 ]
@@ -443,6 +537,7 @@ def _row_cells(row: CompRow, subject: CompRow | None) -> dict[str, str]:
     return {
         "Company": row.company_name[:28],
         "Ticker": row.ticker,
+        "FYE": _fiscal_year_end(row.period_end),
         "Share price": _price(row.price),
         "Equity value": _millions(row.market_cap),
         "Net debt": _millions(net),

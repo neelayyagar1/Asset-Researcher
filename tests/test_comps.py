@@ -4,7 +4,12 @@ from __future__ import annotations
 
 import pytest
 
-from asset_researcher.quant.comps import CompRow, CompsTable, build_comp_row
+from asset_researcher.quant.comps import (
+    CompRow,
+    CompsTable,
+    build_comp_row,
+    format_comp_table,
+)
 from asset_researcher.quant.series import MetricPeriod, MetricSeries
 
 
@@ -155,3 +160,83 @@ def test_ebitda_is_operating_income_plus_dna():
     ]
     row = build_comp_row("X", "X", False, 100e9, 5.0, series)
     assert row.ebitda == pytest.approx(12e9)
+
+
+# --- fiscal period alignment --------------------------------------------
+
+
+def _dated(ticker: str, period_end: str, **kw) -> CompRow:
+    return CompRow(
+        ticker=ticker,
+        company_name=f"{ticker} Inc",
+        is_subject=kw.pop("is_subject", False),
+        market_cap=kw.pop("market_cap", 100e9),
+        net_income=kw.pop("net_income", 5e9),
+        revenue=kw.pop("revenue", 50e9),
+        period_end=period_end,
+        **kw,
+    )
+
+
+def test_every_row_is_dated_with_the_period_its_figures_came_from():
+    """A January filer and a September filer sat in one table up to twelve
+    months apart with nothing saying so."""
+    table = CompsTable(subject_ticker="S", peer_source="test")
+    table.rows = [
+        _dated("S", "2025-09-27", is_subject=True),
+        _dated("A", "2025-01-31"),
+    ]
+    rows = format_comp_table(table)
+    assert rows[0]["FYE"] == "Sep 2025"
+    assert rows[2]["FYE"] == "Jan 2025"
+
+
+def test_a_peer_more_than_two_quarters_off_is_flagged():
+    """Two quarters is where a comparison stops being one: the peer is being
+    valued on a different half of the cycle."""
+    table = CompsTable(subject_ticker="S", peer_source="test")
+    table.rows = [
+        _dated("S", "2025-09-27", is_subject=True),
+        _dated("NEAR", "2025-12-31"),  # one quarter out
+        _dated("FAR", "2025-01-31"),  # three quarters out
+    ]
+    assert table.misaligned_peers() == ["FAR"]
+    assert "FAR" in (table.coverage_note or "")
+    assert "NEAR" not in (table.coverage_note or "")
+
+
+def test_an_undated_row_reads_as_unknown_rather_than_aligned():
+    table = CompsTable(subject_ticker="S", peer_source="test")
+    table.rows = [
+        _dated("S", "2025-09-27", is_subject=True),
+        _dated("X", ""),
+    ]
+    assert table.misaligned_peers() == []
+    assert format_comp_table(table)[2]["FYE"] == "NM"
+
+
+def test_the_coverage_note_agrees_in_number_with_what_it_names():
+    """"P are excluded" and "WDC report a net margin" are the kind of slip
+    that reads as machine-written."""
+    one = CompsTable(subject_ticker="S", peer_source="test")
+    one.rows = [
+        _row("S", is_subject=True),
+        _row("A", market_cap=100e9),
+        _row("B", market_cap=200e9),
+        _row("C", net_income=0.05e9),  # the single outlier
+    ]
+    note = one.coverage_note or ""
+    assert "C is excluded" in note
+    assert "Its value remains" in note
+    assert "it is included" in note
+
+    two = CompsTable(subject_ticker="S", peer_source="test")
+    two.rows = [
+        _row("S", is_subject=True),
+        _row("A", market_cap=100e9),
+        _row("C", net_income=0.05e9),
+        _row("D", net_income=0.04e9),
+    ]
+    note = two.coverage_note or ""
+    assert "C, D are excluded" in note
+    assert "Their values remain" in note
