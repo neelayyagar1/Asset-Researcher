@@ -37,6 +37,40 @@ from asset_researcher.ui.components import Stat
 
 
 
+def _sector_stats(report: Report) -> list[Stat]:
+    """What a bank or a REIT is actually read on.
+
+    Drawn from the sector-gated derived metrics, so nothing here is a
+    figure the taxonomy declares meaningless for this filer.
+    """
+    derived = report.bundle.derived or {}
+    cap = report.bundle.market_cap
+
+    def ratio(label: str, key: str, note: str) -> Stat | None:
+        value = derived.get(key)
+        return (
+            Stat(label, fmt.pct(value), note, lead=True)
+            if value is not None
+            else None
+        )
+
+    out: list[Stat] = []
+    ffo = derived.get("ffo_before_disposals")
+    if ffo and cap:
+        out.append(Stat(
+            "Price / FFO", f"{cap / ffo:,.1f}x",
+            "Funds from operations, before gains on disposal", lead=True,
+        ))
+    out.append(ratio("Return on equity", "roe", "Filed, latest period"))
+    out.append(ratio(
+        "Net margin", "net_margin", "Filed, latest period"
+    ))
+    out.append(ratio(
+        "Efficiency ratio", "efficiency_ratio", "Costs against revenue"
+    ))
+    return [s for s in out if s is not None][:3]
+
+
 def headline_stats(report: Report) -> list[Stat]:
     bundle = report.bundle
     price = bundle.quote.price if bundle.quote else None
@@ -73,6 +107,23 @@ def headline_stats(report: Report) -> list[Stat]:
     def leading(stat: Stat) -> Stat:
         """The figure this report authored, set a rank above the handed ones."""
         return replace(stat, lead=True)
+
+    # Where no valuation was produced at all - a bank or a REIT, which
+    # this tool refuses an enterprise model for - the strip must not
+    # simply print the standard five with four of them NM. That is what
+    # it did: a yield reader's whole first impression of a REIT page was
+    # the tool saying four times that it had nothing, which reads as a
+    # broken widget rather than a considered refusal. The sector figures
+    # below are already computed and gated; the refusal takes the last
+    # cell, where it reads as a judgement rather than as a failure.
+    if cases is None or not cases:
+        sector_stats = _sector_stats(report)
+        if sector_stats:
+            return [price_stat, *sector_stats, Stat(
+                "Modelled target",
+                "Declined",
+                "An enterprise model does not describe this sector",
+            )]
 
     model_is_load_bearing = implied is None or implied.caveat is None
     if model_is_load_bearing:

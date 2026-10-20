@@ -301,8 +301,25 @@ def status(level: str, tag: str, message: str) -> str:
 
 
 def note(text: str) -> str:
-    """Where a section has nothing to show, and why. Always a sentence."""
-    return status("info", "Not available", text)
+    """A search that ran and returned nothing. Always a sentence."""
+    return status("info", "No finding", text)
+
+
+def declined(text: str) -> str:
+    """Something this tool deliberately refused to produce.
+
+    A judgement, not a gap. One grey "Not available" used to serve three
+    different states - a search that found nothing, a deliberate refusal,
+    and a step that should have produced output and did not - and reading
+    three of them in a row is what made a sector page feel broken rather
+    than disciplined.
+    """
+    return status("info", "Declined", text)
+
+
+def unavailable(text: str) -> str:
+    """A step that should have produced output and did not."""
+    return status("warning", "Gap", text)
 
 
 def prose(rendered_markdown: str) -> str:
@@ -640,7 +657,12 @@ def finding(
         else '<span class="ar-pill diverge">Divergence</span>'
     )
     return _one_line(
-        f'<div class="ar-finding"><div class="ar-finding-head">{pill}'
+        # The divergence carries a rule the corroboration does not: the
+        # two were typographically identical and differed only in the
+        # colour of a 10px pill, so a reader had to read the pill to sort
+        # the section the whole report is built around.
+        f'<div class="ar-finding{"" if agrees else " diverge"}">'
+        f'<div class="ar-finding-head">{pill}'
         f'<span class="ar-pill mat">{_text(materiality)} materiality</span>'
         f"</div>"
         f'<div class="ar-finding-grid">'
@@ -692,8 +714,8 @@ def home() -> str:
         '<div class="ar-home">'
         # Spaces before each break: without them textContent read
         # "Read the filings,then read whatmanagement saidabout them."
-        "<h1>Read the filings, <br>then read what <br>"
-        "management said <br>about them.</h1>"
+        "<h1>Read the filings, then read what management said "
+        "about them.</h1>"
         '<p class="lede">A ticker in, a sourced research note out: the '
         "filed financial record, the narrative management wrapped around "
         "it, and the places where the two do not agree.</p>"

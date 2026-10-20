@@ -408,7 +408,12 @@ table.ar-table tbody tr.subject td.nm {
 .ar-chips a:hover { color: var(--ink); border-color: var(--ink); }
 .ar-chips a.ok { color: var(--positive); border-color: var(--positive); }
 .ar-chips a.warn { color: var(--caution); border-color: var(--caution); }
-.ar-chips a.bad { color: var(--negative); border-color: var(--negative); }
+/* Filled, not outlined. A failed-verification chip was the same 10px
+   box at the same border weight as the neutral filing-date chip beside
+   it, so the one signal worth stopping for read as metadata. */
+.ar-chips a.bad { color: var(--paper); background: var(--negative);
+  border-color: var(--negative); }
+.ar-chips a.bad:hover { color: var(--paper); }
 
 /* ---------------------------------------------------------- status bar */
 
@@ -420,7 +425,13 @@ table.ar-table tbody tr.subject td.nm {
 .ar-status.ok .tag { color: var(--positive); }
 .ar-status.warn { border-left-color: var(--caution); }
 .ar-status.warn .tag { color: var(--caution); }
-.ar-status.bad { border-left-color: var(--negative); }
+/* A divergence is the finding this section exists for; a corroboration
+   is context. They carried the same hairline and differed only in the
+   colour of a 10px pill. */
+.ar-finding.diverge { border-left: 2px solid var(--negative);
+  padding-left: var(--s3); }
+.ar-status.warn { border-left-width: 3px; }
+.ar-status.bad { border-left-color: var(--negative); border-left-width: 3px; }
 .ar-status.bad .tag { color: var(--negative); }
 .ar-status.info .tag { color: var(--ink-muted); }
 
@@ -453,7 +464,10 @@ table.ar-table tbody tr.subject td.nm {
   gap: var(--s5); margin-bottom: var(--s3); }
 .ar-finding-grid .lbl { color: var(--ink-muted); margin-bottom: var(--s1); }
 .ar-finding-grid p { margin: 0; }
-.ar-assess { font-size: var(--t-body); line-height: var(--t-body-lh);
+/* The assessment is the finding; the quoted claim and the filed figure
+   above it are the evidence. This set the evidence larger than the
+   verdict, and put the verdict last. */
+.ar-assess { font-size: var(--t-read); line-height: var(--t-read-lh);
   color: var(--ink); border-left: 1px solid var(--accent);
   padding-left: var(--s3); }
 
@@ -799,11 +813,20 @@ hr { border-color: var(--rule); margin: var(--s5) 0; }
    element rendered outside this container, so the row was pure filler and
    left a 214px hole between the lede and the only control on the screen,
    which reads as a bug rather than as breathing room. */
+/* The form sits at a measure, not at the window's width. A ticker field
+   stretched across 1200px of a wide screen is the look of a layout with
+   nothing in it, which is what the empty second column used to be. */
+.ar-workspace-intro, .ar-workspace { max-width: 34rem; }
+.stTextInput, .stTextArea, .stSelectbox,
+[data-testid="stCaptionContainer"] { max-width: 34rem; }
+.stButton > button { max-width: 34rem; }
 .ar-home { border-top: 2px solid var(--ink); padding-top: var(--s5);
-  min-height: calc(100vh - 16rem); display: grid;
-  grid-template-rows: auto auto 1fr; }
+  padding-bottom: var(--s5); }
 .ar-home h1 { font-size: var(--t-d0); line-height: var(--t-d0-lh);
-  letter-spacing: var(--t-d0-ls); margin: 0 0 var(--s5); }
+  letter-spacing: var(--t-d0-ls); margin: 0 0 var(--s5);
+  /* Wraps on its own measure rather than on four hard `<br>`s, which
+     could not respond to width. */
+  max-width: 15ch; }
 .ar-home .lede { font-size: var(--t-read); line-height: var(--t-read-lh);
   color: var(--ink-soft); margin: 0; max-width: 54ch; }
 

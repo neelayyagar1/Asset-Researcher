@@ -167,8 +167,12 @@ def _controls(key: str) -> tuple[str, str, str, bool]:
         if choice == "Describe my own"
         else next(p.description for p in presets if p.name == choice)
     )
+    # Tall enough for the seeded description. At 110 the default content
+    # was cut through the middle of a line of type, so the first thing a
+    # reader saw of the field they most need to read was the app failing
+    # to hold its own text.
     mandate_text = st.text_area(
-        "Mandate description", value=prefill, height=110, key=f"{key}_mandate"
+        "Mandate description", value=prefill, height=150, key=f"{key}_mandate"
     )
     st.caption(
         "Sets emphasis and ordering only. It does not change the reported "
@@ -333,16 +337,18 @@ report = st.session_state.get("report")
 
 if report is None:
     _skip_link("ar-form", "Skip to the form")
-    left, right = st.columns([1.15, 1])
-    with left:
-        write('<span id="ar-form" tabindex="-1"></span>')
-        write(ui.workspace_intro())
-        ticker, mandate_text, urls_text, run = _controls("inline")
-        if run and ticker:
-            st.session_state["pending"] = (ticker, mandate_text, urls_text)
-            st.rerun()
-        if run and not ticker:
-            write(ui.status("error", "Input", "Enter a ticker."))
+    # One column. This was `st.columns([1.15, 1])` with nothing ever
+    # written to the right half, so the screen where a reader decides
+    # whether the tool is serious was 46% empty cream and looked like a
+    # layout that had broken. The form sits at its own measure instead.
+    write('<span id="ar-form" tabindex="-1"></span>')
+    write(ui.workspace_intro())
+    ticker, mandate_text, urls_text, run = _controls("inline")
+    if run and ticker:
+        st.session_state["pending"] = (ticker, mandate_text, urls_text)
+        st.rerun()
+    if run and not ticker:
+        write(ui.status("error", "Input", "Enter a ticker."))
     st.stop()
 
 

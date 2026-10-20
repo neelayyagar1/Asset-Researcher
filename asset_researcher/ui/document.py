@@ -58,6 +58,15 @@ def usd(value: float | None) -> str:
     return f"${value:,.2f}" if value is not None else "NM"
 
 
+def _gap_reason(bundle, source: str) -> str:
+    """The recorded reason for a refusal, so it can be stated where it
+    bites rather than only in the log at the foot of the note."""
+    for gap in bundle.gaps:
+        if gap.source == source:
+            return gap.reason
+    return ""
+
+
 def _currency_note(report) -> str:
     """What currency the filed figures are in, said plainly.
 
@@ -199,9 +208,15 @@ def sections(report: Report) -> list[Section]:
         emit("Valuation")
         add(
             ui.block(
-                ui.note(
-                    "No discounted cash flow model was produced for this filer. "
-                    "Sources records why."
+                # The reason is already written, well, in the gap log.
+                # Pointing at another section for it is the tool
+                # declining to answer and then declining to say why, and
+                # that is what makes a deliberate refusal read as a
+                # failure.
+                ui.declined(
+                    _gap_reason(bundle, "valuation")
+                    or "No discounted cash flow model was produced for "
+                       "this filer."
                 )
             )
         )
