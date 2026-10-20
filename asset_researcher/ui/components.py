@@ -570,20 +570,62 @@ def bullets(items: Sequence[str]) -> str:
 # ------------------------------------------------------------- cover page
 
 
-def open_state(headline: str, lede: str, hint: str) -> str:
-    """What the application shows before a report exists.
+def home() -> str:
+    """The first screen a stranger meets.
 
-    Not a cover page. The previous version was a marketing headline over a
-    three-up 01/02/03 pillar grid, which is a landing page for a product
-    with one user and was the first thing any reader saw. Numbered pillars
-    of heading-plus-paragraph are also the single most recognisable
-    generated-page pattern there is.
-
-    What replaces it is the instrument: a rule, the name, what comes out,
-    and where to start.
+    It states the proposition and nothing else. The tool used to open on a
+    form, which asks someone to supply an input before anything has told
+    them what they get back for it.
     """
     return _one_line(
-        f'<div class="ar-open"><h1>{_text(headline)}</h1>'
-        f'<p class="lede">{_text(lede)}</p>'
-        f'<p class="hint">{_text(hint)}</p></div>'
+        '<div class="ar-home">'
+        "<h1>Read the filings,<br>then read what<br>"
+        "management said<br>about them.</h1>"
+        '<p class="lede">A ticker in, a sourced research note out: the '
+        "filed financial record, the narrative management wrapped around "
+        "it, and the places where the two do not agree.</p>"
+        "</div>"
+    )
+
+
+def home_foot() -> str:
+    """Three claims, under the fold, as a ruled row rather than cards.
+
+    What the product guarantees, stated where it can be read after the
+    proposition has landed rather than competing with it.
+    """
+    claims = (
+        (
+            "Every figure is filed",
+            "Financial data is read from the company's own XBRL submissions "
+            "to the SEC. No figure is model-generated, and the ones computed "
+            "from filed lines are marked as computed.",
+        ),
+        (
+            "Every claim is located",
+            "Narrative statements carry a citation resolved against the "
+            "stored source text. Locating a quote is not establishing that "
+            "it supports the claim, and the report says so.",
+        ),
+        (
+            "The counter-case is mandatory",
+            "Each report states the strongest evidence against its own "
+            "thesis, what would falsify it, and what the sources could not "
+            "see.",
+        ),
+    )
+    blocks = "".join(
+        f"<div><h2>{_text(title)}</h2><p>{_text(body)}</p></div>"
+        for title, body in claims
+    )
+    return _one_line(f'<div class="ar-claims">{blocks}</div>')
+
+
+def workspace_intro() -> str:
+    """The empty workspace, which is a form and should say what it wants."""
+    return _one_line(
+        '<div class="ar-workspace-intro">'
+        "<h2>Build a note</h2>"
+        '<p>Enter a ticker. The report takes about a minute and reads every '
+        "filing it cites.</p></div>"
     )

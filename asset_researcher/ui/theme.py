@@ -580,6 +580,14 @@ button[data-testid="stExpandSidebarButton"]:hover,
 .stTextInput input::placeholder, .stTextArea textarea::placeholder {
   color: var(--ink-muted); opacity: 1; }
 
+/* Streamlit wraps a button's label in its own <p>, and the document's
+   global paragraph colour then won against the button's: the primary
+   action rendered #403c33 on #17150f, about 1.8:1, which is invisible.
+   Every control's descendants inherit the control's colour instead. */
+.stButton > button *, .stDownloadButton > button *,
+[data-testid="stExpander"] summary *, .stTabs [data-baseweb="tab"] * {
+  color: inherit; }
+
 .stButton > button, .stDownloadButton > button {
   font-family: var(--sans); font-size: var(--t-label);
   letter-spacing: var(--t-label-ls); text-transform: uppercase;
@@ -608,6 +616,48 @@ hr, [data-testid="stDivider"] { border-color: var(--rule);
   border-radius: 0; }
 
 
+/* --------------------------------------------------------------- home */
+
+/* The proposition, set at the one deliberate extreme in the type scale and
+   given the viewport to itself. No pillar grid, no hero image, no badge:
+   the sentence is the argument. */
+.ar-home { border-top: 2px solid var(--ink); padding-top: var(--s5);
+  min-height: calc(100vh - 16rem); display: grid;
+  grid-template-rows: auto auto 1fr; }
+.ar-home h1 { font-size: var(--t-d0); line-height: var(--t-d0-lh);
+  letter-spacing: var(--t-d0-ls); margin: 0 0 var(--s5); }
+.ar-home .lede { font-size: var(--t-read); line-height: var(--t-read-lh);
+  color: var(--ink-soft); margin: 0; max-width: 54ch; }
+
+/* The three guarantees, ruled rather than boxed. Cards would make them
+   look like features; rules make them look like terms. */
+.ar-claims { display: grid; grid-template-columns: repeat(3, 1fr);
+  border-top: 1px solid var(--rule); margin-top: var(--s7); }
+.ar-claims > div { padding: var(--s5) var(--s5) var(--s6) 0; }
+.ar-claims > div + div { border-left: 1px solid var(--rule);
+  padding-left: var(--s5); }
+.ar-claims h2 { font-size: var(--t-h2); margin: 0 0 var(--s2); }
+.ar-claims p { font-size: var(--t-micro); line-height: 1.55; margin: 0; }
+
+/* ------------------------------------------------------- the workspace */
+
+.ar-workspace-intro { border-top: 2px solid var(--ink);
+  padding-top: var(--s4); margin-bottom: var(--s5); }
+.ar-workspace-intro h2 { font-size: var(--t-d2); letter-spacing: var(--t-d2-ls);
+  margin: 0 0 var(--s2); }
+.ar-workspace-intro p { font-size: var(--t-body); color: var(--ink-muted);
+  margin: 0; max-width: 46ch; }
+
+/* The dialog that carries the form once a report is on screen. */
+[data-testid="stDialog"] div[role="dialog"] { border-radius: 0;
+  border: 1px solid var(--ink); background: var(--paper); }
+
+@media (max-width: 900px) {
+  .ar-claims { grid-template-columns: 1fr; }
+  .ar-claims > div + div { border-left: none; padding-left: 0;
+    border-top: 1px solid var(--rule); }
+}
+
 /* ---------------------------------------------------------- open state */
 
 /* No cover page. The application opens on the instrument itself: one rule,
@@ -618,18 +668,6 @@ hr, [data-testid="stDivider"] { border-color: var(--rule);
    headline takes the top, the lede sits under it, and the hint is pinned to
    the bottom edge, so the empty space between them reads as deliberate
    rather than as a block that ran out of content. */
-.ar-open { border-top: 2px solid var(--ink); padding-top: var(--s5);
-  min-height: calc(100vh - 11rem); display: grid;
-  grid-template-rows: auto auto 1fr auto; }
-.ar-open h1 { font-size: var(--t-d0); line-height: var(--t-d0-lh);
-  letter-spacing: var(--t-d0-ls); max-width: 16ch; margin-bottom: var(--s5); }
-.ar-open .lede { font-size: var(--t-read); line-height: var(--t-read-lh);
-  color: var(--ink-soft); margin: 0; max-width: 54ch; }
-.ar-open .hint { font-family: var(--sans); font-size: var(--t-label);
-  letter-spacing: var(--t-label-ls); text-transform: uppercase;
-  font-weight: 600; color: var(--ink-muted); margin: 0;
-  border-top: 1px solid var(--rule); padding-top: var(--s3);
-  align-self: end; }
 """
 
 

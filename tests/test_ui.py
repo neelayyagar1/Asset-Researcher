@@ -675,3 +675,15 @@ def test_a_source_url_is_attribute_escaped():
     )
     assert "<script>" not in out
     assert "&quot;" in out
+
+
+def test_a_control_label_inherits_the_control_colour():
+    """Streamlit wraps a button's label in its own <p>, and the document's
+    global paragraph colour then won against the button's: the primary
+    action rendered #403c33 on #17150f, about 1.8:1, which is invisible.
+
+    The regression is in the stylesheet rather than in rendered markup, so
+    the rule itself is what gets asserted."""
+    css = theme.stylesheet()
+    assert ".stButton > button *" in css
+    assert "color: inherit;" in css

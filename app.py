@@ -56,13 +56,18 @@ def _bridge_hosted_secrets() -> None:
     without this bridge a deployed instance starts with no credentials and
     fails on the first EDGAR call.
     """
-    try:
-        secrets = st.secrets
-    except Exception:
-        return
+    # st.secrets is lazy: the attribute resolves fine and the load happens
+    # on first use, so wrapping only the attribute access let a missing
+    # secrets.toml crash the app on every local run.
     for key in ("ANTHROPIC_API_KEY", "FINNHUB_API_KEY", "EDGAR_USER_AGENT"):
-        if key not in os.environ and key in secrets:
-            os.environ[key] = str(secrets[key])
+        if key in os.environ:
+            continue
+        try:
+            value = st.secrets[key]
+        except Exception:
+            # No secrets file, or no such key. Local runs read .env.
+            return
+        os.environ[key] = str(value)
 
 
 _bridge_hosted_secrets()
@@ -109,60 +114,64 @@ st.session_state.setdefault("session_spend", 0.0)
 st.session_state.setdefault("report", None)
 
 
-# ------------------------------------------------------------------ controls
+# ------------------------------------------------------------------ views
 
-# No sidebar. The controls that matter sit at the top of the page where
-# they are visible, and the section index is a sticky bar the reader can
-# reach at any scroll depth. Burying the index under four input widgets in
-# a collapsible drawer made the one thing a reader needs constantly the
-# hardest thing on the page to reach, and collapsing that drawer used to
-# hide the entire input surface.
-presets = load_presets()
+# Three screens, not one. The tool used to open on a form, which asks a
+# stranger to supply an input before anything has told them what they get
+# back. Home states the proposition, the workspace runs the report, and the
+# form returns as a dialog once a report is on screen, because at that
+# point it is a thing you reach for occasionally rather than the first
+# thing you meet.
+st.session_state.setdefault("view", "home")
 report = st.session_state.get("report")
+presets = load_presets()
 
-controls = st.columns([1.1, 2.4, 1.2, 1.1, 0.9] if report else [1.1, 2.4, 1.2])
-ticker = controls[0].text_input("Ticker", value="AAPL", max_chars=8).strip().upper()
-choice = controls[1].selectbox(
-    "Mandate", ["Describe my own"] + [p.name for p in presets], index=1
-)
-controls[2].markdown('<div style="height:1.62rem"></div>', unsafe_allow_html=True)
-run = controls[2].button("Generate report", type="primary", use_container_width=True)
 
-prefill = (
-    ""
-    if choice == "Describe my own"
-    else next(p.description for p in presets if p.name == choice)
-)
-
-with st.expander("Mandate detail and additional sources"):
-    mandate_text = st.text_area("Mandate description", value=prefill, height=110)
+def _controls(key: str) -> tuple[str, str, str, bool]:
+    """The report form. Rendered inline on the empty workspace and inside
+    a dialog once there is a report to replace."""
+    ticker = st.text_input(
+        "Ticker", value="AAPL", max_chars=8, key=f"{key}_ticker"
+    ).strip().upper()
+    choice = st.selectbox(
+        "Mandate",
+        ["Describe my own"] + [p.name for p in presets],
+        index=1,
+        key=f"{key}_preset",
+    )
+    prefill = (
+        ""
+        if choice == "Describe my own"
+        else next(p.description for p in presets if p.name == choice)
+    )
+    mandate_text = st.text_area(
+        "Mandate description", value=prefill, height=110, key=f"{key}_mandate"
+    )
     st.caption(
         "Sets emphasis and ordering only. It does not change the reported "
         "figures, the citations, or which divergences are disclosed."
     )
-    urls_text = st.text_area("Additional sources", height=70, placeholder="https://")
+    urls_text = st.text_area(
+        "Additional sources", height=70, placeholder="https://",
+        key=f"{key}_urls",
+    )
     st.caption(
         "Public URLs. Classified as secondary and attributed as opinion. "
         f"Demo budget remaining today: ${spend.remaining_today():,.2f}"
     )
+    run = st.button(
+        "Generate report", type="primary", use_container_width=True,
+        key=f"{key}_run",
+    )
+    return ticker, mandate_text, urls_text, run
 
-if report is not None:
-    controls[3].markdown('<div style="height:1.62rem"></div>', unsafe_allow_html=True)
-    controls[3].download_button(
-        "HTML",
-        data=report_to_html(report),
-        file_name=f"{report.ticker}-research-note.html",
-        mime="text/html",
-        use_container_width=True,
-    )
-    controls[4].markdown('<div style="height:1.62rem"></div>', unsafe_allow_html=True)
-    controls[4].download_button(
-        "Markdown",
-        data=report_to_markdown(report),
-        file_name=f"{report.ticker}-research-note.md",
-        mime="text/markdown",
-        use_container_width=True,
-    )
+
+@st.dialog("New report", width="large")
+def _new_report_dialog() -> None:
+    ticker, mandate_text, urls_text, run = _controls("dialog")
+    if run and ticker:
+        st.session_state["pending"] = (ticker, mandate_text, urls_text)
+        st.rerun()
 
 
 def generate(ticker: str, mandate_text: str, urls: list[str]):
@@ -234,38 +243,49 @@ def _generate(ticker: str, mandate_text: str, urls: list[str], user_sources: lis
     return build_report(bundle, mandate, narrative, reconciliation)
 
 
-if run:
-    if not ticker:
-        write(ui.status("error", "Input", "Enter a ticker."))
-    else:
-        urls = [u.strip() for u in urls_text.splitlines() if u.strip()]
-        try:
-            st.session_state["report"] = generate(ticker, mandate_text, urls)
-        except Exception as exc:
-            st.session_state["report"] = None
-            write(
-                ui.status(
-                    "error", "Failed", f"The report could not be generated: {exc}"
-                )
+def _run_pending() -> None:
+    pending = st.session_state.pop("pending", None)
+    if not pending:
+        return
+    ticker, mandate_text, urls_text = pending
+    urls = [u.strip() for u in urls_text.splitlines() if u.strip()]
+    try:
+        st.session_state["report"] = generate(ticker, mandate_text, urls)
+    except Exception as exc:
+        st.session_state["report"] = None
+        write(
+            ui.status(
+                "error", "Failed", f"The report could not be generated: {exc}"
             )
-
-
-# ------------------------------------------------------------- open state
-
-report = st.session_state.get("report")
-if report is None:
-    write(
-        ui.open_state(
-            "Read the filings, then read what management said about them.",
-            "A ticker in, a sourced research note out: the filed financial "
-            "record, the narrative management wrapped around it, and the "
-            "places where the two do not agree. Every figure comes from the "
-            "company's own submissions to the SEC, every claim carries a "
-            "citation back to the source text, and every report states the "
-            "strongest case against its own thesis.",
-            "Enter a ticker above. About a minute.",
         )
-    )
+
+
+# ------------------------------------------------------------------- home
+
+if st.session_state["view"] == "home" and report is None:
+    write(ui.home())
+    if st.button("Start a report", type="primary", key="enter"):
+        st.session_state["view"] = "tool"
+        st.rerun()
+    write(ui.home_foot())
+    st.stop()
+
+
+# -------------------------------------------------------------- workspace
+
+_run_pending()
+report = st.session_state.get("report")
+
+if report is None:
+    left, right = st.columns([1.15, 1])
+    with left:
+        write(ui.workspace_intro())
+        ticker, mandate_text, urls_text, run = _controls("inline")
+        if run and ticker:
+            st.session_state["pending"] = (ticker, mandate_text, urls_text)
+            st.rerun()
+        if run and not ticker:
+            write(ui.status("error", "Input", "Enter a ticker."))
     st.stop()
 
 
@@ -277,6 +297,28 @@ implied = bundle.implied
 context = bundle.cash_context
 
 # ----------------------------------------------------------------- masthead
+
+# A new report is an occasional act once one is on screen, so the form is
+# behind a control rather than occupying the top of every page.
+actions = st.columns([5, 1.1, 1.1, 1.3])
+if actions[3].button("New report", use_container_width=True, key="new"):
+    _new_report_dialog()
+actions[1].download_button(
+    "HTML",
+    data=report_to_html(report),
+    file_name=f"{report.ticker}-research-note.html",
+    mime="text/html",
+    use_container_width=True,
+    key="dl_html",
+)
+actions[2].download_button(
+    "Markdown",
+    data=report_to_markdown(report),
+    file_name=f"{report.ticker}-research-note.md",
+    mime="text/markdown",
+    use_container_width=True,
+    key="dl_md",
+)
 
 write(
     ui.masthead(
