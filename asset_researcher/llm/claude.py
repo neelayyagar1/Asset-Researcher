@@ -104,7 +104,15 @@ class ClaudeProvider(LLMProvider):
         max_tokens: int,
     ) -> T:
         schema = to_structured_schema(output_model)
-        response = self._client.messages.create(
+        # Streamed, because this call can legitimately run past ten
+        # minutes and the SDK refuses a non-streaming request that might.
+        # Raising the token ceiling for large filers made that reachable:
+        # Costco's reconciliation, over 153,000 characters of source text,
+        # failed outright with "Streaming is required for operations that
+        # may take longer than 10 minutes". Nothing else changes - the
+        # accumulated message is the same object the non-streaming call
+        # returned, so stop_reason, usage and content are read as before.
+        with self._client.messages.stream(
             model=self._model,
             max_tokens=max_tokens,
             system=system,
@@ -113,7 +121,8 @@ class ClaudeProvider(LLMProvider):
                 "format": {"type": "json_schema", "schema": schema},
                 "effort": effort,
             },
-        )
+        ) as stream:
+            response = stream.get_final_message()
 
         self._record_usage(response)
 
@@ -161,13 +170,18 @@ class ClaudeProvider(LLMProvider):
         ]
         content.append({"type": "text", "text": user})
 
-        response = self._client.messages.create(
+        # Streamed for the same reason as the structured call above: this
+        # one carries every source document in the prompt, so it is the
+        # larger of the two and just as able to run past the SDK's
+        # ten-minute ceiling on a non-streaming request.
+        with self._client.messages.stream(
             model=self._model,
             max_tokens=max_tokens,
             system=system,
             messages=[{"role": "user", "content": content}],
             output_config={"effort": effort},
-        )
+        ) as stream:
+            response = stream.get_final_message()
 
         self._record_usage(response)
 
