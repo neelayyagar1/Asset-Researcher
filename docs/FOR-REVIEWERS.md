@@ -91,6 +91,38 @@ Stated here rather than buried.
   point and the note labels it as one.
 - **Semantic citation support is unchecked.** Provenance is verified;
   inference is not.
+- **An acquisition sets the growth record.** The projection takes a capped
+  revenue CAGR from filed statements, and filed revenue does not separate
+  organic growth from a deal. A company growing 5% organically that closed
+  an acquisition in the final year reports a three-year CAGR well above
+  that, and the summary's first sentence then says the price asks less
+  than the record delivered. The magnitude guard is a unit-error check and
+  a 2.4x revenue step does not trip it. Beneish does move on the sales
+  growth index, which is the right flag for the wrong reason.
+- **Fiscal labels follow the first-week rule, not the filer's cover.** A
+  year ending 2021-01-30 is labelled FY2021. Walmart agrees; Target, Gap
+  and Kohl's call it fiscal 2020, so for those filers the columns sit a
+  year off their own 10-K. A 53-week year passes the duration check
+  correctly but is not flagged, so the extra week prints as growth.
+- **Non-USD filers get an incomplete note, deliberately.** Monetary facts
+  in another currency are refused rather than converted, because the
+  market capitalisation they would be priced against is a USD quote. The
+  note says so and the figures are absent rather than wrong.
+- **Banks and REITs get no discounted cash flow.** The model discounts
+  unlevered cash flow and bridges across net debt, which does not describe
+  a deposit-funded balance sheet or a company valued on funds from
+  operations against asset value. Comparables, the statement table and the
+  health screens still run, sector-gated.
+- **No active-section indicator while scrolling.** Twenty sections down a
+  long document and the index marks your place only after a click.
+  Mapping scroll position to a nav item needs script, and faking it in CSS
+  would mark the wrong section.
+- **`app.py` is not under test.** The pipeline, the components and the
+  export are; the view layer's state transitions are exercised by hand.
+- **Focus does not return to the trigger when the dialog closes.**
+  Streamlit owns the dialog. Focus enters it, the trap holds, Escape
+  closes it and the background is inert; on close focus lands on the body,
+  which is not reachable without script.
 
 ## Links
 
