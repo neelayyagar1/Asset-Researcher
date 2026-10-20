@@ -25,11 +25,43 @@ class DerivedValue:
     unavailable_reason: str | None = None
 
 
-def _at(series: MetricSeries, metric: str, index: int) -> float | None:
-    periods = series.series.get(metric)
-    if not periods or abs(index) > len(periods):
+def aligned_labels(series: MetricSeries) -> list[str]:
+    """Every fiscal label present anywhere in the series, oldest first.
+
+    The alignment key. Labels are "FY" plus a four-digit year, so sorting
+    them is chronological.
+    """
+    labels: set[str] = set()
+    for points in series.series.values():
+        labels.update(p.frame_label for p in points)
+    return sorted(labels)
+
+
+def _at(series: MetricSeries, metric: str, index: int = -1) -> float | None:
+    """One metric's value for the period at `index` of the aligned window.
+
+    Indexing each metric's own list independently is what this replaces,
+    and it silently combined periods. Any filer whose balance-sheet series
+    runs longer than its income-statement series - a transition-period
+    stub, a comparative tagged late - had position -1 mean different
+    years for different metrics. Measured on such a filer: Altman Z
+    printed 3.06, reported as "safe", where the period-aligned score is
+    2.17, inside Altman's own grey zone. Working capital flipped sign,
+    ROIC moved 1.5 points, and in a live fiscal-year-end change the same
+    defect produced a return on equity of 194%.
+
+    Returning None where this metric has no fact for that period is the
+    point: a score built from two different years is worse than one that
+    declines to compute.
+    """
+    labels = aligned_labels(series)
+    if not labels or abs(index) > len(labels):
         return None
-    return periods[index].value
+    target = labels[index]
+    for period in series.series.get(metric) or ():
+        if period.frame_label == target:
+            return period.value
+    return None
 
 
 def _safe_div(

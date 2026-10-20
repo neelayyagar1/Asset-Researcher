@@ -200,6 +200,87 @@ def check_required_metrics_present(series: MetricSeries, result: ValidationResul
             )
 
 
+def _by_label(series: MetricSeries, metric: str) -> dict[str, float]:
+    return {
+        p.frame_label: p.value for p in (series.series.get(metric) or ())
+    }
+
+
+def _accessions(series: MetricSeries, metric: str) -> dict[str, str]:
+    return {p.frame_label: p.accn for p in (series.series.get(metric) or ())}
+
+
+def check_income_statement_foots(
+    series: MetricSeries, result: ValidationResult
+) -> None:
+    """Revenue less cost of revenue should equal gross profit.
+
+    There was no footing check of any kind, and the gap it leaves is not
+    theoretical. Facts are deduped per concept, keeping the most recently
+    filed value for each period end, so a filer that restates one line in
+    a later 10-K gets the restated figure for that line and the
+    as-originally-filed figure for every line it did not restate. The
+    period then carries a mixture: restated revenue beside original cost
+    of revenue, with a gross profit that matches neither. Revenue minus
+    cost of revenue came to 118.5 against a stated gross profit of 148.5,
+    gross margin printed on the stated figure, and `validate` returned no
+    issues at all.
+    """
+    revenue = _by_label(series, "revenue")
+    cogs = _by_label(series, "cost_of_revenue")
+    gross = _by_label(series, "gross_profit")
+
+    for label in sorted(set(revenue) & set(cogs) & set(gross)):
+        stated = gross[label]
+        implied = revenue[label] - cogs[label]
+        scale = max(abs(stated), abs(implied))
+        if scale == 0:
+            continue
+        if abs(stated - implied) / scale > _IDENTITY_TOLERANCE:
+            result.add(
+                "income_statement_footing",
+                f"{label}: revenue less cost of revenue is "
+                f"${implied:,.0f}, but gross profit is stated as "
+                f"${stated:,.0f}. The three lines do not foot, which "
+                f"usually means the period mixes restated and "
+                f"originally-filed figures. Margins for {label} should "
+                f"not be relied on.",
+                severity="error",
+            )
+
+
+def check_period_sources_agree(
+    series: MetricSeries, result: ValidationResult
+) -> None:
+    """One period built from several filings is a restatement, undisclosed.
+
+    Every fact records the accession it came from, and that was recorded
+    and then read by nothing. Where the lines of a single fiscal year come
+    from different filings, that year has been restated and the note said
+    so nowhere.
+    """
+    core = (
+        "revenue", "cost_of_revenue", "gross_profit", "net_income",
+        "total_assets", "operating_income",
+    )
+    by_label: dict[str, set[str]] = {}
+    for metric in core:
+        for label, accn in _accessions(series, metric).items():
+            by_label.setdefault(label, set()).add(accn)
+
+    mixed = sorted(l for l, accns in by_label.items() if len(accns) > 1)
+    if not mixed:
+        return
+    result.add(
+        "restated_period",
+        f"{', '.join(mixed)} draws its lines from more than one filing, "
+        f"which means the period was restated. Figures shown are the most "
+        f"recently filed value for each line, so a line the filer did not "
+        f"restate is still as originally reported.",
+        severity="warning",
+    )
+
+
 def check_reporting_currency(series: MetricSeries, result: ValidationResult) -> None:
     """A filer reporting in anything but dollars cannot be priced here.
 
@@ -233,6 +314,8 @@ _ALL_CHECKS = [
     check_scale_plausibility,
     check_required_metrics_present,
     check_reporting_currency,
+    check_income_statement_foots,
+    check_period_sources_agree,
 ]
 
 

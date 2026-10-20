@@ -18,6 +18,7 @@ from dataclasses import dataclass
 from enum import Enum
 
 from asset_researcher.quant.metrics_config import all_health_score_defs
+from asset_researcher.quant.derived import _at, aligned_labels
 from asset_researcher.quant.series import MetricSeries
 
 
@@ -51,11 +52,9 @@ class ScoreResult:
         return f"{rendered}, {self.detail}" if self.detail else rendered
 
 
-def _at(series: MetricSeries, metric: str, index: int = -1) -> float | None:
-    periods = series.series.get(metric)
-    if not periods or abs(index) > len(periods):
-        return None
-    return periods[index].value
+# `_at` and the alignment it depends on live in derived.py, imported
+# rather than duplicated: two copies of this indexing is how the two
+# modules came to drift apart in the first place.
 
 
 def _band_for(value: float, bands: dict) -> str | None:
