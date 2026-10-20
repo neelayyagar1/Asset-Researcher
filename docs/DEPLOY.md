@@ -58,6 +58,48 @@ Cloudflare dashboard under Workers and Pages.
 To refresh later, re-run both commands. The site is static files; there is
 nothing to migrate.
 
+Note the Node version: wrangler 4 wants Node 22. On Node 20, pin it:
+
+```bash
+npx wrangler@3 pages deploy build/site --project-name asset-researcher
+```
+
+### Making it private, which is the default you probably want
+
+A `*.pages.dev` URL is public and indexable the moment it exists. A demo
+sent to a handful of named people should not be either, and the fix is
+Cloudflare Access, which is free for up to 50 users and sits in front of
+the site as a real identity check rather than a shared secret.
+
+In the Cloudflare dashboard: **Zero Trust → Access → Applications → Add
+an application → Self-hosted**. Point it at the Pages hostname, then add
+one policy:
+
+- Action: **Allow**
+- Include: **Emails** (list the addresses) or **Emails ending in** (a
+  company domain)
+
+Leave the identity provider as the built-in **One-time PIN**. A recipient
+opens the link, types their email, receives a six-digit code, and is in.
+No account to create, nothing for them to install, and you can revoke an
+address later without moving the site.
+
+Two things worth knowing before you rely on it:
+
+- **Add the policy before you share the link, not after.** Between
+  deploying and attaching the policy the site is open, and that window is
+  long enough to be indexed.
+- **Access protects the hostname, not the files.** Anything that is also
+  committed to a public branch is still public through that branch. Keep
+  generated notes out of the repository; `build/` is gitignored for this
+  reason.
+
+GitHub Pages is the wrong host for a private demo. Pages on a private
+repository is a paid feature, and on a public repository the published
+branch is readable by anyone regardless of the Pages setting. Deleting
+the branch does not unpublish the site either: the last deployment keeps
+serving until Pages is set to **None** in the repository settings.
+
 ## 2. The live tool, on Streamlit Community Cloud
 
 Push the repository to GitHub, then:
@@ -80,6 +122,37 @@ finds them unchanged.
 
 5. Deploy. The first build installs from `requirements.txt` and takes a few
    minutes.
+
+### Keeping the live tool private
+
+**Cloudflare Access cannot protect this one.** Access works by sitting in
+front of a hostname that routes through Cloudflare, and a
+`*.streamlit.app` address does not. Two options that do work:
+
+**Streamlit's own viewer list**, which is the simple answer. In the app's
+settings, set it to private and add viewer emails. The cost is that a
+viewer needs a Google account and has to sign in with it, which is a
+larger ask of a busy reader than a six-digit code.
+
+**A Cloudflare Tunnel from your own machine**, which keeps everything on
+one access model. Run the app locally, expose it through a tunnel, and
+put the same Access policy in front of the tunnel hostname that guards
+the notes:
+
+```bash
+streamlit run app.py --server.port 8501 &
+npx wrangler@3 tunnel --url http://localhost:8501
+```
+
+Same one-time-PIN flow as the notes, no Google account, no secrets on
+anyone else's infrastructure, and the API key never leaves your machine.
+The cost is that the link only works while your machine is awake, which
+makes it right for a scheduled call and wrong for "have a look whenever".
+
+**Whichever you pick, the spend caps still matter.** Private means the
+people who can reach it are named, not that they cannot spend your
+balance: each report is a real API call against your key. Keep a separate
+key on anything deployed, and read the section below.
 
 ### Before you make that link public
 
