@@ -89,10 +89,18 @@ st.markdown(theme.stylesheet(), unsafe_allow_html=True)
 # no `main` element to target, so the link points at the masthead, which
 # is the first thing in the report proper. The exported file, whose shell
 # we do write, gets a real `main` landmark.
-st.markdown(
-    '<a class="ar-skip" href="#ar-report">Skip to report</a>',
-    unsafe_allow_html=True,
-)
+def _skip_link(target: str, label: str) -> None:
+    """A bypass link, emitted only where its target exists.
+
+    This was emitted unconditionally and pointed at `#ar-report`, which
+    is written only on the report screen, so on home and on the workspace
+    the first thing a keyboard user met was a bypass control that went
+    nowhere.
+    """
+    st.markdown(
+        f'<a class="ar-skip" href="#{target}">{label}</a>',
+        unsafe_allow_html=True,
+    )
 
 
 def write(html: str) -> None:
@@ -308,6 +316,8 @@ def _run_pending() -> None:
 # ------------------------------------------------------------------- home
 
 if st.session_state["view"] == "home" and report is None:
+    _skip_link("ar-home", "Skip to start")
+    write('<span id="ar-home" tabindex="-1"></span>')
     write(ui.home())
     if st.button("Start a report", type="primary", key="enter"):
         st.session_state["view"] = "tool"
@@ -322,8 +332,10 @@ _run_pending()
 report = st.session_state.get("report")
 
 if report is None:
+    _skip_link("ar-form", "Skip to the form")
     left, right = st.columns([1.15, 1])
     with left:
+        write('<span id="ar-form" tabindex="-1"></span>')
         write(ui.workspace_intro())
         ticker, mandate_text, urls_text, run = _controls("inline")
         if run and ticker:
@@ -365,6 +377,7 @@ actions[2].download_button(
     key="dl_md",
 )
 
+_skip_link("ar-report", "Skip to report")
 write('<span id="ar-report" tabindex="-1"></span>')
 write(
     ui.masthead(

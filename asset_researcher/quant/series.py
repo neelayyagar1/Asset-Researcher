@@ -146,6 +146,9 @@ def build_metric_series(
     (e.g. total_debt = LongTermDebt + CommercialPaper), in which case values
     are summed per period."""
     result = MetricSeries(cik=facts.cik, sector=sector)
+    # Collected first, labelled second: the labels depend on every end
+    # date in the filer's series, not just one metric's.
+    per_metric: dict[str, list[tuple[str, tuple[float, str]]]] = {}
 
     for canonical_name in canonical_metric_names:
         concept_names = mapping.get(canonical_name) or []
@@ -185,8 +188,26 @@ def build_metric_series(
             result.resolved_but_empty.append(canonical_name)
             continue
 
-        ordered = sorted(combined.items())
-        labels = _fiscal_labels([end for end, _ in ordered])
+        per_metric[canonical_name] = sorted(combined.items())
+
+    # Label once, over the union of every end date in the filer's series.
+    #
+    # This used to run per metric, over that metric's own end dates, so
+    # the collision suffix was scoped to one metric at a time. On a filer
+    # that changes its fiscal year end the two halves of the statement
+    # disagree: balance-sheet facts are instant and carry the transition
+    # stub, while the stub's income-statement facts are dropped by the
+    # duration check. `total_assets` was then labelled "FY2025 (to
+    # 2025-01-20)" and "FY2025 (to 2025-12-31)" while `revenue` was
+    # labelled plain "FY2025", and since the layer above joins metrics on
+    # the label, nothing lined up: every margin, EBITDA, ROIC and all
+    # three health scores returned nothing on a filer whose income
+    # statement was complete. Labelling over the union means a given end
+    # date has one label everywhere, and two genuinely different periods
+    # are told apart everywhere.
+    all_ends = sorted({end for rows in per_metric.values() for end, _ in rows})
+    labels = _fiscal_labels(all_ends)
+    for canonical_name, ordered in per_metric.items():
         result.series[canonical_name] = [
             MetricPeriod(end=end, frame_label=labels[end], value=value, accn=accn)
             for end, (value, accn) in ordered

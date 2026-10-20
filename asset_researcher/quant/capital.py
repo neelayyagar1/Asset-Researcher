@@ -91,8 +91,20 @@ class NetDebt:
 
 
 def _latest(series: MetricSeries, metric: str) -> float:
-    points = series.series.get(metric) or []
-    return points[-1].value if points else 0.0
+    """This metric's value for the series' latest period, or zero.
+
+    Resolved by fiscal label, not by list position. Taking `points[-1]`
+    back-filled a component from whatever year it was last tagged: a filer
+    that stopped tagging short-term investments after FY2022 had that
+    FY2022 figure netted into an FY2025 balance sheet, and the bridge
+    printed it as though it were current. The valuation bridge and the
+    derived net-debt line then disagreed on identical inputs, because the
+    latter had already moved to label alignment.
+    """
+    from asset_researcher.quant.derived import _at
+
+    value = _at(series, metric, -1)
+    return value if value is not None else 0.0
 
 
 def net_debt(series: MetricSeries, sector_class: str = "standard") -> NetDebt:

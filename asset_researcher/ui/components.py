@@ -243,12 +243,50 @@ def footnote(text: str) -> str:
 _STATUS_CLASS = {"success": "ok", "warning": "warn", "error": "bad", "info": "info"}
 
 
+# What each level is, in a word, for readers who do not get the hue. The
+# level was carried by the colour of a 10px label and a 1px rule and by
+# nothing else: not to a screen reader, not in greyscale print, not in
+# forced-colours mode.
+_STATUS_WORD = {
+    "error": "Error: ",
+    "warning": "Warning: ",
+    "success": "",
+    "info": "",
+}
+_STATUS_ROLE = {"error": ' role="alert"', "warning": ' role="status"'}
+
+
+# A figure in parentheses is negative, by the accounting convention this
+# document follows everywhere. Screen readers at their default punctuation
+# level do not speak brackets, so "(1,823.1)" was announced as "one
+# thousand eight hundred twenty three point one" - the sign, which on a
+# loss-making filer is the whole content of the cell, reached nobody who
+# was not looking at it. The glyph stays exactly as printed; a spoken form
+# is carried beside it.
+_PARENTHESISED = re.compile(r"^\((.+)\)$")
+
+
+def _figure(value) -> str:
+    """A figure cell's content, with the accounting negative spoken."""
+    rendered = str(value).strip()
+    match = _PARENTHESISED.match(rendered)
+    if not match:
+        return _text(value)
+    return (
+        f'<span aria-hidden="true">{_text(rendered)}</span>'
+        f'<span class="ar-sr">minus {_text(match.group(1))}</span>'
+    )
+
+
 def status(level: str, tag: str, message: str) -> str:
     """A ruled status line, in place of a filled alert panel."""
     cls = _STATUS_CLASS.get(level, "info")
+    word = _STATUS_WORD.get(level, "")
+    spoken = f'<span class="ar-sr">{word}</span>' if word else ""
     return _one_line(
-        f'<div class="ar-status {cls}">'
-        f'<span class="tag">{_text(tag)}</span>{_text(message)}</div>'
+        f'<div class="ar-status {cls}"{_STATUS_ROLE.get(level, "")}>'
+        f'{spoken}<span class="tag">{_text(tag)}</span>'
+        f"{_text(message)}</div>"
     )
 
 
@@ -288,7 +326,12 @@ class Col:
     link: bool = False  # the value is a URL, rendered as a short anchor
 
 
-_NM_VALUES = {"NM", "n/a", "Not disclosed.", "Not assessed.", ""}
+# "n.d." belongs here. It is the token the statement table actually
+# emits for a period the filer did not tag, and leaving it out meant the
+# cell rendered in full ink, indistinguishable from a figure that was
+# filed. components.py's own rule, below, is that this is the one thing a
+# financial table must never do.
+_NM_VALUES = {"NM", "n.d.", "n/a", "Not disclosed.", "Not assessed.", ""}
 
 # A value short enough to sit in a right-aligned figure column. Anything
 # longer is prose that happens to occupy a value column, and forcing it to
@@ -342,7 +385,9 @@ def table(
             if str(value).strip() in _NM_VALUES:
                 classes.append("nm")
             body_cell = (
-                _anchor(str(value)) if column.link else _text(value)
+                _anchor(str(value))
+                if column.link
+                else (_figure(value) if column.num else _text(value))
             )
             cells.append(
                 f'<td class="{" ".join(classes)}">{body_cell}</td>'
@@ -355,12 +400,23 @@ def table(
     # so more than half its columns were unreachable without a mouse. Only
     # the scrolling variant gets this: making every table a tab stop would
     # add a dozen empty stops to the page.
-    wrap = (
-        '<div class="ar-table-wrap" tabindex="0" role="region"'
-        ' aria-label="Comparable companies, scrollable">'
-        if scrolls
-        else '<div class="ar-table-wrap">'
-    )
+    # Every wrapper is a scroll container below 900px, not only the
+    # comparables one: the narrow-width rule sets overflow-x on all of
+    # them. Ten of eleven were therefore unreachable by keyboard at phone
+    # width and at 400% zoom, which is where the right-hand periods of a
+    # statement live. The comparables table keeps `region`, being a
+    # genuine landmark; the rest take `group`, so the export does not
+    # grow ten landmarks.
+    if scrolls:
+        wrap = (
+            '<div class="ar-table-wrap" tabindex="0" role="region"'
+            ' aria-label="Comparable companies, scrollable">'
+        )
+    else:
+        wrap = (
+            '<div class="ar-table-wrap" tabindex="0" role="group"'
+            ' aria-label="Table, scrollable when narrow">'
+        )
     return _one_line(
         f'{wrap}<table class="ar-table{variant}">'
         f"<thead><tr>{head}</tr></thead>"
@@ -417,15 +473,20 @@ def statement_table(rows, periods: Sequence[str]) -> str:
                 f"</td></tr>"
             )
             continue
-        cells = [f'<td class="rowhead">{_text(row.label)}</td>']
+        # A row header, not a cell. Reading across a statement row, a
+        # screen reader announced the period and never the line item, so
+        # a figure arrived with one of the two coordinates that give it
+        # meaning. th.rowhead is already styled, so this costs nothing
+        # visually.
+        cells = [f'<th scope="row" class="rowhead">{_text(row.label)}</th>']
         for period in periods:
             value = row.values.get(period, "")
             nm = " nm" if str(value).strip() in _NM_VALUES else ""
-            cells.append(f'<td class="num{nm}">{_text(value)}</td>')
+            cells.append(f'<td class="num{nm}">{_figure(value)}</td>')
         body.append(f'<tr class="statement-{row.kind}">{"".join(cells)}</tr>')
 
     return _one_line(
-        f'<div class="ar-table-wrap"><table class="ar-table ar-statement">'
+        f'<div class="ar-table-wrap" tabindex="0" role="group" aria-label="Table, scrollable when narrow"><table class="ar-table ar-statement">'
         f"<thead><tr>{head}</tr></thead>"
         f'<tbody>{"".join(body)}</tbody></table></div>'
     )
@@ -479,7 +540,12 @@ def sensitivity_table(
 
     body = []
     for row in grid:
-        cells = [f'<td class="rowhead">{_text(row.get("WACC", ""))}</td>']
+        # Worst case for a missing row header: a sensitivity cell means
+        # nothing without both its discount rate and its terminal growth.
+        cells = [
+            f'<th scope="row" class="rowhead">'
+            f'{_text(row.get("WACC", ""))}</th>'
+        ]
         for column in growth_columns:
             raw = row.get(column, "")
             style = ""
@@ -489,11 +555,22 @@ def sensitivity_table(
                     ratio = value / reference_price - 1
                     style = f' style="background:{_tint(ratio)}"'
             classes = "heat" + (" nm" if raw.strip() in _NM_VALUES else "")
-            cells.append(f'<td class="{classes}"{style}>{_text(raw)}</td>')
+            # The caption says a cell is shaded only where the modelled
+            # value clears the traded price, and the shade was the only
+            # carrier of that. Nothing reached a reader who cannot see
+            # the tint.
+            label = (
+                f' aria-label="{_text(raw)}, clears the traded price"'
+                if style
+                else ""
+            )
+            cells.append(
+                f'<td class="{classes}"{style}{label}>{_figure(raw)}</td>'
+            )
         body.append(f'<tr>{"".join(cells)}</tr>')
 
     return _one_line(
-        f'<div class="ar-table-wrap"><table class="ar-table">'
+        f'<div class="ar-table-wrap" tabindex="0" role="group" aria-label="Table, scrollable when narrow"><table class="ar-table">'
         f"<thead><tr>{head}</tr></thead>"
         f'<tbody>{"".join(body)}</tbody></table></div>'
     )

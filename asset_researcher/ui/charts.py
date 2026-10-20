@@ -740,7 +740,11 @@ def dcf_bridge(
         body.append(
             f'<rect x="{centre - bar_w / 2:.1f}" y="{top_y:.1f}" '
             f'width="{bar_w:.1f}" height="{max(bar_h, 2.0):.1f}" '
-            f'fill="{colour}" opacity="{1.0 if is_total else 0.86}"/>'
+            # Full opacity. At 0.86 the recessive bar composited to
+            # 2.78:1, back under the 3:1 a graphical object carrying
+            # meaning has to clear. These were the only marks in any
+            # chart not at opacity 1.0.
+            f'fill="{colour}"/>'
         )
         # A connector to the next bar, so the bars read as a waterfall
         # rather than as five unrelated columns.

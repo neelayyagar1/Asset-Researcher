@@ -165,6 +165,12 @@ html { caret-color: var(--accent); scrollbar-color: var(--rule) transparent;
 body { font-variant-numeric: tabular-nums lining-nums;
   font-feature-settings: "tnum" 1, "lnum" 1; }
 
+/* Visible to a screen reader, never to the eye. Used for the spoken form
+   of an accounting negative and for the severity word on a status. */
+.ar-sr { position: absolute; width: 1px; height: 1px; padding: 0;
+  margin: -1px; overflow: hidden; clip: rect(0 0 0 0);
+  clip-path: inset(50%); white-space: nowrap; border: 0; }
+
 /* A bypass link: offscreen until focused, which is the one pattern that
    serves a keyboard user without showing a control nobody else needs. */
 .ar-skip { position: absolute; left: -9999px; top: 0; z-index: 100;
@@ -194,7 +200,12 @@ a:hover { text-decoration-color: var(--accent); }
 
 /* The one label style. It was ten. */
 .ar-sec-label, .ar-stat-label, .ar-col-label, .ar-pill, .ar-field,
-table.ar-table thead th, .ar-status .tag, .ar-finding-grid .lbl {
+table.ar-table thead th, .ar-status .tag, .ar-finding-grid .lbl,
+/* The widget labels were the last text in the product still set in
+   Streamlit's own voice: 14px sentence-case regular, directly above a
+   button that is 10px uppercase tracked. One label style means this one
+   too. */
+.stTextInput label, .stTextArea label, .stSelectbox label {
   font-family: var(--sans); font-size: var(--t-label);
   line-height: var(--t-label-lh); letter-spacing: var(--t-label-ls);
   font-weight: 600; text-transform: uppercase; }
@@ -241,6 +252,12 @@ table.ar-table thead th, .ar-status .tag, .ar-finding-grid .lbl {
   letter-spacing: var(--t-d2-ls); line-height: var(--t-d2-lh); }
 .ar-stat-value.pos { color: var(--positive); }
 .ar-stat-value.neg { color: var(--negative); }
+/* `.ar-stat.lead .ar-stat-value` is (0,3,0) and this was (0,2,0), so the
+   lead rule won and a refusal rendered at 28px: on a REIT page the
+   largest figure on the screen was the word NM, set bigger than the
+   stock's own traded price. The intent was always that a non-figure
+   recede. */
+.ar-stat.lead .ar-stat-value.nm { font-size: var(--t-h2); letter-spacing: 0; }
 .ar-stat-value.nm { color: var(--ink-muted); font-size: var(--t-h2);
   letter-spacing: 0; }
 .ar-stat-note { font-size: var(--t-micro); line-height: var(--t-micro-lh);
@@ -513,7 +530,12 @@ table.ar-statement tbody td.rowhead { white-space: nowrap; }
   /* Reading position across a document that measures over ten thousand
      pixels. Scroll-driven, so it costs no script, and where the timeline
      is unsupported the rule simply does nothing. */
-  .ar-nav { position: relative; }
+  /* No `position: relative` here. It was added to give the bar below a
+     containing block and it silently overrode `position: sticky` at line
+     466, because it is later in the sheet at equal specificity. The
+     result was a twenty-section document with no navigation at all once
+     you were past the first screen. A sticky element is already a
+     positioned element, so the containing block was never missing. */
   .ar-nav::after { content: ""; position: absolute; left: 0; bottom: -1px;
     height: 2px; width: 100%; background: var(--accent);
     transform-origin: 0 50%; transform: scaleX(0);
@@ -707,6 +729,25 @@ button[data-testid="stExpandSidebarButton"]:hover,
 section:focus-visible, div[class*="block-container"]:focus-visible {
   outline: 2px solid var(--accent); outline-offset: 2px; }
 
+/* Streamlit's own anchor rules out-specify `.ar-skip`, so in the app the
+   bypass link rendered #0054a3 on its near-black pill, 2.43:1, with its
+   focus ring suppressed: the first control a keyboard user meets was
+   invisible and close to unreadable. The export, whose shell we write, is
+   unaffected. */
+.ar-skip, .ar-skip:visited, .ar-skip:hover, .ar-skip:active {
+  color: var(--paper) !important; text-decoration: none !important; }
+.ar-skip:focus-visible {
+  outline: 2px solid var(--paper) !important; outline-offset: 2px; }
+
+/* The earlier rule here was `section:focus-visible`, (0,1,1), which loses
+   to Streamlit's emotion rule setting `outline: none`. Only the
+   outline-offset landed, which is the tell. The main container is a
+   full-viewport tab stop, so without this a keyboard user lands on a
+   silent invisible stop covering the whole page. Negative offset keeps
+   the ring inside the viewport. */
+section.stMain:focus-visible, [data-testid="stMain"]:focus-visible {
+  outline: 2px solid var(--accent) !important; outline-offset: -2px; }
+
 [data-testid="stExpander"] { background: var(--surface);
   border: 1px solid var(--rule); border-radius: 0; box-shadow: none; }
 [data-testid="stExpander"] summary, [data-testid="stExpander"] p,
@@ -739,6 +780,10 @@ hr { border-color: var(--rule); margin: var(--s5) 0; }
 /* The proposition, set at the one deliberate extreme in the type scale and
    given the viewport to itself. No pillar grid, no hero image, no badge:
    the sentence is the argument. */
+/* The `1fr` row here used to hold nothing: the button is a Streamlit
+   element rendered outside this container, so the row was pure filler and
+   left a 214px hole between the lede and the only control on the screen,
+   which reads as a bug rather than as breathing room. */
 .ar-home { border-top: 2px solid var(--ink); padding-top: var(--s5);
   min-height: calc(100vh - 16rem); display: grid;
   grid-template-rows: auto auto 1fr; }

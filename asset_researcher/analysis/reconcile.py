@@ -296,7 +296,16 @@ def generate_reconciliation(
     mandate: MandateProfile,
     llm: LLMProvider,
     effort: str = "high",
-    max_tokens: int = 16_000,
+    # Structured output guarantees valid JSON only on a complete response,
+    # so truncation here is not a shortened answer, it is a hard failure.
+    # 16,000 was not enough for a large filer: Costco, at 17 passages and
+    # 153,000 characters of source text, produced enough reconciliations,
+    # divergences, catalysts and cases to run past it and the call raised
+    # after the narrative call had already been paid for. Doubled, which
+    # is still well inside the model's output ceiling, and the failure is
+    # now rare enough to be worth a clear error rather than a retry that
+    # would double the cost of the expensive call.
+    max_tokens: int = 32_000,
 ) -> ReconciliationReport:
     report = llm.complete_structured(
         system=load_prompt("reconciliation.md"),

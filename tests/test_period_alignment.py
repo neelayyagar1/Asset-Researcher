@@ -107,7 +107,7 @@ def test_a_period_mixing_restated_and_original_lines_fails_to_foot():
                     accn="0000-23-restated",
                 )
             ],
-            "cost_of_revenue": [
+            "cogs": [
                 MetricPeriod(
                     end="2023-12-31", frame_label="FY2023", value=181.5,
                     accn="0000-23-original",
@@ -142,7 +142,7 @@ def test_a_period_that_foots_raises_nothing():
         series=dict(
             [
                 line("revenue", 300.0),
-                line("cost_of_revenue", 181.5),
+                line("cogs", 181.5),
                 line("gross_profit", 118.5),
             ]
         ),

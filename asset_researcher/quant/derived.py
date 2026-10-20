@@ -64,6 +64,12 @@ def _at(series: MetricSeries, metric: str, index: int = -1) -> float | None:
     return None
 
 
+# A sentinel floor no denominator can clear, used where the floor cannot
+# be computed at all. `None` means "no floor" to _safe_div, which is the
+# opposite of what an unknown asset base should mean.
+_NO_RATIO = float("inf")
+
+
 def _safe_div(
     numerator: float | None,
     denominator: float | None,
@@ -163,7 +169,7 @@ def compute_derived(
             _safe_add(g("total_debt"), g("total_equity")), g("cash_and_equivalents")
         )
 
-    return {
+    values = {
         "ebitda": ebitda,
         "fcf": fcf,
         "fcf_conversion": _safe_div(fcf, g("net_income"), require_positive=True),
@@ -191,11 +197,28 @@ def compute_derived(
             _nopat(g),
             invested_capital,
             require_positive=True,
-            floor=(g("total_assets") or 0.0) * 0.01 or None,
+            # 5% of total assets, matching statements.py. This was 1%,
+            # the very floor that was raised there after a $9.8B
+            # denominator against $359B of assets produced returns of
+            # 875%. Worse, `or None` meant an untagged assets figure
+            # became no floor at all, so the same period rendered NM in
+            # the table and 8,333% in the dictionary handed to the model.
+            # No assets, no floor that can be applied, no ratio.
+            floor=(
+                g("total_assets") * 0.05
+                if g("total_assets") is not None
+                else _NO_RATIO
+            ),
         ),
-        "gross_margin": _safe_div(g("gross_profit"), g("revenue")),
-        "operating_margin": _safe_div(g("operating_income"), g("revenue")),
-        "net_margin": _safe_div(g("net_income"), g("revenue")),
+        "gross_margin": _safe_div(
+            g("gross_profit"), g("revenue"), require_positive=True
+        ),
+        "operating_margin": _safe_div(
+            g("operating_income"), g("revenue"), require_positive=True
+        ),
+        "net_margin": _safe_div(
+            g("net_income"), g("revenue"), require_positive=True
+        ),
         # Financial-sector.
         #
         # Return on equity, named for what it computes. It was labelled
@@ -218,7 +241,9 @@ def compute_derived(
         "nim_on_assets": _safe_div(
             g("net_interest_income"), g("total_assets"), require_positive=True
         ),
-        "npl_ratio": _safe_div(g("nonperforming_loans"), g("total_assets")),
+        "npl_ratio": _safe_div(
+            g("nonperforming_loans"), g("total_assets"), require_positive=True
+        ),
         # REIT. Net income plus depreciation, without the gain-on-sale
         # deduction the NAREIT definition carries: gains on property sales
         # are not a canonical metric here, so for a REIT that sold property

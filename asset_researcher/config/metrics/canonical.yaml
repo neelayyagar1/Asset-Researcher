@@ -66,6 +66,19 @@ line_items:
   total_debt:
     label: Total Debt
     sectors: [all]
+  # combined_debt and short_term_debt have to be line items or they are
+  # never built: build_metric_series only iterates the line items for the
+  # sector, so a concept resolved for them was mapped and then discarded.
+  # That left CompRow.combined_debt and .short_term_debt permanently None,
+  # and once total_debt was narrowed to strictly non-current tags, any
+  # peer tagging LongTermDebt or the combined amount reported gross debt
+  # of zero and an enterprise value short by its entire debt load.
+  combined_debt:
+    label: Debt, long and short combined
+    sectors: [all]
+  short_term_debt:
+    label: Short-term Debt
+    sectors: [all]
   retained_earnings:
     label: Retained Earnings
     sectors: [all]

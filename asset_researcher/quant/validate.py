@@ -227,7 +227,12 @@ def check_income_statement_foots(
     issues at all.
     """
     revenue = _by_label(series, "revenue")
-    cogs = _by_label(series, "cost_of_revenue")
+    # "cogs", which is what the canonical taxonomy calls it. This read
+    # "cost_of_revenue", a name that appears nowhere in canonical.yaml, so
+    # the three-way intersection below was always empty and the check was
+    # inert in production. Its two tests passed because they were written
+    # against the same wrong name.
+    cogs = _by_label(series, "cogs")
     gross = _by_label(series, "gross_profit")
 
     for label in sorted(set(revenue) & set(cogs) & set(gross)):

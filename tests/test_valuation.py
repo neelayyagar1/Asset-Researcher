@@ -28,10 +28,23 @@ def _inputs(**kw) -> DcfInputs:
 
 
 def _series(**metrics) -> MetricSeries:
+    """Metrics aligned so every one ends at the same, latest period.
+
+    Each metric used to be labelled from FY2020 forwards over its own
+    values, so a metric given one value landed in the OLDEST year while a
+    metric given three ended in the newest. Nothing downstream resolves
+    periods by position any more, so such a fixture described a filer
+    that stopped reporting its balance sheet years before its income
+    statement, and the latest period then had no debt in it.
+    """
     series = MetricSeries(cik=1, sector="standard")
+    span = max((len(v) for v in metrics.values()), default=0)
     for name, values in metrics.items():
+        offset = span - len(values)
         series.series[name] = [
-            MetricPeriod(f"202{i}-12-31", f"FY202{i}", v, "a")
+            MetricPeriod(
+                f"202{i + offset}-12-31", f"FY202{i + offset}", v, "a"
+            )
             for i, v in enumerate(values)
         ]
     return series
