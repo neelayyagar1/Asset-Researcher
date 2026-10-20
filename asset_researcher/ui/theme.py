@@ -7,12 +7,15 @@ it, so the screen and the exported file are the same object.
 
 Four decisions carry it.
 
-**One type scale, nine steps.** An earlier version of this file held 31
+**One type scale, ten steps.** An earlier version of this file held 31
 distinct font sizes, eighteen of them inside a five-pixel band. Nobody
 perceives 0.775rem as a different rank from 0.78rem; they perceive "all the
 text is small". Per-component tuning like that is locally defensible and
 globally flat, and it is the clearest sign that a stylesheet was assembled
-rather than designed. Component rules may only reference the scale.
+rather than designed. Component rules may only reference the scale, with
+one exception: the citation marker is sized relative to the prose it
+interrupts (`0.72em`), because a raised marker has to track whatever line
+it sits in rather than a fixed step.
 
 **Monospace sets figures and nothing else.** It was doing ten jobs: every
 label, every table header, the tab bar, the buttons. Monospace worn as a
@@ -81,8 +84,10 @@ _FONT_IMPORT = (
     "family=Spline+Sans+Mono:wght@400;500&display=swap');"
 )
 
-# Nine type steps and eight spacing stops. A raw rem inside a component rule
+# Ten type steps and eight spacing stops. A raw rem inside a component rule
 # is how the 31-size scale happened, so component rules reference these only.
+# d0 exists for exactly one role, the opening headline, and is the only
+# fluid step; the rest are flat so a rank is the same rank everywhere.
 _SCALE = """
   --t-d0: clamp(2.6rem, 5.4vw, 4.4rem); --t-d0-lh: 0.98; --t-d0-ls: -0.038em;
   --t-d1: 2.6rem; --t-d1-lh: 1.04; --t-d1-ls: -0.034em;

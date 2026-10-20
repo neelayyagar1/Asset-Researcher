@@ -32,3 +32,6 @@ build/
 .vscode/
 .idea/
 .claude/
+# Design-tool sidecar. DESIGN.md is the artifact worth keeping; this is the
+# machine-readable copy the tool regenerates from it.
+.impeccable/
