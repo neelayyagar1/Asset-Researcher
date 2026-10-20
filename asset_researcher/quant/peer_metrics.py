@@ -48,10 +48,18 @@ PEER_CONCEPT_FALLBACKS: dict[str, list[str]] = {
         "CashAndCashEquivalentsAtCarryingValue",
         "CashCashEquivalentsRestrictedCashAndRestrictedCashEquivalents",
     ],
+    # Strictly non-current only, because `short_term_debt` is added to it
+    # below. `DebtLongtermAndShorttermCombinedAmount` and `LongTermDebt`
+    # both already include the current portion for most filers, so pairing
+    # either with a current-debt tag counted the same borrowing twice and
+    # overstated every peer's enterprise value, which biases the subject
+    # toward looking cheap. The combined tag is kept separately.
     "total_debt": [
+        "LongTermDebtNoncurrent",
+    ],
+    "combined_debt": [
         "DebtLongtermAndShorttermCombinedAmount",
         "LongTermDebt",
-        "LongTermDebtNoncurrent",
     ],
     # Current debt and finance leases are separate tags for most filers.
     # Omitting them understates net debt and therefore enterprise value,

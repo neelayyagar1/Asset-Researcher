@@ -426,7 +426,16 @@ def sections(report: Report) -> list[Section]:
             ui.footnote(
                 "Lines set in the lighter weight are computed from the filed "
                 "lines above them (growth rates, margins, free cash flow, net "
-                "debt). Every other figure is exactly as submitted to the SEC."
+                "debt). Every other figure is exactly as submitted to the SEC. "
+                "Two lines here net cash against debt and they do it "
+                "differently, deliberately. Net debt nets cash, short-term "
+                "investments and, where the sector permits it, long-term "
+                "investments, because a reader pricing the equity is buying "
+                "the whole portfolio. Return on invested capital nets cash "
+                "and equivalents only: netting a large securities portfolio "
+                "out of invested capital shrinks the denominator until the "
+                "ratio stops describing the operating business, which on one "
+                "large-cap filer produced returns above 800%."
             )
             if statement
             else "",
@@ -525,9 +534,13 @@ def sections(report: Report) -> list[Section]:
         add(
             ui.block(
                 ui.note(
-                    "No management analysis was produced. This section depends "
-                    "on a proxy statement; Sources records whether one was "
-                    "available."
+                    "A proxy statement was read but no management analysis "
+                    "came back from it. Treat that as a gap in this report "
+                    "rather than as an absence of disclosure."
+                    if any(p.form == "DEF 14A" for p in bundle.passages)
+                    else "No proxy statement was available for this filer, "
+                    "so there is nothing to assess on pay, board "
+                    "independence or ownership. Sources records why."
                 )
             )
         )

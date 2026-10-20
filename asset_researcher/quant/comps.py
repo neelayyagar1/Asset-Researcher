@@ -54,6 +54,12 @@ class CompRow:
     total_equity: float | None = None
     total_debt: float | None = None
     short_term_debt: float | None = None
+    # The combined long-and-short tag, kept apart from the non-current one
+    # so the two are never added together.
+    combined_debt: float | None = None
+    # Decides whether long-term securities net against debt: for a bank the
+    # investment portfolio is the operating business, not a cash reserve.
+    sector_class: str = "standard"
     cash: float | None = None
     short_term_investments: float | None = None
     long_term_investments: float | None = None
@@ -96,14 +102,28 @@ class CompRow:
         return self.market_cap / self.total_equity
 
     @property
+    def gross_debt(self) -> float:
+        """Borrowings, counted once.
+
+        A filer tags either a combined long-and-short amount or a
+        non-current amount beside a current one. Adding a current-debt tag
+        to a combined one counts the same borrowing twice, so the combined
+        figure wins outright where it exists.
+        """
+        if self.combined_debt is not None:
+            return self.combined_debt
+        return (self.total_debt or 0.0) + (self.short_term_debt or 0.0)
+
+    @property
     def net_debt(self) -> float:
         """The shared definition, so a peer row and the subject's valuation
         bridge cannot disagree about what net debt means."""
         return net_debt_from_values(
-            total_debt=(self.total_debt or 0.0) + (self.short_term_debt or 0.0),
+            total_debt=self.gross_debt,
             cash=self.cash,
             short_term_investments=self.short_term_investments,
             long_term_investments=self.long_term_investments,
+            sector_class=self.sector_class,
         ).value
 
     @property
@@ -450,6 +470,8 @@ def build_comp_row(
         total_equity=_latest(series, "total_equity"),
         total_debt=_latest(series, "total_debt"),
         short_term_debt=_latest(series, "short_term_debt"),
+        combined_debt=_latest(series, "combined_debt"),
+        sector_class=series.sector,
         cash=_latest(series, "cash_and_equivalents"),
         short_term_investments=_latest(series, "short_term_investments"),
         long_term_investments=_latest(series, "long_term_investments"),

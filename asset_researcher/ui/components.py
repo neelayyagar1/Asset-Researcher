@@ -624,7 +624,7 @@ def home_foot() -> str:
 def workspace_intro() -> str:
     """The empty workspace, which is a form and should say what it wants."""
     return _one_line(
-        '<div class="ar-workspace-intro">'
+        '<div class="ar-workspace ar-workspace-intro">'
         "<h2>Build a note</h2>"
         '<p>Enter a ticker. The report takes about a minute and reads every '
         "filing it cites.</p></div>"

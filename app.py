@@ -201,6 +201,15 @@ def generate(ticker: str, mandate_text: str, urls: list[str]):
 
 def _generate(ticker: str, mandate_text: str, urls: list[str], user_sources: list):
     with st.status(f"Building {ticker}", expanded=True) as status:
+        # The stage lines below all land within the first few seconds and
+        # the longest stage then runs silently for over a minute, which
+        # reads as a hung process. The bar is a time estimate, not measured
+        # progress, and stops short of full for that reason; it is honest
+        # here only because this block mounts once per run and is replaced
+        # when the run ends, so it cannot replay on an unrelated rerun.
+        st.markdown(
+            '<div class="ar-progress"><i></i></div>', unsafe_allow_html=True
+        )
         for url in urls:
             try:
                 user_sources.append(fetch_user_source(url))

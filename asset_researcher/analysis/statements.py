@@ -346,11 +346,22 @@ def _evaluate(
         rate = tax / pretax
         if not 0.0 <= rate < 1.0:
             return NM, False
+        # Cash and equivalents only, deliberately, and NOT the net-debt
+        # definition. Netting the whole securities portfolio was tried and
+        # is wrong: it drove Apple's invested capital to $9.8B and produced
+        # returns of 875%, 1,350% and 281% across three years. Operating
+        # invested capital is the capital the business runs on; a treasury
+        # portfolio is not working capital and removing it leaves a
+        # denominator too small to carry a ratio.
+        #
+        # The consequence is that this row and the net debt row use
+        # different cash, which the footnote under the table states.
         invested = debt + equity - (cash or 0.0)
         assets = filed("total_assets", period) or 0.0
-        if invested <= 0 or (assets and invested < assets * 0.01):
-            # Invested capital near zero cannot carry a return: the ratio
-            # explodes rather than informing.
+        if invested <= 0 or (assets and invested < assets * 0.05):
+            # A denominator under 5% of total assets explodes rather than
+            # informing. The old floor of 1% let a $9.8B denominator
+            # through against $359B of assets.
             return NM, False
         return _percent(operating * (1 - rate) / invested), True
 

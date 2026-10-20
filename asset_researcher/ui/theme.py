@@ -483,9 +483,37 @@ table.ar-statement tbody td.rowhead { white-space: nowrap; }
    blanket entrance on every section, which reads as a template playing an
    animation at the reader. */
 @media (prefers-reduced-motion: no-preference) {
-  .ar-masthead { animation: ar-settle 420ms var(--ease) both; }
-  .ar-stats { animation: ar-settle 420ms var(--ease) 80ms both; }
+  .ar-masthead { animation: ar-settle 560ms var(--ease) both; }
+  .ar-stats { animation: ar-settle 560ms var(--ease) 120ms both; }
+  /* The workspace has neither a masthead nor a stat strip, so home to
+     workspace was the one transition in the product that hard-cut. */
+  .ar-workspace { animation: ar-settle 560ms var(--ease) both; }
+  .ar-progress i { animation: ar-fill 75s cubic-bezier(.2,.7,.3,1) both; }
+
+  /* A press with no acknowledgement, followed by a rerun most of a second
+     later, reads as a button that did not work. These are the product's
+     two most consequential clicks. */
+  .stButton > button:active, .stDownloadButton > button:active {
+    transform: translateY(1px); transition-duration: 40ms; }
+
+  /* Reading position across a document that measures over ten thousand
+     pixels. Scroll-driven, so it costs no script, and where the timeline
+     is unsupported the rule simply does nothing. */
+  .ar-nav { position: relative; }
+  .ar-nav::after { content: ""; position: absolute; left: 0; bottom: -1px;
+    height: 2px; width: 100%; background: var(--accent);
+    transform-origin: 0 50%; transform: scaleX(0);
+    animation: ar-fill-full linear both;
+    animation-timeline: scroll(root block); }
+
+  table.ar-table tbody tr:hover td {
+    transition: background-color 90ms var(--ease); }
+  /* A 0.72em superscript is a small target; it should answer precisely. */
+  .ar-prose a { padding: 0 0.25em;
+    transition: background-color 120ms var(--ease); }
 }
+@keyframes ar-fill { from { transform: scaleX(0) } to { transform: scaleX(.97) } }
+@keyframes ar-fill-full { from { transform: scaleX(0) } to { transform: scaleX(1) } }
 @keyframes ar-settle {
   from { opacity: 0; transform: translateY(5px); }
   to { opacity: 1; transform: none; }
@@ -518,6 +546,34 @@ table.ar-statement tbody td.rowhead { white-space: nowrap; }
 _APP_CSS = """
 html, body, .stApp, [data-testid="stAppViewContainer"] {
   background: var(--paper); color: var(--ink); }
+/* The document stylesheet states the heading face as `h1, h2, h3, h4`,
+   which is specificity (0,0,1). Streamlit's own emotion rules reach the
+   same elements as class-plus-element, (0,1,1), and win: in the running
+   app every bare heading rendered in Streamlit's "Source Sans" while the
+   exported file, which carries no Streamlit CSS, rendered Faustina
+   correctly. The whole typographic argument was shipping only in the
+   export. `.ar-title` escaped this by being a class, which is why the
+   masthead looked right and the home hero did not.
+
+   Restated here at (0,1,1) so it ties with Streamlit's rule and wins on
+   source order, this stylesheet being injected after theirs. This block
+   lives in the app stylesheet rather than the document one because it
+   exists solely to answer Streamlit; the exported file needs none of it
+   and should not carry it. */
+[data-testid="stAppViewContainer"] h1, [data-testid="stAppViewContainer"] h2,
+[data-testid="stAppViewContainer"] h3, [data-testid="stAppViewContainer"] h4,
+[data-testid="stAppViewContainer"] .ar-prose h1,
+[data-testid="stAppViewContainer"] .ar-prose h2 {
+  font-family: var(--display); font-weight: 500; color: var(--ink); }
+[data-testid="stAppViewContainer"] p, [data-testid="stAppViewContainer"] li {
+  font-family: var(--sans); }
+/* Figures stay monospaced; the sans restatement above must not reach them. */
+[data-testid="stAppViewContainer"] .ar-ticker,
+[data-testid="stAppViewContainer"] .ar-masthead .rail,
+[data-testid="stAppViewContainer"] table.ar-table td.num,
+[data-testid="stAppViewContainer"] table.ar-table td.heat {
+  font-family: var(--mono); }
+
 .stApp, [data-testid="stAppViewContainer"] { font-family: var(--sans);
   font-size: var(--t-body); line-height: var(--t-body-lh);
   -webkit-font-smoothing: antialiased; }
@@ -529,7 +585,7 @@ html, body, .stApp, [data-testid="stAppViewContainer"] {
 header[data-testid="stHeader"] { background: transparent; }
 [data-testid="stToolbarActions"], [data-testid="stAppDeployButton"],
 [data-testid="stMainMenu"], [data-testid="stMainMenuButton"],
-[data-testid="stStatusWidget"], [data-testid="stDecoration"],
+[data-testid="stStatusWidget"],
 #MainMenu, footer { display: none !important; }
 
 /* Streamlit appends an anchor to every heading it renders, shown on hover.
@@ -605,15 +661,39 @@ button[data-testid="stExpandSidebarButton"]:hover,
 .stButton > button:focus-visible, .stDownloadButton > button:focus-visible {
   outline: 2px solid var(--accent); outline-offset: 2px; }
 
-[data-testid="stStatus"] { background: var(--surface);
+/* `st.status` renders as an expander, not as its own element: there is no
+   `stStatus` test id in this Streamlit build, and the rules that targeted
+   one styled nothing. The progress surface a reader watches for the whole
+   ninety seconds of a run was therefore the only unthemed surface in the
+   product, carrying Streamlit's 8px radius and default sans while every
+   other edge here is square. Confirmed against the shipped assets, which
+   expose stExpander, stExpanderDetails and stExpanderIcon{,Check,Error,
+   Spinner} and no stStatus. */
+[data-testid="stExpander"] { background: var(--surface);
   border: 1px solid var(--rule); border-radius: 0; box-shadow: none; }
-[data-testid="stStatus"] p, [data-testid="stStatus"] div {
-  font-family: var(--mono); font-size: var(--t-micro); color: var(--ink-soft); }
+[data-testid="stExpander"] summary, [data-testid="stExpander"] p,
+[data-testid="stExpanderDetails"] p {
+  font-family: var(--mono); font-size: var(--t-micro); color: var(--ink-soft);
+  letter-spacing: 0; text-transform: none; }
 
-hr, [data-testid="stDivider"] { border-color: var(--rule);
-  margin: var(--s5) 0; }
-[data-testid="stAlert"], [data-testid="stVerticalBlockBorderWrapper"] {
-  border-radius: 0; }
+/* The run blocks the script for about ninety seconds, and the stage lines
+   all land in the first five of them: a working system read as a hung one.
+   A determinate bar is honest here only because the status block mounts
+   once per run and is replaced on completion, so the animation cannot
+   replay. It stops short of the end because the duration is an estimate,
+   and a bar that reaches 100% while the work continues is a lie. */
+.ar-progress { height: 2px; background: var(--rule); margin-top: var(--s2); }
+.ar-progress i { display: block; height: 100%; background: var(--accent);
+  transform-origin: 0 50%; transform: scaleX(0); }
+
+/* `st.divider` renders a plain `hr`, which the element selector already
+   reaches. The test-id companions that used to sit beside these two rules
+   (stDecoration, stDivider, stVerticalBlockBorderWrapper) are not emitted
+   by this Streamlit build at all and styled nothing; tests/
+   test_theme_selectors.py now fails on any such rule rather than letting
+   it rot here. */
+hr { border-color: var(--rule); margin: var(--s5) 0; }
+[data-testid="stAlert"] { border-radius: 0; }
 
 
 /* --------------------------------------------------------------- home */

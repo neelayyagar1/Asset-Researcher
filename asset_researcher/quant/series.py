@@ -80,7 +80,13 @@ def _annual_facts_by_end_date(facts_by_unit: dict[str, list[Fact]]) -> dict[str,
 
     by_end: dict[str, Fact] = {}
     for f in facts_by_unit[unit]:
-        if f.form != "10-K" or f.fp != "FY":
+        # startswith, so 10-K/A and 10-KT count. The policy here is that
+        # the most recently filed value for a period wins, which is the
+        # restated one; an exact match on "10-K" filtered out amendments,
+        # which are the vehicle restatements arrive in. A filer that
+        # restated via 10-K/A kept showing the original until the figure
+        # reappeared as a comparative a year later.
+        if not f.form.startswith("10-K") or f.fp != "FY":
             continue
         if not _is_annual_duration(f):
             continue
