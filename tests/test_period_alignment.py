@@ -123,7 +123,6 @@ def test_a_period_mixing_restated_and_original_lines_fails_to_foot():
     )
     checks = {i.check for i in validate(series).issues}
     assert "income_statement_footing" in checks
-    assert "restated_period" in checks
 
 
 def test_a_period_that_foots_raises_nothing():
@@ -150,4 +149,3 @@ def test_a_period_that_foots_raises_nothing():
     )
     checks = {i.check for i in validate(series).issues}
     assert "income_statement_footing" not in checks
-    assert "restated_period" not in checks

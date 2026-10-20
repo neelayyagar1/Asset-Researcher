@@ -249,36 +249,18 @@ def check_income_statement_foots(
             )
 
 
-def check_period_sources_agree(
-    series: MetricSeries, result: ValidationResult
-) -> None:
-    """One period built from several filings is a restatement, undisclosed.
-
-    Every fact records the accession it came from, and that was recorded
-    and then read by nothing. Where the lines of a single fiscal year come
-    from different filings, that year has been restated and the note said
-    so nowhere.
-    """
-    core = (
-        "revenue", "cost_of_revenue", "gross_profit", "net_income",
-        "total_assets", "operating_income",
-    )
-    by_label: dict[str, set[str]] = {}
-    for metric in core:
-        for label, accn in _accessions(series, metric).items():
-            by_label.setdefault(label, set()).add(accn)
-
-    mixed = sorted(l for l, accns in by_label.items() if len(accns) > 1)
-    if not mixed:
-        return
-    result.add(
-        "restated_period",
-        f"{', '.join(mixed)} draws its lines from more than one filing, "
-        f"which means the period was restated. Figures shown are the most "
-        f"recently filed value for each line, so a line the filer did not "
-        f"restate is still as originally reported.",
-        severity="warning",
-    )
+# There is deliberately no check here comparing the accessions behind one
+# period's lines. One was written and removed: it fired on Apple, and on
+# every other ordinary filer, because a 10-K carries three years of income
+# statement and only two years of balance sheet. FY2023 revenue therefore
+# comes from the FY2025 filing while FY2023 total assets last appeared in
+# the FY2024 one, and differing accessions mean nothing more than that.
+# Since facts are deduped per concept, the original value is not retained,
+# so a genuine restatement cannot be distinguished from a normal
+# comparative window by accession alone. What a restatement actually does
+# is break the arithmetic, and `check_income_statement_foots` above
+# catches that: it stays silent on Apple, whose statement foots to the
+# dollar, and fires on a period that mixes restated and original lines.
 
 
 def check_reporting_currency(series: MetricSeries, result: ValidationResult) -> None:
@@ -315,7 +297,6 @@ _ALL_CHECKS = [
     check_required_metrics_present,
     check_reporting_currency,
     check_income_statement_foots,
-    check_period_sources_agree,
 ]
 
 
