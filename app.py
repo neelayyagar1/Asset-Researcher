@@ -19,6 +19,7 @@ the tables above them.
 
 from __future__ import annotations
 
+import hmac
 import os
 
 import streamlit as st
@@ -76,6 +77,58 @@ def _bridge_hosted_secrets() -> None:
 
 _bridge_hosted_secrets()
 
+
+def _passphrase() -> str:
+    """The shared passphrase, or "" when none is configured.
+
+    Absent means open, which is right for a local run and wrong for a
+    deployment. Setting DEMO_PASSPHRASE in the host's secrets is what
+    turns the gate on.
+    """
+    if os.environ.get("DEMO_PASSPHRASE"):
+        return os.environ["DEMO_PASSPHRASE"]
+    try:
+        return str(st.secrets["DEMO_PASSPHRASE"])
+    except Exception:
+        return ""
+
+
+def _gate() -> bool:
+    """Stop here unless the visitor knows the passphrase.
+
+    This is not authentication and does not pretend to be: one secret,
+    shared by everyone who has it, with no per-person revocation. What it
+    buys is the thing that actually matters for a deployed demo, which is
+    that a stranger cannot reach the Generate button and spend the API
+    balance behind it. The spend caps are the second line and the
+    provider's own limit is the third.
+
+    `st.stop()` rather than a wrapper around the page body, because the
+    rest of this file runs top to bottom at import: stopping is what keeps
+    an unauthenticated visitor from reaching any of it.
+    """
+    secret = _passphrase()
+    if not secret:
+        return True
+    if st.session_state.get("unlocked"):
+        return True
+
+    write(ui.gate())
+    entered = st.text_input(
+        "Passphrase", type="password", key="gate_input",
+        label_visibility="collapsed", placeholder="Passphrase",
+    )
+    if st.button("Enter", type="primary", key="gate_go"):
+        # compare_digest rather than ==, so the comparison does not leak
+        # the length of the secret through its timing.
+        if hmac.compare_digest(entered, secret):
+            st.session_state["unlocked"] = True
+            st.rerun()
+        else:
+            write(ui.status("error", "Refused", "That passphrase is not right."))
+    return False
+
+
 st.set_page_config(
     page_title="Asset Researcher",
     layout="wide",
@@ -111,6 +164,13 @@ def write(html: str) -> None:
     """
     if html:
         st.markdown(html, unsafe_allow_html=True)
+
+
+# Before anything that can spend money, and after `write`, which the gate
+# screen renders through. Everything below this point is reachable only by
+# a visitor who knows the passphrase.
+if not _gate():
+    st.stop()
 
 
 @st.cache_resource

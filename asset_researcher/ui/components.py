@@ -795,6 +795,27 @@ def home() -> str:
     )
 
 
+def gate() -> str:
+    """The passphrase screen.
+
+    Says what the thing is before asking for anything, because a bare
+    password box on an unexplained page reads as a phishing form. It also
+    states why the gate exists: every report spends real money, and a
+    reader who understands that is less likely to assume the tool is
+    hiding something.
+    """
+    return _one_line(
+        '<div class="ar-home ar-gate">'
+        "<h1>Asset Researcher</h1>"
+        '<p class="lede">Equity research built from the filings themselves. '
+        "This demo is shared with named reviewers rather than published, "
+        "because each report it builds is a real call against a metered "
+        "API.</p>"
+        '<p class="ar-foot">Enter the passphrase you were sent.</p>'
+        "</div>"
+    )
+
+
 def home_foot() -> str:
     """Three claims, under the fold, as a ruled row rather than cards.
 
