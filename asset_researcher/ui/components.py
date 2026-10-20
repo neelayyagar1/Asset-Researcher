@@ -250,6 +250,27 @@ def footnote(text: str) -> str:
     return _one_line(f'<p class="ar-foot">{_text(text)}</p>')
 
 
+def legend(*rendered: str) -> str:
+    """A key for whichever tokens the tables above actually used.
+
+    Printed, not only hovered. A tooltip serves a reader who already
+    suspects there is something to find; a reader meeting "NM" for the
+    first time needs it in the text. Only the tokens present are
+    explained, so a page with no refusals carries no key.
+    """
+    blob = " ".join(rendered)
+    parts = [
+        f"<strong>{token}</strong> {_GLOSS[token].split(':', 1)[1].strip()}"
+        for token in ("NM", "n.d.")
+        if f">{token}</abbr>" in blob
+    ]
+    if not parts:
+        return ""
+    return _one_line(
+        f'<p class="ar-foot ar-legend">{" ".join(parts)}</p>'
+    )
+
+
 _STATUS_CLASS = {"success": "ok", "warning": "warn", "error": "bad", "info": "info"}
 
 
@@ -276,9 +297,36 @@ _STATUS_ROLE = {"error": ' role="alert"', "warning": ' role="status"'}
 _PARENTHESISED = re.compile(r"^\((.+)\)$")
 
 
+# What the terse tokens mean, spelled out. They appeared up to 43 times
+# on a single page and were glossed nowhere: the Health table writes "not
+# meaningful for this sector" in full prose, so the document knows how to
+# say it, and simply never said it where the two-letter form is used.
+# The title carries the hover; the hidden span carries the screen reader.
+_GLOSS = {
+    "NM": "Not meaningful: the figure is computable but its denominator "
+          "makes the result misleading, usually a negative or near-zero "
+          "base, or a measure that does not apply to this sector.",
+    "n.d.": "No data: the company did not report this figure for this "
+            "period.",
+    "n/a": "Not applicable to this filer.",
+}
+
+
+def _glossed(token: str) -> str:
+    """A token the reader should not have to guess at."""
+    meaning = _GLOSS[token]
+    short = meaning.split(":")[0]
+    return (
+        f'<abbr class="ar-token" title="{_text(meaning)}">{_text(token)}</abbr>'
+        f'<span class="ar-sr">, {_text(short.lower())}</span>'
+    )
+
+
 def _figure(value) -> str:
-    """A figure cell's content, with the accounting negative spoken."""
+    """A figure cell's content, with its conventions made legible."""
     rendered = str(value).strip()
+    if rendered in _GLOSS:
+        return _glossed(rendered)
     match = _PARENTHESISED.match(rendered)
     if not match:
         return _text(value)
@@ -370,6 +418,30 @@ _FIGURE_WIDTH = 14
 
 def _is_figure(value: object) -> bool:
     return len(str(value).strip()) <= _FIGURE_WIDTH
+
+
+def drop_empty_columns(
+    columns: Sequence[Col], rows: Sequence[dict[str, str]]
+) -> tuple[list[Col], list[str]]:
+    """Columns that hold a figure somewhere, and the names of those that
+    do not.
+
+    A column whose every cell is a refusal says one thing, and says it
+    once per row. On a bank, EBITDA, EBITDA margin and EV/EBITDA cannot
+    be derived for any peer at all, so three of sixteen columns carried
+    thirty-five refusals between them and no information. The fact is
+    worth stating; the column is not worth printing. The caller names the
+    dropped columns in the footnote, so nothing is hidden.
+    """
+    kept, dropped = [], []
+    for column in columns:
+        values = [str(r.get(column.key, "")).strip() for r in rows]
+        real = [v for v in values if v and v not in _NM_VALUES]
+        if real or not any(values):
+            kept.append(column)
+        else:
+            dropped.append(column.label)
+    return kept, dropped
 
 
 def table(

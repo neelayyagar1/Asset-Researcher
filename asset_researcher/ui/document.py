@@ -458,9 +458,13 @@ def sections(report: Report) -> list[Section]:
                     else None
                 ),
             ),
-            ui.statement_table(statement, periods_of(bundle.series))
-            if statement
-            else ui.note("No filed financial data is available for this company."),
+            _statement_html := (
+                ui.statement_table(statement, periods_of(bundle.series))
+                if statement
+                else ui.note(
+                    "No filed financial data is available for this company."
+                )
+            ),
             ui.footnote(
                 "Lines set in the lighter weight are computed from the filed "
                 "lines above them (growth rates, margins, free cash flow, net "
@@ -477,6 +481,7 @@ def sections(report: Report) -> list[Section]:
             )
             if statement
             else "",
+            ui.legend(_statement_html),
         )
     )
 
@@ -515,6 +520,37 @@ def sections(report: Report) -> list[Section]:
     if table is None or not table.rows:
         add(ui.block(ui.note("No peer comparison is available for this filer.")))
     else:
+        comp_rows = format_comp_table(table)
+        comp_columns, comp_dropped = ui.drop_empty_columns(
+            [
+                Col("Company", "Company", emphasis=True),
+                Col("Ticker", "Ticker"),
+                Col("FYE", "FYE"),
+                Col("Share price", "Share price", num=True),
+                Col("Equity value", "Equity value", num=True),
+                Col("Net debt", "Net debt", num=True),
+                Col("Enterprise value", "Enterprise value", num=True),
+                Col("Revenue", "Revenue", num=True),
+                Col("EBITDA", "EBITDA", num=True),
+                Col("EBITDA margin", "EBITDA margin", num=True),
+                Col("Net margin", "Net margin", num=True),
+                Col("EV/Revenue", "EV/Revenue", num=True),
+                Col("EV/EBITDA", "EV/EBITDA", num=True),
+                Col("P/E", "P/E", num=True),
+                Col("P/B", "P/B", num=True),
+                Col("Basis for inclusion", "Basis for inclusion", wide=True),
+            ],
+            comp_rows,
+        )
+        dropped_note = (
+            f" {ui.plural(len(comp_dropped), 'column')} "
+            f"({', '.join(comp_dropped)}) "
+            f"{'is' if len(comp_dropped) == 1 else 'are'} not derivable for "
+            f"any company in this peer set and {'has' if len(comp_dropped) == 1 else 'have'} "
+            f"been omitted rather than printed as a column of refusals."
+            if comp_dropped
+            else ""
+        )
         add(
             ui.block(
                 ui.caption(
@@ -524,26 +560,9 @@ def sections(report: Report) -> list[Section]:
                     "Summary statistics are computed across peers only, "
                     "excluding the subject and extreme multiples."
                 ),
-                ui.table(
-                    [
-                        Col("Company", "Company", emphasis=True),
-                        Col("Ticker", "Ticker"),
-                        Col("FYE", "FYE"),
-                        Col("Share price", "Share price", num=True),
-                        Col("Equity value", "Equity value", num=True),
-                        Col("Net debt", "Net debt", num=True),
-                        Col("Enterprise value", "Enterprise value", num=True),
-                        Col("Revenue", "Revenue", num=True),
-                        Col("EBITDA", "EBITDA", num=True),
-                        Col("EBITDA margin", "EBITDA margin", num=True),
-                        Col("Net margin", "Net margin", num=True),
-                        Col("EV/Revenue", "EV/Revenue", num=True),
-                        Col("EV/EBITDA", "EV/EBITDA", num=True),
-                        Col("P/E", "P/E", num=True),
-                        Col("P/B", "P/B", num=True),
-                        Col("Basis for inclusion", "Basis for inclusion", wide=True),
-                    ],
-                    format_comp_table(table),
+                _comps_html := ui.table(
+                    comp_columns,
+                    comp_rows,
                     classify=ui.comps_classify,
                     scrolls=True,
                 ),
@@ -551,7 +570,9 @@ def sections(report: Report) -> list[Section]:
                     "Dollar figures in millions. EBITDA is operating income plus "
                     "depreciation and amortisation, a convention rather than a "
                     "reported line. " + (table.coverage_note or "")
+                    + dropped_note
                 ),
+                ui.legend(_comps_html),
                 ui.row(
                     charts.figure(
                         charts.peer_bars(table, "pe", "Price to earnings", width=HALF)

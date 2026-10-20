@@ -525,9 +525,15 @@ def _add_comps(
             for future in as_completed(futures):
                 peer = futures[future]
                 try:
-                    table.rows.append(future.result())
+                    row = future.result()
                 except Exception:
                     table.excluded.append(peer)
+                    continue
+                reason = _not_comparable(row, subject_row)
+                if reason:
+                    table.excluded.append(f"{peer} ({reason})")
+                    continue
+                table.rows.append(row)
 
         # Concurrency reorders results; restore the peer list's own order so
         # the table is stable between runs.
@@ -539,13 +545,35 @@ def _add_comps(
             "comps",
             f"Excluded {len(table.excluded)} "
             f"{'peer' if len(table.excluded) == 1 else 'peers'} "
-            f"with no usable data: "
+            f"as not comparable: "
             f"{', '.join(table.excluded)}.",
         )
     if not peers:
         bundle.add_gap("comps", "No peer list available; relative valuation omitted.")
 
     bundle.comps = table
+
+
+# A peer two orders of magnitude smaller than the subject is not a
+# comparable, whatever a vendor list says. The lists put "Orbit Drop Inc"
+# against Costco and "Aptera Motors" against Ford: pre-revenue shells
+# whose every multiple came out NM, so they contributed eleven refusals
+# and no information each, and a reader who sees them stops trusting the
+# rows that are real.
+_MIN_PEER_SHARE_OF_SUBJECT = 0.01
+
+
+def _not_comparable(row, subject) -> str:
+    """Why this peer should not sit in the table, or "" if it should."""
+    if subject is None or not subject.market_cap:
+        return ""
+    if not row.market_cap:
+        return "no market capitalisation"
+    if row.market_cap < subject.market_cap * _MIN_PEER_SHARE_OF_SUBJECT:
+        return "under 1% of the subject's market capitalisation"
+    if not row.revenue:
+        return "no reported revenue"
+    return ""
 
 
 def _peer_row(settings, edgar, finnhub, peer_ticker):

@@ -167,6 +167,14 @@ body { font-variant-numeric: tabular-nums lining-nums;
 
 /* Visible to a screen reader, never to the eye. Used for the spoken form
    of an accounting negative and for the severity word on a status. */
+/* A glossed token. The dotted rule is the only affordance saying there
+   is something to hover; without it the tooltip exists and nobody finds
+   it, which is the same as not having one. */
+.ar-legend strong { font-family: var(--mono); font-weight: 500;
+  color: var(--ink); }
+abbr.ar-token { text-decoration: underline dotted var(--ink-muted);
+  text-underline-offset: 3px; cursor: help; }
+
 .ar-sr { position: absolute; width: 1px; height: 1px; padding: 0;
   margin: -1px; overflow: hidden; clip: rect(0 0 0 0);
   clip-path: inset(50%); white-space: nowrap; border: 0; }
