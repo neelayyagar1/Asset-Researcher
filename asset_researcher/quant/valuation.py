@@ -361,7 +361,7 @@ def _unlever(series: MetricSeries, base_fcf: float) -> tuple[float, str]:
 
 # Sector classes whose economics this enterprise model does not describe.
 # Named here rather than inline so the exclusion is one fact in one place.
-_NO_ENTERPRISE_DCF = frozenset({"financial", "reit"})
+NO_ENTERPRISE_DCF = frozenset({"financial", "reit"})
 
 
 def derive_dcf_inputs(
@@ -398,7 +398,7 @@ def derive_dcf_inputs(
     # `implied.caveat` had nothing to object to. A REIT is excluded for the
     # same reason in reverse: it is valued on funds from operations against
     # asset value, not on discounted enterprise cash flow.
-    if sector_class in _NO_ENTERPRISE_DCF:
+    if sector_class in NO_ENTERPRISE_DCF:
         return None
 
     # Normalised rather than latest, so one distorted year does not set the

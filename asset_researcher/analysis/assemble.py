@@ -37,6 +37,7 @@ from asset_researcher.quant.validate import validate
 from asset_researcher.quant.valuation import (
     build_cases,
     cash_flow_context,
+    NO_ENTERPRISE_DCF,
     derive_dcf_inputs,
     implied_expectations,
     run_dcf,
@@ -149,12 +150,29 @@ def _add_valuation(bundle, series, profile=None) -> None:
         series, shares_outstanding, sector_class=bundle.sector_class
     )
     if inputs is None:
-        bundle.add_gap(
-            "valuation",
-            "Filed statements do not support a discounted cash flow model "
-            "(operating cash flow, capital expenditure or share count is "
-            "unavailable, or free cash flow is negative).",
-        )
+        # Name the actual reason. Banks and REITs are refused on principle
+        # rather than for missing data, and reporting a sector exclusion as
+        # "capital expenditure is unavailable" is true of the filing but
+        # misleading about the decision: a reader would go looking for the
+        # missing tag instead of understanding that an enterprise model
+        # does not describe the business.
+        if bundle.sector_class in NO_ENTERPRISE_DCF:
+            bundle.add_gap(
+                "valuation",
+                f"No discounted cash flow is modelled for this filer. The "
+                f"model discounts unlevered free cash flow to an enterprise "
+                f"value and bridges to equity across net debt, which does "
+                f"not describe a {'deposit-funded balance sheet' if bundle.sector_class == 'financial' else 'company valued on funds from operations against asset value'}. "
+                f"Comparables, the statement table and the health screens "
+                f"still apply.",
+            )
+        else:
+            bundle.add_gap(
+                "valuation",
+                "Filed statements do not support a discounted cash flow "
+                "model (operating cash flow, capital expenditure or share "
+                "count is unavailable, or free cash flow is negative).",
+            )
         return
 
     # The share count's provenance travels with the model, because which
