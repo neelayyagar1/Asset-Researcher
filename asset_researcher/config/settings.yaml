@@ -48,11 +48,22 @@ sectors:
   default: standard
 
 hosting:
-  # A measured report costs ~$1.30; the estimator assumes $2.00. The session
-  # cap must exceed that or no run can start at all, it allows roughly three
-  # reports per visitor, and the daily cap roughly twelve across everyone.
-  spend_cap_daily_usd: 25
-  spend_cap_session_usd: 6
+  # A measured report costs ~$1.30; the estimator assumes $2.00, and the
+  # session cap must exceed that or no run can start at all.
+  #
+  # These are deliberately below the account's credit balance rather than
+  # at it. A cap set above what the account holds is not a cap: it simply
+  # means the key runs dry and every visitor after that meets an
+  # authentication error instead of a budget message.
+  #
+  # Read the caveat in docs/DEPLOY.md before making the link public. The
+  # daily counter is a file on local disk, and on a host with an ephemeral
+  # filesystem - Streamlit Community Cloud among them - it resets whenever
+  # the app restarts, so the daily cap bounds a day of continuous uptime
+  # and not a calendar day. The session cap is unaffected and is the one
+  # that bounds a single visitor.
+  spend_cap_daily_usd: 10
+  spend_cap_session_usd: 3
 
 report:
   disclaimer: >

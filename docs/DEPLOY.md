@@ -88,14 +88,33 @@ thing between a public URL and your API balance:
 
 ```yaml
 hosting:
-  spend_cap_daily_usd: 25
-  spend_cap_session_usd: 6
+  spend_cap_daily_usd: 10
+  spend_cap_session_usd: 3
 ```
 
-The daily cap is file-backed and real. The per-session cap resets if a
-visitor reloads, so the daily cap is the one that actually binds. At about
-$1.30 a report, $25 is roughly nineteen reports a day across everyone.
-Lower it if the link goes anywhere you do not control.
+**Neither cap is as strong as it looks, and the daily one is the weaker.**
+It is backed by `data/spend.json`, a file on local disk. Streamlit
+Community Cloud has an ephemeral filesystem, so that file goes with the
+container: the counter resets on every restart, redeploy and wake from
+sleep. It bounds a stretch of continuous uptime, not a calendar day. The
+per-session cap lives in Streamlit's session state, so it resets when a
+visitor reloads the page.
+
+Read together, that means **a determined visitor can spend more than
+either number**, and the real bound on your exposure is the credit
+balance on the key itself. At about $1.30 a report:
+
+- Set the caps below the balance, not at it. A cap above what the account
+  holds is not a cap; it just means the key runs dry and everyone after
+  that meets an authentication error instead of a budget message.
+- Put a separate key on the deployment, not the one you develop with, and
+  fund it with only what you are willing to lose.
+- Anthropic's console has its own spend limits. That one is enforced
+  server-side and is the only hard stop in this list.
+
+If the link is going somewhere genuinely public rather than to a handful
+of named people, lead with the static sample and keep the live tool for
+people you can name.
 
 Streamlit Community Cloud also sleeps an app after a period of inactivity
 and takes thirty seconds or so to wake. That is the strongest argument for

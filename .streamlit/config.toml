@@ -1,16 +1,30 @@
-# Light is pinned rather than left to the viewer's OS setting. The charts are
-# rendered as images against a white surface, and a dark page would frame each
-# one in a bright rectangle. Research notes are also read and printed on white,
-# so this matches the medium rather than fighting it.
+# Streamlit's own theme, set to the design system's tokens.
+#
+# This is not where the product is styled: asset_researcher/ui/theme.py
+# generates the stylesheet, and it generates it from Python constants so a
+# colour cannot drift between the CSS and the SVG charts. What this file
+# controls is the frame Streamlit paints before that stylesheet arrives,
+# and the chrome it owns outright.
+#
+# It used to hold a white page and a blue accent from before the redesign,
+# so a cold load flashed white and then settled onto cream. These values
+# are the real tokens: PAPER, INK and ACCENT as theme.py defines them.
 [theme]
 base = "light"
-primaryColor = "#2a78d6"
-backgroundColor = "#ffffff"
-secondaryBackgroundColor = "#f6f6f4"
-textColor = "#0b0b0b"
+primaryColor = "#1d5a86"
+backgroundColor = "#faf8f3"
+secondaryBackgroundColor = "#ffffff"
+textColor = "#17150f"
 
 [server]
 headless = true
+# The note is one long document and the export is a whole HTML file.
+maxMessageSize = 300
 
 [browser]
 gatherUsageStats = false
+
+[client]
+# A traceback on screen tells a visitor nothing and shows them our paths.
+# Failures are reported through the status block in app.py instead.
+showErrorDetails = false
