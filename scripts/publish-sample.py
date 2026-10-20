@@ -19,6 +19,7 @@ the API call once rather than once per visitor. Run
 from __future__ import annotations
 
 import argparse
+import shutil
 import sys
 from datetime import date
 from html import escape
@@ -120,17 +121,45 @@ def main() -> int:
     mandate_text = args.mandate or (presets[0].description if presets else "")
 
     out = ROOT / "build" / "site"
-    out.mkdir(parents=True, exist_ok=True)
+    # Built in a staging directory and moved into place only once every
+    # note has succeeded. Writing notes straight into the published
+    # directory meant a failure partway through left the previous run's
+    # index still advertising the old set, beside orphaned pages nothing
+    # linked to, and the money for the notes that did build was already
+    # spent. Each note is also kept if a later one fails, so a retry does
+    # not pay for it twice.
+    staging = ROOT / "build" / "site.partial"
+    if staging.exists():
+        shutil.rmtree(staging)
+    staging.mkdir(parents=True)
 
     notes = []
+    failed: list[tuple[str, str]] = []
     for ticker in args.ticker:
         print(f"{ticker}:")
-        notes.append(build(ticker.upper(), mandate_text, out))
+        try:
+            notes.append(build(ticker.upper(), mandate_text, staging))
+        except Exception as exc:
+            # Named and carried, not raised: one bad ticker should not
+            # discard the notes already paid for.
+            print(f"  FAILED: {exc}")
+            failed.append((ticker.upper(), str(exc)))
 
-    write_index(out, notes)
+    if not notes:
+        shutil.rmtree(staging, ignore_errors=True)
+        print("\nno notes were built; the published site is unchanged")
+        return 1
+
+    write_index(staging, notes)
+    if out.exists():
+        shutil.rmtree(out)
+    staging.rename(out)
+
     print(f"\nwrote {len(notes)} note(s) to {out}")
+    for ticker, exc in failed:
+        print(f"  {ticker} is missing from the index: {exc}")
     print("deploy with:  npx wrangler pages deploy build/site")
-    return 0
+    return 1 if failed else 0
 
 
 if __name__ == "__main__":
