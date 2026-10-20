@@ -58,6 +58,29 @@ def usd(value: float | None) -> str:
     return f"${value:,.2f}" if value is not None else "NM"
 
 
+def _currency_note(report) -> str:
+    """What currency the filed figures are in, said plainly.
+
+    Silence here would be its own claim, so the USD case is stated too.
+    """
+    series = report.bundle.series
+    foreign = getattr(series, "foreign_currencies", None) if series else None
+    if foreign:
+        found = ", ".join(sorted(foreign))
+        return (
+            f"This filer tags monetary facts in {found}. Those figures were "
+            f"refused rather than read as dollars, so the financial data "
+            f"here is incomplete and the multiples and valuation should not "
+            f"be relied on."
+        )
+    if series is None:
+        return ""
+    return (
+        "All filed figures are in US dollars, as submitted. Market data is "
+        "quoted in US dollars."
+    )
+
+
 def provenance_items(report: Report) -> list[tuple[str, str]]:
     """The three provenance states, compressed to chips."""
     verification = report.narrative.verification
@@ -699,7 +722,14 @@ def sections(report: Report) -> list[Section]:
             ui.status("warning", "Model divergence", report.bundle.implied.caveat)
             if report.bundle.implied is not None and report.bundle.implied.caveat
             else "",
-            ui.status("info", "Source currency", report.bundle.staleness_note)
+            # This chip was labelled "Source currency" and rendered the
+            # filing-age sentence: the one line in the note that promised
+            # to address currency printed something else entirely. Both
+            # facts are worth showing, under their own names.
+            ui.status("info", "Source currency", _currency_note(report))
+            if _currency_note(report)
+            else "",
+            ui.status("info", "Filing age", report.bundle.staleness_note)
             if report.bundle.staleness_note
             else "",
         )

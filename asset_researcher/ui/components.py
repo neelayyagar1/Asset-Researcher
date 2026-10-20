@@ -44,8 +44,14 @@ def escape_text(value: str) -> str:
 
     Composed sentences mix filed figures with model judgements, so they are
     escaped like anything else that passes through a model.
+
+    C0 control characters are stripped as well as escaped, which
+    `html.escape` alone does not do. The sibling `_text` has always done
+    this; `escape_text` arrived later without it and reopened the hole for
+    anything routed through the summary block, in the page and in the HTML
+    export both.
     """
-    return escape(str(value))
+    return escape(str(value).translate(_CONTROL))
 
 
 def plural(count: int, noun: str, plural_form: str | None = None) -> str:

@@ -138,7 +138,9 @@ def _format_series(bundle: SourceBundle) -> str:
         history: dict[str, list[tuple[str, float]]] = {}
         for offset, label in enumerate(periods):
             index = offset - len(periods)
-            for name, value in compute_derived(bundle.series, index).items():
+            for name, value in compute_derived(
+                bundle.series, index, sector=bundle.series.sector
+            ).items():
                 if value is not None:
                     history.setdefault(name, []).append((label, value))
 

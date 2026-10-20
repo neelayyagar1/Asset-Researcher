@@ -200,6 +200,31 @@ def check_required_metrics_present(series: MetricSeries, result: ValidationResul
             )
 
 
+def check_reporting_currency(series: MetricSeries, result: ValidationResult) -> None:
+    """A filer reporting in anything but dollars cannot be priced here.
+
+    Monetary facts in a foreign currency are refused at extraction rather
+    than loaded, because every downstream consumer assumes dollars: the
+    market capitalisation comes from a USD quote, so a euro cash flow
+    priced against it produced a market-cap-to-free-cash-flow multiple that
+    was simply the cross rate times the real one, and a per-share
+    discounted value printed with a dollar sign in front of it. None of it
+    raised an issue. This check is what makes the refusal visible.
+    """
+    if not series.foreign_currencies:
+        return
+    found = ", ".join(sorted(series.foreign_currencies))
+    result.add(
+        "reporting_currency",
+        f"This filer tags monetary facts in {found} rather than USD. Those "
+        f"figures were refused rather than read as dollars, because the "
+        f"market capitalisation they would be priced against is a USD "
+        f"quote. Financial data for this company is incomplete and no "
+        f"multiple or valuation here should be relied on.",
+        severity="error",
+    )
+
+
 _ALL_CHECKS = [
     check_accounting_identity,
     check_revenue_exceeds_net_income,
@@ -207,6 +232,7 @@ _ALL_CHECKS = [
     check_magnitude_jumps,
     check_scale_plausibility,
     check_required_metrics_present,
+    check_reporting_currency,
 ]
 
 

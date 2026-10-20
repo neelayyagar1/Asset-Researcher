@@ -212,7 +212,7 @@ def _add_quantitative(bundle, settings, edgar, llm, cik, sector):
     series = build_metric_series(facts, mapping, sector, names, years=6)
 
     bundle.series = series
-    bundle.derived = compute_derived(series)
+    bundle.derived = compute_derived(series, sector=series.sector)
     bundle.health_scores = compute_health_scores(series, sector, bundle.market_cap)
     bundle.validation = validate(series)
 

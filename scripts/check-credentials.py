@@ -25,9 +25,18 @@ OK, BAD = "  PASS", "  FAIL"
 
 
 def _shape(value: str | None) -> str:
+    """Enough to tell two keys apart, and no more.
+
+    This printed the first fourteen characters. For an Anthropic key that
+    is mostly a fixed prefix, but a Finnhub key is about twenty characters
+    of undifferentiated entropy, so fourteen of them went to stdout and
+    into terminal scrollback, which contradicts this module's own promise
+    never to print a key. The last four identify a key to someone who
+    already holds it and are no use to anyone who does not.
+    """
     if not value:
         return "not set"
-    return f"{value[:14]}... ({len(value)} chars)"
+    return f"ending {value[-4:]} ({len(value)} chars)"
 
 
 def check_anthropic(key: str | None) -> bool:

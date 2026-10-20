@@ -13,6 +13,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 
 from asset_researcher.quant.capital import net_debt_from_values
+from asset_researcher.quant.metrics_config import derived_for_sector
 from asset_researcher.quant.series import MetricSeries
 
 
@@ -36,6 +37,7 @@ def _safe_div(
     denominator: float | None,
     *,
     require_positive: bool = False,
+    require_positive_numerator: bool = False,
     floor: float | None = None,
 ) -> float | None:
     """A ratio, or None where the denominator makes it meaningless.
@@ -51,10 +53,19 @@ def _safe_div(
     ratio read backwards: net debt over negative EBITDA returned -6.25x,
     which scans as net cash. `floor` refuses a denominator too small relative
     to the business to carry a ratio at all.
+
+    `require_positive_numerator` is the other half of that, and was
+    missing. Interest coverage guarded only its denominator, so operating
+    income of -$4.9B over interest of $0.7B printed -7.0x for a company
+    with negative EBITDA, which is exactly the "coverage on a loss reads as
+    cover" failure the comment at the call site claimed to have prevented.
+    A loss does not cover interest a little bit; it does not cover it.
     """
     if numerator is None or denominator is None or denominator == 0:
         return None
     if require_positive and denominator <= 0:
+        return None
+    if require_positive_numerator and numerator <= 0:
         return None
     if floor is not None and abs(denominator) < abs(floor):
         return None
@@ -93,7 +104,9 @@ def _safe_add(a: float | None, b: float | None) -> float | None:
     return a + b
 
 
-def compute_derived(series: MetricSeries, index: int = -1) -> dict[str, float | None]:
+def compute_derived(
+    series: MetricSeries, index: int = -1, *, sector: str | None = None
+) -> dict[str, float | None]:
     """Computes every derived metric that has the inputs available, for the
     period at `index` (default: most recent). Returns None for any metric
     whose inputs are missing."""
@@ -127,7 +140,10 @@ def compute_derived(series: MetricSeries, index: int = -1) -> dict[str, float | 
         # loss reads as cover. Both are reported as unavailable instead.
         "net_debt_to_ebitda": _safe_div(net_debt, ebitda, require_positive=True),
         "interest_coverage": _safe_div(
-            g("operating_income"), g("interest_expense"), require_positive=True
+            g("operating_income"),
+            g("interest_expense"),
+            require_positive=True,
+            require_positive_numerator=True,
         ),
         "working_capital": working_capital,
         # Invested capital within 1% of total assets of zero cannot carry a
@@ -180,5 +196,32 @@ def compute_derived(series: MetricSeries, index: int = -1) -> dict[str, float | 
             g("net_income"), g("depreciation_amortization")
         ),
         # Energy
-        "capex_intensity": _safe_div(g("capital_expenditures"), g("revenue")),
+        # Capital expenditure is tagged with either sign depending on the
+        # filer, and the raw sign reached this ratio: a filer tagging capex
+        # negative reported negative capital intensity, which reads as
+        # disposing of plant. Intensity is a magnitude.
+        "capex_intensity": _safe_div(
+            abs(g("capital_expenditures"))
+            if g("capital_expenditures") is not None
+            else None,
+            g("revenue"),
+            require_positive=True,
+        ),
     }
+
+    # Gate by sector. `metrics_config.derived_for_sector` has always
+    # existed and was never called, so every consumer of this dictionary
+    # received metrics the taxonomy declares meaningless for the filer:
+    # `reconcile._format_series` hands the whole thing to the model under
+    # "Derived (computed, not filed)", which meant the model reasoned over
+    # a REIT's capital intensity and free-cash-flow conversion, and over a
+    # bank's net debt of $20bn standing against $1.3tn of deposits. The
+    # health scores and the statement table were already gated; this layer
+    # was the leak.
+    #
+    # `sector=None` leaves the dictionary ungated, for callers that want
+    # every computable value and will gate it themselves.
+    if sector is None:
+        return values
+    permitted = {d.name for d in derived_for_sector(sector)}
+    return {k: v for k, v in values.items() if k in permitted}

@@ -65,8 +65,12 @@ def _bridge_hosted_secrets() -> None:
         try:
             value = st.secrets[key]
         except Exception:
-            # No secrets file, or no such key. Local runs read .env.
-            return
+            # No secrets file, or no such key. `continue`, not `return`:
+            # returning here meant a secrets.toml that set Finnhub and the
+            # EDGAR agent but not Anthropic bridged nothing at all, and the
+            # deployment then failed on its first EDGAR call with a 403,
+            # which is the exact failure this function exists to prevent.
+            continue
         os.environ[key] = str(value)
 
 
@@ -172,6 +176,9 @@ def _new_report_dialog() -> None:
     if run and ticker:
         st.session_state["pending"] = (ticker, mandate_text, urls_text)
         st.rerun()
+    if run and not ticker:
+        # The inline form says this; the dialog used to do nothing at all.
+        write(ui.status("error", "Input", "Enter a ticker."))
 
 
 def generate(ticker: str, mandate_text: str, urls: list[str]):
@@ -183,17 +190,21 @@ def generate(ticker: str, mandate_text: str, urls: list[str]):
         write(ui.status("error", "Budget", str(exc)))
         return None
 
-    before = llm.usage.cost_usd
     user_sources = []
 
     # Call A costs roughly a dollar and runs before Call B, which is the one
     # that can fail on a truncated structured response. Recording the cost
     # only after both succeeded meant a repeatable late failure spent real
     # money against a counter that never moved, and neither cap ever bound.
+    # Scoped rather than differenced against the provider's cumulative
+    # counter. The provider is shared by every browser session, so a
+    # before-and-after reading of that counter charged this visitor for
+    # whatever other visitors spent while this run was in flight.
     try:
-        return _generate(ticker, mandate_text, urls, user_sources)
+        with llm.usage_scope() as run:
+            return _generate(ticker, mandate_text, urls, user_sources)
     finally:
-        cost = llm.usage.cost_usd - before
+        cost = run.cost_usd
         if cost:
             st.session_state["session_spend"] += cost
             spend.record(cost)
@@ -258,15 +269,22 @@ def _run_pending() -> None:
         return
     ticker, mandate_text, urls_text = pending
     urls = [u.strip() for u in urls_text.splitlines() if u.strip()]
+    # The report already on screen survives a failure. Assigning the
+    # result straight into session state discarded it whenever `generate`
+    # returned None, which it does on a budget refusal, so a visitor who
+    # hit the cap lost the note they were reading and landed back on an
+    # empty form.
     try:
-        st.session_state["report"] = generate(ticker, mandate_text, urls)
+        fresh = generate(ticker, mandate_text, urls)
     except Exception as exc:
-        st.session_state["report"] = None
         write(
             ui.status(
                 "error", "Failed", f"The report could not be generated: {exc}"
             )
         )
+        return
+    if fresh is not None:
+        st.session_state["report"] = fresh
 
 
 # ------------------------------------------------------------------- home

@@ -359,6 +359,11 @@ def _unlever(series: MetricSeries, base_fcf: float) -> tuple[float, str]:
     )
 
 
+# Sector classes whose economics this enterprise model does not describe.
+# Named here rather than inline so the exclusion is one fact in one place.
+_NO_ENTERPRISE_DCF = frozenset({"financial", "reit"})
+
+
 def derive_dcf_inputs(
     series: MetricSeries,
     shares_outstanding: float | None,
@@ -380,11 +385,38 @@ def derive_dcf_inputs(
     if operating_cash_flow is None or revenue is None or not shares_outstanding:
         return None
 
+    # A bank or a REIT does not get one of these, at all.
+    #
+    # This model discounts unlevered free cash flow to an enterprise value
+    # and then bridges to equity across net debt. For a deposit-funded
+    # balance sheet that bridge is meaningless: deposits are the funding of
+    # the business, not a claim to be subtracted, and such a filer tags no
+    # capital expenditure, so the fallback below turned operating cash flow
+    # straight into "free cash flow". The result was a bank carrying a
+    # probability-weighted target at the largest type size on the page,
+    # with a bear-to-bull range, and no caveat attached, because
+    # `implied.caveat` had nothing to object to. A REIT is excluded for the
+    # same reason in reverse: it is valued on funds from operations against
+    # asset value, not on discounted enterprise cash flow.
+    if sector_class in _NO_ENTERPRISE_DCF:
+        return None
+
     # Normalised rather than latest, so one distorted year does not set the
     # base for every projected period.
-    base_fcf = normalised_base_fcf(series) or (
-        operating_cash_flow - abs(capex or 0.0)
-    )
+    #
+    # The fallback requires capital expenditure to have been filed. It used
+    # to substitute `abs(capex or 0.0)`, so a filer tagging no capex had
+    # operating cash flow adopted as free cash flow while the basis string
+    # asserted "operating cash flow less capital expenditure", which was
+    # false of that number. That is the exact substitution
+    # `free_cash_flow_history` exists to refuse, and the stat strip showed
+    # it plainly: "Market cap / free cash flow: NM" sat beside a modelled
+    # per-share value built on the same missing figure.
+    base_fcf = normalised_base_fcf(series)
+    if base_fcf is None:
+        if capex is None:
+            return None
+        base_fcf = operating_cash_flow - abs(capex)
     if base_fcf <= 0:
         return None
 

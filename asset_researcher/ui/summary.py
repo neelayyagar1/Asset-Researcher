@@ -34,12 +34,22 @@ the divergence first.
 
 from __future__ import annotations
 
+from math import isfinite
+
 from asset_researcher.analysis.report import Report
+from asset_researcher.ui import format as fmt
 from asset_researcher.ui import components as ui
 
 
-def _pct(value: float | None) -> str | None:
-    return f"{value * 100:,.1f}%" if value is not None else None
+def _multiple(value: float | None) -> str | None:
+    """A multiple, which may legitimately be below one.
+
+    `,.0f` rendered 0.4x as "0 times free cash flow", the same class of
+    defect as the "$0B" that `format.scaled_usd` was written to close.
+    """
+    if value is None or not isfinite(value):
+        return None
+    return f"{value:,.1f}" if abs(value) < 10 else f"{value:,.0f}"
 
 
 def _gap_line(report: Report) -> str:
@@ -47,26 +57,26 @@ def _gap_line(report: Report) -> str:
     context = report.bundle.cash_context
     implied = report.bundle.implied
 
-    multiple = context.multiple_of_fcf if context else None
-    growth = _pct(implied.implied_growth) if implied else None
-    cagr = _pct(context.fcf_cagr) if context else None
+    multiple = _multiple(context.multiple_of_fcf) if context else None
+    growth = fmt.pct(implied.implied_growth) if implied else None
+    cagr = fmt.pct(context.fcf_cagr) if context else None
     years = context.years_observed if context else 0
 
     if multiple and growth and cagr and years:
         return (
-            f"At {multiple:,.0f} times free cash flow the price requires "
+            f"At {multiple} times free cash flow the price requires "
             f"{growth} annual growth. The filed record compounded at "
             f"{cagr} over {ui.plural(years, 'year')}."
         )
     if multiple and cagr and years:
         return (
-            f"The market capitalises free cash flow at {multiple:,.0f} "
+            f"The market capitalises free cash flow at {multiple} "
             f"times, against {cagr} compounded over "
             f"{ui.plural(years, 'year')} of filed history."
         )
     if multiple and growth:
         return (
-            f"At {multiple:,.0f} times free cash flow the price requires "
+            f"At {multiple} times free cash flow the price requires "
             f"{growth} annual growth, against a filed history too short to "
             f"compound."
         )
@@ -104,27 +114,75 @@ def _quality_line(report: Report) -> str:
     if conversion is None:
         return ""
 
-    periods = [p for p, v in conversion.values.items() if v not in {"NM", "n.d.", ""}]
-    if not periods:
+    return conversion_sentence(
+        conversion.values, accrual.values if accrual is not None else {}
+    )
+
+
+def conversion_sentence(
+    values: dict[str, str], accruals: dict[str, str]
+) -> str:
+    """The cash-conversion sentence, as a pure function of rendered rows.
+
+    Separated from `_quality_line` so it can be tested without standing up
+    a whole pipeline. It could not be before, which is why this module's
+    most load-bearing sentence had no behavioural test at all and asserted
+    a direction it had not measured.
+
+    Both arguments map a period label to an already-rendered cell, in
+    filing order, including the unmeasurable ones.
+    """
+    ordered = list(values)
+    measured = [p for p in ordered if values[p] not in _UNMEASURED]
+    if not measured:
         return ""
 
-    latest = conversion.values[periods[-1]]
-    if len(periods) < 2:
-        return f"Cash conversion is {latest} of net income, on one year only."
+    # Name the period rather than implying the latest one. Filtering to
+    # measurable periods and then reporting in the present tense stated a
+    # four-year-old figure as current fact: a filer whose last four years
+    # were losses reported its one profitable year as though it were the
+    # position today, and called five filed years "one year only".
+    newest, latest = measured[-1], values[measured[-1]]
+    stale = newest != ordered[-1]
+    asof = f" in {newest}" if stale else ""
 
-    first = conversion.values[periods[0]]
-    direction = (
-        "down from" if _as_number(latest) < _as_number(first) else "up from"
-    )
-    sentence = (
-        f"Cash conversion is {latest} of net income, {direction} {first} "
-        f"across the filed window"
-    )
-    if accrual is not None and accrual.values.get(periods[-1], "") not in {
-        "NM", "n.d.", ""
-    }:
-        sentence += f", with an accrual ratio of {accrual.values[periods[-1]]}"
+    if len(measured) < 2:
+        sentence = (
+            f"Cash conversion was {latest} of net income{asof}, the only "
+            f"period in which it could be measured"
+        )
+    else:
+        first = values[measured[0]]
+        low = min(measured, key=lambda p: _as_number(values[p]))
+        delta = _as_number(latest) - _as_number(first)
+        # No equality branch here meant a flat series read "up from" its
+        # own value. A window is also not described by its endpoints: a
+        # series running 130, 60, 40, 55, 130 is flat on the ends and hides
+        # exactly the accrual build this line is billed as catching, so the
+        # trough is named whenever it sits meaningfully below both.
+        if abs(delta) < 0.05:
+            movement = f"level with {first} at the start of the filed window"
+        else:
+            movement = (
+                f"{'down' if delta < 0 else 'up'} from {first} across the "
+                f"filed window"
+            )
+        sentence = f"Cash conversion is {latest} of net income{asof}, {movement}"
+        trough = _as_number(values[low])
+        if low not in (measured[0], measured[-1]) and trough < min(
+            _as_number(first), _as_number(latest)
+        ) - 10:
+            sentence += (
+                f", having fallen to {values[low]} in {low}"
+            )
+
+    accrual_now = accruals.get(newest, "")
+    if accrual_now not in _UNMEASURED:
+        sentence += f", with an accrual ratio of {accrual_now} in {newest}"
     return sentence + "."
+
+
+_UNMEASURED = {"NM", "n.d.", ""}
 
 
 def _as_number(rendered: str) -> float:

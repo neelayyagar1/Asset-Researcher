@@ -22,6 +22,8 @@ is a matter of relaxing the form/fp filter below, not a new fetch.
 
 from __future__ import annotations
 
+import re
+
 from dataclasses import dataclass, field
 from datetime import date
 
@@ -47,6 +49,12 @@ class MetricSeries:
     resolved_but_empty: list[str] = field(default_factory=list)
     # Canonical metrics with no resolved concept at all.
     unmapped: list[str] = field(default_factory=list)
+    # Currencies other than USD that were found and refused, mapped to the
+    # concepts they were tagged under. Non-empty means this filer reports
+    # in something the rest of the pipeline cannot price against a USD
+    # market capitalisation, and the note must say so rather than printing
+    # a multiple that mixes the two.
+    foreign_currencies: dict[str, str] = field(default_factory=dict)
 
 
 def _is_annual_duration(fact: Fact) -> bool:
@@ -70,13 +78,44 @@ def _is_annual_duration(fact: Fact) -> bool:
     return 330 <= span <= 400
 
 
-def _annual_facts_by_end_date(facts_by_unit: dict[str, list[Fact]]) -> dict[str, Fact]:
-    """One fact per end-date, preferring USD, falling back to any other unit
-    present (e.g. "shares" for share-count concepts). Dedupes by keeping the
-    most-recently-filed fact for each end-date."""
-    unit = "USD" if "USD" in facts_by_unit else next(iter(facts_by_unit), None)
+# A bare three-letter uppercase unit is an ISO 4217 currency code. XBRL
+# also uses compound monetary units such as "USD-per-shares", which are not
+# matched here and are handled as the non-monetary fallback they behave
+# like.
+_CURRENCY_UNIT = re.compile(r"^[A-Z]{3}$")
+
+
+def _annual_facts_by_end_date(
+    facts_by_unit: dict[str, list[Fact]],
+) -> tuple[dict[str, Fact], str | None]:
+    """One fact per end-date, and any foreign currency that was refused.
+
+    USD is preferred. A non-USD currency is **refused rather than
+    consumed**, which is the point of this function's second return value.
+    The fallback used to be `next(iter(facts_by_unit))`, so a filer tagging
+    in EUR had its euro values loaded verbatim and then priced against a
+    USD market capitalisation: the note printed a market-cap-to-free-cash-
+    flow multiple mixing the two currencies, a per-share DCF value with a
+    dollar sign on it, and raised no issue anywhere. A reader checking the
+    multiple against their own screen finds it off by the cross rate.
+
+    Non-monetary units still fall back as before, because "shares" and
+    "pure" are what share counts and ratios are tagged in.
+
+    Dedupes by keeping the most-recently-filed fact for each end-date.
+    """
+    refused: str | None = None
+    if "USD" in facts_by_unit:
+        unit = "USD"
+    else:
+        currencies = [u for u in facts_by_unit if _CURRENCY_UNIT.match(u)]
+        if currencies:
+            # Monetary, and not in dollars. Nothing downstream can convert
+            # it, so the metric is left unresolved and the currency named.
+            return {}, currencies[0]
+        unit = next(iter(facts_by_unit), None)
     if unit is None:
-        return {}
+        return {}, refused
 
     by_end: dict[str, Fact] = {}
     for f in facts_by_unit[unit]:
@@ -93,7 +132,7 @@ def _annual_facts_by_end_date(facts_by_unit: dict[str, list[Fact]]) -> dict[str,
         existing = by_end.get(f.end)
         if existing is None or f.filed > existing.filed:
             by_end[f.end] = f
-    return by_end
+    return by_end, refused
 
 
 def build_metric_series(
@@ -122,7 +161,9 @@ def build_metric_series(
             facts_by_unit = facts.concepts.get(concept_name)
             if not facts_by_unit:
                 continue
-            by_end = _annual_facts_by_end_date(facts_by_unit)
+            by_end, refused = _annual_facts_by_end_date(facts_by_unit)
+            if refused:
+                result.foreign_currencies[refused] = concept_name
             if not by_end:
                 continue
             if primary_ends is None:

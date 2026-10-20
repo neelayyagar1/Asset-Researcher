@@ -71,7 +71,11 @@ line_items:
     sectors: [all]
   depreciation_amortization:
     label: Depreciation & Amortization
-    sectors: [standard, energy]
+    # reit included deliberately. ffo_before_disposals is net income plus
+    # this line, and without reit here the line was never resolved for a
+    # REIT, so FFO was always None: the one metric a REIT is actually
+    # valued on was structurally unreachable.
+    sectors: [standard, energy, reit]
   operating_cash_flow:
     label: Operating Cash Flow
     sectors: [all]
