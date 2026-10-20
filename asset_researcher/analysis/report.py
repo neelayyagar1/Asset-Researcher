@@ -183,7 +183,16 @@ def render_with_citations(
             # in words rather than with a symbol.
             url = document.source_url if document else ""
             label = f"{number}" if verified else f"{number}, unverified"
-            markers.append(f"[[{label}]({url})]" if url else f"[{label}]")
+            # The visible marker stays "[1]". Its accessible name was the
+            # literal "[1", an unclosed bracket announced as "link, left
+            # bracket one", which told a reader nothing about where it
+            # went. The title carries the source instead.
+            source = document.label if document else "source"
+            markers.append(
+                f'[[{label}]({url} "Citation {number}: {source}")]'
+                if url
+                else f"[{label}]"
+            )
 
         if markers:
             parts.append(" " + "".join(markers))

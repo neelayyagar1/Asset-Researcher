@@ -47,7 +47,10 @@ def test_headings_lists_and_bold_are_the_supported_subset():
         "Apple designs **phones**.\n\n"
         "- One segment\n- Two segments\n"
     )
-    assert "<h2>Business overview</h2>" in out
+    # h4, not h2: a heading inside filing prose nests under the report's
+    # own section label, which is the h2. Rendering it at h2 lifted it out
+    # of its section in the document outline.
+    assert "<h4>Business overview</h4>" in out
     assert "<strong>phones</strong>" in out
     assert out.count("<li>") == 2
 

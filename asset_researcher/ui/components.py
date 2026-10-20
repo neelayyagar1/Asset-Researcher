@@ -103,7 +103,12 @@ def masthead(
         f'<div class="rail">{_text(provenance)}</div>'
         f"<div>"
         f'<h1 class="ar-title">{_text(title)}'
-        f'<span class="ar-ticker">{_text(ticker)}</span></h1>'
+        # The space matters: the span is display:block so the eye sees two
+        # lines, but textContent concatenates, and the heading was
+        # announced as "Realty Income Corpo" and "Truist Financial
+        # Corptfc". Streamlit also derives its anchor slug from that
+        # string.
+        f' <span class="ar-ticker">{_text(ticker)}</span></h1>'
         f'<div class="ar-subline">{parts}</div>'
         f"</div></div>"
     )
@@ -167,11 +172,16 @@ def section(label: str, note: str = "") -> str:
     """
     trailing = f'<div class="ar-sec-note">{_text(note)}</div>' if note else ""
     return _one_line(
-        f'<section class="ar-sec" id="{slug(label)}"'
-        f' aria-labelledby="h-{slug(label)}">'
-        f'<h2 class="ar-sec-label" id="h-{slug(label)}">{_text(label)}</h2>'
+        # A div, not a section. This is a heading band: the content it
+        # names follows as a sibling block, so marking it `<section>`
+        # published eighteen landmarks that each contained only their own
+        # title, and a screen reader's landmark list offered eighteen
+        # empty regions. The `<h2>` is what carries the structure, and it
+        # stays.
+        f'<div class="ar-sec" id="{slug(label)}">'
+        f'<h2 class="ar-sec-label">{_text(label)}</h2>'
         f'<div class="ar-sec-body"><div class="ar-sec-rule"></div>'
-        f"{trailing}</div></section>"
+        f"{trailing}</div></div>"
     )
 
 
@@ -392,7 +402,13 @@ def table(
             cells.append(
                 f'<td class="{" ".join(classes)}">{body_cell}</td>'
             )
-        body.append(f'<tr class="{row_class}">{"".join(cells)}</tr>')
+        # The spacer row is a rule drawn with table cells. To a screen
+        # reader it was sixteen empty cells standing between the subject
+        # and the first peer, each of which had to be stepped through.
+        hidden = ' aria-hidden="true"' if row_class == "spacer" else ""
+        body.append(
+            f'<tr class="{row_class}"{hidden}>{"".join(cells)}</tr>'
+        )
 
     variant = " ar-table-scroll" if scrolls else ""
     # A scrolling region has to be focusable or a keyboard cannot reach the
@@ -674,8 +690,10 @@ def home() -> str:
     """
     return _one_line(
         '<div class="ar-home">'
-        "<h1>Read the filings,<br>then read what<br>"
-        "management said<br>about them.</h1>"
+        # Spaces before each break: without them textContent read
+        # "Read the filings,then read whatmanagement saidabout them."
+        "<h1>Read the filings, <br>then read what <br>"
+        "management said <br>about them.</h1>"
         '<p class="lede">A ticker in, a sourced research note out: the '
         "filed financial record, the narrative management wrapped around "
         "it, and the places where the two do not agree.</p>"

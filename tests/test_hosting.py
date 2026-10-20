@@ -123,7 +123,10 @@ def test_verified_citations_render_as_plain_numbered_markers():
     )
     markdown, citations = render_with_citations(narrative)
     # Inline hyperlink to the source, no separate footnote list to scroll to.
-    assert "[[1](https://sec.gov/doc)]" in markdown
+    # The link carries a title, so its accessible name says where it
+    # goes. Without it the name was the literal "[1", announced as
+    # "link, left bracket one".
+    assert '[[1](https://sec.gov/doc "Citation 1: AAPL 10-K Item 1")]' in markdown
     assert "unverified" not in markdown
     assert citations[0].verified
     assert citations[0].source_url == "https://sec.gov/doc"

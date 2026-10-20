@@ -24,7 +24,13 @@ from html import escape
 
 # Ordered: links are extracted before bold so a bold label inside a link
 # label cannot break the link, and both run on already-escaped text.
-_LINK = re.compile(r"\[([^\]]+)\]\(([^)\s]+)\)")
+# An optional title after the URL, which is how a citation marker says
+# where it leads. Without it the marker's accessible name was the literal
+# "[1". The title is already HTML-escaped when this runs, so the quotes
+# in the source text are &quot; by the time the pattern sees them.
+_LINK = re.compile(
+    r"\[([^\]]+)\]\(([^)\s]+)(?:\s+&quot;([^)]*?)&quot;)?\)"
+)
 _BOLD = re.compile(r"\*\*([^*]+)\*\*")
 _SAFE_URL = re.compile(r"^(https?://|/|#)", re.IGNORECASE)
 
@@ -40,12 +46,13 @@ def _inline(text: str) -> str:
     out = escape(text, quote=True)
 
     def link(match: re.Match[str]) -> str:
-        label, url = match.group(1), match.group(2)
+        label, url, title = match.group(1), match.group(2), match.group(3)
         if not _SAFE_URL.match(url):
             return label
+        name = f' title="{title}" aria-label="{title}"' if title else ""
         return (
-            f'<a href="{url}" target="_blank" rel="noopener noreferrer">'
-            f"{label}</a>"
+            f'<a href="{url}" target="_blank" rel="noopener noreferrer"'
+            f"{name}>{label}</a>"
         )
 
     out = _LINK.sub(link, out)
@@ -84,19 +91,19 @@ def to_html(markdown: str) -> str:
         if stripped.startswith("### "):
             flush_paragraph()
             flush_list()
-            blocks.append(f"<h3>{_inline(stripped[4:].strip())}</h3>")
+            blocks.append(f"<h5>{_inline(stripped[4:].strip())}</h5>")
             continue
 
         if stripped.startswith("## "):
             flush_paragraph()
             flush_list()
-            blocks.append(f"<h2>{_inline(stripped[3:].strip())}</h2>")
+            blocks.append(f"<h4>{_inline(stripped[3:].strip())}</h4>")
             continue
 
         if stripped.startswith("# "):
             flush_paragraph()
             flush_list()
-            blocks.append(f"<h2>{_inline(stripped[2:].strip())}</h2>")
+            blocks.append(f"<h3>{_inline(stripped[2:].strip())}</h3>")
             continue
 
         if stripped.startswith(("- ", "* ")):

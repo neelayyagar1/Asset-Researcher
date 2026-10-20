@@ -29,6 +29,13 @@ from decimal import ROUND_HALF_UP, Decimal
 from asset_researcher.quant.capital import net_debt_from_values
 from asset_researcher.quant.series import MetricSeries
 
+# The lines whose absence is a mapping failure rather than a filer's
+# choice. Every operating company reports these, so a blank here is our
+# gap to disclose, not theirs.
+_STRUCTURAL_LINES = frozenset({
+    "Revenue", "Net income", "Total assets", "Operating cash flow",
+})
+
 # Row kinds, in the order of visual weight the renderer gives them.
 SECTION = "section"
 LINE = "line"
@@ -298,6 +305,7 @@ def build_statement(
         return lookup.get(metric, {}).get(period)
 
     rows: list[StatementRow] = []
+    pending: list[tuple[int, StatementRow]] = []
     for kind, label, spec in statement_order(sector_class):
         if kind == SECTION:
             rows.append(
@@ -315,10 +323,50 @@ def build_statement(
             values[period] = rendered
             present = present or has_value
 
+        # Empty rows are dropped, deliberately: a filer that does not tag
+        # accounts receivable should not carry a row of n.d. for it.
+        #
+        # The exception is the handful of lines every operating company
+        # reports. When one of those fails to resolve, the cause is our
+        # mapping, not the filer, and deleting the row hides that: a REIT
+        # whose revenue concept did not resolve got an income statement
+        # with no revenue line at all, while the comparables table two
+        # sections below printed that same company's revenue. Nothing on
+        # the page said the question had been asked. Those lines are kept
+        # and marked n.d., which is what this module's own rule - that a
+        # missing value and an absent one must never look alike - requires.
         if present:
             rows.append(StatementRow(label=label, kind=kind, values=values))
+        elif label in _STRUCTURAL_LINES:
+            # Held back until the whole statement is built: a structural
+            # line is only worth showing as a gap inside a section that
+            # has other content. Keeping it unconditionally would conjure
+            # a balance sheet for a filer who filed none.
+            pending.append((len(rows), StatementRow(
+                label=label, kind=kind, values=values
+            )))
 
+    # Reinstate a structural gap only where its section already carries
+    # something, so a missing revenue line shows as n.d. inside a real
+    # income statement rather than conjuring a section of its own.
+    for position, row in reversed(pending):
+        if _section_has_content(rows, position):
+            rows.insert(position, row)
     return _drop_empty_sections(rows)
+
+
+def _section_has_content(rows: list[StatementRow], position: int) -> bool:
+    """Whether the section this position falls in already has a row."""
+    for row in reversed(rows[:position]):
+        if row.kind == SECTION:
+            break
+    else:
+        return False
+    for row in rows[:position][::-1]:
+        if row.kind == SECTION:
+            return False
+        return True
+    return False
 
 
 def _evaluate(

@@ -373,7 +373,13 @@ table.ar-statement tbody tr.statement-derived td { color: var(--ink-muted);
 table.ar-statement tbody tr.statement-derived td.rowhead {
   color: var(--ink-muted); padding-left: var(--s5); }
 table.ar-statement tbody tr.statement-line td { border-bottom: none; }
-table.ar-statement tbody td.rowhead { white-space: nowrap; }
+table.ar-statement tbody td.rowhead,
+table.ar-statement tbody th.rowhead { white-space: nowrap; }
+/* The subject row sets its own colour at (0,2,4) and beat the muting
+   rule at (0,2,3), so in the one row about the company being analysed an
+   NM rendered identically to a filed figure. */
+table.ar-table tbody tr.subject td.nm {
+  color: var(--ink-muted); font-weight: 400; }
 
 /* ---------------------------------------------------------- summary */
 
@@ -491,6 +497,9 @@ table.ar-statement tbody td.rowhead { white-space: nowrap; }
   mask-image: linear-gradient(90deg, #000 calc(100% - 44px), transparent);
   -webkit-mask-image: linear-gradient(90deg, #000 calc(100% - 44px), transparent); }
 .ar-nav::-webkit-scrollbar { display: none; }
+/* 24px minimum target height. These measured 15px and 23px. */
+.ar-nav a { min-height: 24px; display: inline-flex; align-items: center; }
+.ar-chips a { min-height: 24px; display: inline-flex; align-items: center; }
 .ar-nav a { font-family: var(--sans); font-size: var(--t-label);
   line-height: var(--t-label-lh); letter-spacing: var(--t-label-ls);
   font-weight: 600; text-transform: uppercase; color: var(--ink-muted);
@@ -577,6 +586,12 @@ table.ar-statement tbody td.rowhead { white-space: nowrap; }
      to stop labels wrapping mid-phrase on a wide screen; at this width a
      wrapped label is the lesser cost. */
   table.ar-table td.key, table.ar-table th.rowhead { min-width: 0; }
+  /* The min-widths were relaxed but this was not, and the row labels are
+     what set the floor: "Depreciation and amortisation" refusing to wrap
+     kept the statement table at 581px inside a 390px viewport, clipping
+     the two most recent periods. */
+  table.ar-statement tbody td.rowhead,
+  table.ar-statement tbody th.rowhead { white-space: normal; }
   table.ar-table td.wide { min-width: 0; white-space: normal; }
   .ar-table-wrap { overflow-x: auto; }
   table.ar-table thead th { position: static; }
