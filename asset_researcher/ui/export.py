@@ -129,7 +129,12 @@ def report_to_html(report: Report, notice: str = "") -> str:
         "table.ar-table thead th{position:static}"
         ".ar-nav{display:none}}"
         "</style></head>"
-        f'<body><div class="ar-page">{"".join(body)}</div></body></html>'
+        # A `main` landmark and a bypass link. The exported file had
+        # neither, and it carries twenty section anchors ahead of its
+        # content, so a screen-reader user had no way past the index.
+        f'<body><a class="ar-skip" href="#ar-content">Skip to report</a>'
+        f'<main id="ar-content" class="ar-page">{"".join(body)}</main>'
+        f"</body></html>"
     )
 
 

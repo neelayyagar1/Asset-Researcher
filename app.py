@@ -83,6 +83,17 @@ st.set_page_config(
 )
 st.markdown(theme.stylesheet(), unsafe_allow_html=True)
 
+# A bypass link. The report carries twenty section anchors ahead of its
+# content, so without this a keyboard user tabs through the whole index to
+# reach the note. Streamlit owns the document shell and gives our content
+# no `main` element to target, so the link points at the masthead, which
+# is the first thing in the report proper. The exported file, whose shell
+# we do write, gets a real `main` landmark.
+st.markdown(
+    '<a class="ar-skip" href="#ar-report">Skip to report</a>',
+    unsafe_allow_html=True,
+)
+
 
 def write(html: str) -> None:
     """Emit a rendered block.
@@ -218,8 +229,15 @@ def _generate(ticker: str, mandate_text: str, urls: list[str], user_sources: lis
         # progress, and stops short of full for that reason; it is honest
         # here only because this block mounts once per run and is replaced
         # when the run ends, so it cannot replay on an unrelated rerun.
+        # role=progressbar with no value, which is what an indeterminate
+        # bar is, plus a live region so the stage changes are announced.
+        # Nothing on this page was a live region at all, so a build that
+        # runs for over a minute was entirely silent to a screen reader.
         st.markdown(
-            '<div class="ar-progress"><i></i></div>', unsafe_allow_html=True
+            '<div class="ar-progress" role="progressbar" aria-busy="true"'
+            ' aria-label="Building the report">'
+            "<i></i></div>",
+            unsafe_allow_html=True,
         )
         for url in urls:
             try:
@@ -347,6 +365,7 @@ actions[2].download_button(
     key="dl_md",
 )
 
+write('<span id="ar-report" tabindex="-1"></span>')
 write(
     ui.masthead(
         bundle.company_name,

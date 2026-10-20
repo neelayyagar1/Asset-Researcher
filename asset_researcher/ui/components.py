@@ -167,10 +167,11 @@ def section(label: str, note: str = "") -> str:
     """
     trailing = f'<div class="ar-sec-note">{_text(note)}</div>' if note else ""
     return _one_line(
-        f'<div class="ar-sec" id="{slug(label)}">'
-        f'<div class="ar-sec-label">{_text(label)}</div>'
+        f'<section class="ar-sec" id="{slug(label)}"'
+        f' aria-labelledby="h-{slug(label)}">'
+        f'<h2 class="ar-sec-label" id="h-{slug(label)}">{_text(label)}</h2>'
         f'<div class="ar-sec-body"><div class="ar-sec-rule"></div>'
-        f"{trailing}</div></div>"
+        f"{trailing}</div></section>"
     )
 
 
@@ -319,7 +320,7 @@ def table(
         return ""
 
     head = "".join(
-        f'<th class="{"num" if c.num else ""}">{_text(c.label)}</th>'
+        f'<th scope="col" class="{"num" if c.num else ""}">{_text(c.label)}</th>'
         for c in columns
     )
 
@@ -349,8 +350,19 @@ def table(
         body.append(f'<tr class="{row_class}">{"".join(cells)}</tr>')
 
     variant = " ar-table-scroll" if scrolls else ""
+    # A scrolling region has to be focusable or a keyboard cannot reach the
+    # columns inside it. The comparables table is 1847px wide inside 687px,
+    # so more than half its columns were unreachable without a mouse. Only
+    # the scrolling variant gets this: making every table a tab stop would
+    # add a dozen empty stops to the page.
+    wrap = (
+        '<div class="ar-table-wrap" tabindex="0" role="region"'
+        ' aria-label="Comparable companies, scrollable">'
+        if scrolls
+        else '<div class="ar-table-wrap">'
+    )
     return _one_line(
-        f'<div class="ar-table-wrap"><table class="ar-table{variant}">'
+        f'{wrap}<table class="ar-table{variant}">'
         f"<thead><tr>{head}</tr></thead>"
         f'<tbody>{"".join(body)}</tbody></table></div>'
     )
@@ -386,8 +398,8 @@ def statement_table(rows, periods: Sequence[str]) -> str:
     if not rows:
         return ""
 
-    head = '<th class="rowhead"></th>' + "".join(
-        f'<th class="num">{_text(p)}</th>' for p in periods
+    head = '<th scope="col" class="rowhead"></th>' + "".join(
+        f'<th scope="col" class="num">{_text(p)}</th>' for p in periods
     )
 
     body = []
@@ -461,8 +473,8 @@ def sensitivity_table(
         return ""
 
     growth_columns = [k for k in grid[0].keys() if k != "WACC"]
-    head = '<th class="rowhead">WACC</th>' + "".join(
-        f'<th class="num">{_text(c)}</th>' for c in growth_columns
+    head = '<th scope="col" class="rowhead">WACC</th>' + "".join(
+        f'<th scope="col" class="num">{_text(c)}</th>' for c in growth_columns
     )
 
     body = []
@@ -631,7 +643,7 @@ def workspace_intro() -> str:
     """The empty workspace, which is a form and should say what it wants."""
     return _one_line(
         '<div class="ar-workspace ar-workspace-intro">'
-        "<h2>Build a note</h2>"
+        '<h1 class="ar-workspace-title">Build a note</h1>'
         '<p>Enter a ticker. The report takes about a minute and reads every '
         "filing it cites.</p></div>"
     )

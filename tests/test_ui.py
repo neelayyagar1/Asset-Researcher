@@ -101,7 +101,9 @@ def test_numeric_columns_are_right_aligned_and_prose_columns_wrap():
         ],
         [{"name": "Discount rate", "value": "8.5%", "why": "Convention"}],
     )
-    assert '<th class="num">Value</th>' in out
+    # scope="col" is not decoration: a screen reader reads a figure back
+    # with its column name only where the header says what it governs.
+    assert '<th scope="col" class="num">Value</th>' in out
     assert 'class="num"' in out
     assert 'class="wide"' in out
     assert 'class="key"' in out

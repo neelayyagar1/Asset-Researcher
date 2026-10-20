@@ -58,7 +58,12 @@ RULE_SOFT = "#ece8dd"  # hairline, within a table
 ACCENT = "#1d5a86"  # slate: the subject, this analysis
 ACCENT_SOFT = "#e9eef3"
 ACCENT_2 = "#a8481f"  # sienna: the market, the prevailing view, traded price
-NEUTRAL = "#b4afa1"  # peers, recessive marks
+# Peers and recessive marks. #b4afa1 measured 2.06:1 against the paper,
+# under the 3:1 that WCAG requires of a graphical object carrying meaning:
+# a peer bar and the bear-to-bull band are data, not decoration, so they
+# have to be distinguishable. This clears it at 3.42:1. Gridlines stay
+# lighter on purpose, being genuinely decorative.
+NEUTRAL = "#8c8676"
 
 NEGATIVE = "#8a2d1c"  # divergence, bear
 POSITIVE = "#2b6349"  # corroboration, bull
@@ -159,6 +164,15 @@ html { caret-color: var(--accent); scrollbar-color: var(--rule) transparent;
    are the document default rather than a per-table opt-in. */
 body { font-variant-numeric: tabular-nums lining-nums;
   font-feature-settings: "tnum" 1, "lnum" 1; }
+
+/* A bypass link: offscreen until focused, which is the one pattern that
+   serves a keyboard user without showing a control nobody else needs. */
+.ar-skip { position: absolute; left: -9999px; top: 0; z-index: 100;
+  background: var(--ink); color: var(--paper); padding: var(--s2) var(--s3);
+  font-family: var(--sans); font-size: var(--t-label);
+  letter-spacing: var(--t-label-ls); text-transform: uppercase;
+  text-decoration: none; }
+.ar-skip:focus { left: var(--s3); top: var(--s3); }
 
 /* ---------------------------------------------------------- typography */
 
@@ -535,6 +549,14 @@ table.ar-statement tbody td.rowhead { white-space: nowrap; }
   /* A nowrap section note measured 359px inside a 390px viewport and
      pushed the entire document into horizontal scroll. */
   .ar-sec-note { white-space: normal; }
+  /* Reflow. `td.key` at 8.5rem, `td.wide` at 17rem and nowrap figures set
+     a min-content floor of roughly 866px, so a 390px viewport required
+     scrolling in two directions, and so did 400% zoom. The floors exist
+     to stop labels wrapping mid-phrase on a wide screen; at this width a
+     wrapped label is the lesser cost. */
+  table.ar-table td.key, table.ar-table th.rowhead { min-width: 0; }
+  table.ar-table td.wide { min-width: 0; white-space: normal; }
+  .ar-table-wrap { overflow-x: auto; }
   table.ar-table thead th { position: static; }
 }
 """
@@ -567,6 +589,15 @@ html, body, .stApp, [data-testid="stAppViewContainer"] {
   font-family: var(--display); font-weight: 500; color: var(--ink); }
 [data-testid="stAppViewContainer"] p, [data-testid="stAppViewContainer"] li {
   font-family: var(--sans); }
+/* A section label is an `h2` so that twenty sections expose twenty
+   headings rather than three, but it is set as a label, not as a display
+   heading. The restatement above reaches it at (0,1,1), so the label face
+   has to be restated here above that. */
+[data-testid="stAppViewContainer"] h2.ar-sec-label,
+[data-testid="stAppViewContainer"] h3.ar-block-label {
+  font-family: var(--sans); font-size: var(--t-label);
+  line-height: var(--t-label-lh); letter-spacing: var(--t-label-ls);
+  font-weight: 600; text-transform: uppercase; }
 /* Figures stay monospaced; the sans restatement above must not reach them. */
 [data-testid="stAppViewContainer"] .ar-ticker,
 [data-testid="stAppViewContainer"] .ar-masthead .rail,
@@ -669,6 +700,13 @@ button[data-testid="stExpandSidebarButton"]:hover,
    other edge here is square. Confirmed against the shipped assets, which
    expose stExpander, stExpanderDetails and stExpanderIcon{,Check,Error,
    Spinner} and no stStatus. */
+/* Streamlit puts the form container in the tab order and then removes
+   its outline, so a keyboard user landed on an invisible stop. If it is
+   focusable it has to show focus. */
+[data-testid="stVerticalBlock"]:focus-visible,
+section:focus-visible, div[class*="block-container"]:focus-visible {
+  outline: 2px solid var(--accent); outline-offset: 2px; }
+
 [data-testid="stExpander"] { background: var(--surface);
   border: 1px solid var(--rule); border-radius: 0; box-shadow: none; }
 [data-testid="stExpander"] summary, [data-testid="stExpander"] p,
@@ -723,7 +761,11 @@ hr { border-color: var(--rule); margin: var(--s5) 0; }
 
 .ar-workspace-intro { border-top: 2px solid var(--ink);
   padding-top: var(--s4); margin-bottom: var(--s5); }
-.ar-workspace-intro h2 { font-size: var(--t-d2); letter-spacing: var(--t-d2-ls);
+/* An h1, because this screen's only heading was an h2 and a hierarchy
+   that starts at level two tells a screen-reader user the page title is
+   missing. Set at the same size it always was. */
+.ar-workspace-intro h1 { font-size: var(--t-d2);
+  letter-spacing: var(--t-d2-ls);
   margin: 0 0 var(--s2); }
 .ar-workspace-intro p { font-size: var(--t-body); color: var(--ink-muted);
   margin: 0; max-width: 46ch; }

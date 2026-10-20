@@ -76,7 +76,26 @@ def _text(
     )
 
 
-def _frame(width: float, height: float, body: str) -> str:
+def _describe(what: str, rows: list[tuple[str, str]]) -> str:
+    """A chart's data as a sentence, for a reader who is not looking at it.
+
+    An accessible name alone says a chart exists. This says what is in it,
+    which is the part that was missing: none of these graphics conveyed
+    their data non-visually by any route.
+    """
+    if not rows:
+        return what
+    body = "; ".join(f"{k} {v}" for k, v in rows if v)
+    return f"{what}. {body}." if body else what
+
+
+def _multiple_text(value: float | None) -> str:
+    return f"{value:,.1f}x" if value is not None else "not meaningful"
+
+
+def _frame(
+    width: float, height: float, body: str, label: str = "", describe: str = ""
+) -> str:
     """Scalable, but never beyond the width it was laid out for.
 
     Without the cap a chart stretched to a wider container scales its type
@@ -84,10 +103,25 @@ def _frame(width: float, height: float, body: str) -> str:
     12.5px on the page. Capping at the design width keeps a type size in a
     chart equal to a type size on the page it sits on.
     """
+    # `role="img"` with no name is an unlabelled image, and every chart
+    # here was one: no aria-label, no <title>, no <desc>. A reader not
+    # looking at the picture was told nothing at all. The title names the
+    # chart and the description says what it shows; where a caller gives
+    # neither, the graphic is marked presentational instead, which is
+    # honest rather than announcing an unnamed image.
+    if not label:
+        return (
+            f'<svg viewBox="0 0 {width:.0f} {height:.0f}" '
+            f'style="max-width:{width:.0f}px" aria-hidden="true" '
+            f'xmlns="http://www.w3.org/2000/svg" role="presentation">'
+            f"{body}</svg>"
+        )
+    desc = f"<desc>{escape(describe)}</desc>" if describe else ""
     return (
         f'<svg viewBox="0 0 {width:.0f} {height:.0f}" '
         f'style="max-width:{width:.0f}px" '
-        f'xmlns="http://www.w3.org/2000/svg" role="img">{body}</svg>'
+        f'xmlns="http://www.w3.org/2000/svg" role="img">'
+        f"<title>{escape(label)}</title>{desc}{body}</svg>"
     )
 
 
@@ -260,7 +294,14 @@ def metric_bars(
             _text(centre, height - 8, label, _TICK, theme.INK_MUTED, "middle")
         )
 
-    return _frame(width, height, "".join(body))
+    return _frame(
+        width, height, "".join(body),
+        label=title,
+        describe=_describe(
+            subtitle or title,
+            [(p.frame_label, _money_precise(p.value)) for p in points],
+        ),
+    )
 
 
 def margin_lines(
@@ -367,7 +408,18 @@ def margin_lines(
             )
         )
 
-    return _frame(width, height, "".join(body))
+    return _frame(
+        width, height, "".join(body),
+        label="Gross and operating margin by filed year",
+        describe=_describe(
+            "Both margins as a percentage of revenue",
+            [
+                (f"{name} {period}", f"{value:,.1f}%")
+                for name, _, pairs in lines
+                for period, value in pairs
+            ],
+        ),
+    )
 
 
 # ------------------------------------------------------------ peer context
@@ -458,7 +510,18 @@ def peer_bars(
             )
         )
 
-    return _frame(width, height, "".join(body))
+    return _frame(
+        width, height, "".join(body),
+        label=f"{title}: the subject against its peer set",
+        describe=_describe(
+            f"{title} for each company in the peer set",
+            [
+                (f"{ticker} (subject)" if subject else ticker,
+                 _multiple_text(value))
+                for ticker, value, subject in entries
+            ],
+        ),
+    )
 
 
 # -------------------------------------------------------------- valuation
@@ -525,7 +588,10 @@ def valuation_range(
     body.append(
         f'<line x1="{x_of(min(values)):.1f}" y1="{axis_y}" '
         f'x2="{x_of(max(values)):.1f}" y2="{axis_y}" '
-        f'stroke="{theme.NEUTRAL}" stroke-width="7" opacity="0.4" '
+        # Full opacity: at 0.4 this composited to 1.54:1, so the band
+        # that states the whole valuation range was the least visible
+        # thing in the chart.
+        f'stroke="{theme.NEUTRAL}" stroke-width="7" '
         f'stroke-linecap="butt"/>'
     )
 
@@ -574,7 +640,19 @@ def valuation_range(
         )
     )
 
-    return _frame(width, height, "".join(body))
+    return _frame(
+        width, height, "".join(body),
+        label="Valuation range against the traded price",
+        describe=_describe(
+            "Each modelled case, and the traded price as a rule",
+            [(c.name, f"${c.value_per_share:,.2f}") for c in cases]
+            + (
+                [("Traded price", f"${market_price:,.2f}")]
+                if market_price
+                else []
+            ),
+        ),
+    )
 
 
 def dcf_bridge(
@@ -702,7 +780,28 @@ def dcf_bridge(
                       "middle", font=_SANS)
             )
 
-    return _frame(width, height, "".join(body))
+    return _frame(
+        width, height, "".join(body),
+        label="Discounted cash flow bridge",
+        describe=_describe(
+            "From forecast cash flows and terminal value to equity value",
+            [
+                ("Present value of forecast", _money_precise(dcf.pv_forecast)),
+                ("Present value of terminal", _money_precise(dcf.pv_terminal)),
+                ("Enterprise value", _money_precise(dcf.enterprise_value)),
+                # Follows the bar's own wording: a negative net-debt
+                # position is cash being added, and calling it "less net
+                # debt" reads as debt being added to enterprise value.
+                (
+                    "Less net debt"
+                    if inputs.net_debt >= 0
+                    else "Plus net cash",
+                    _money_precise(abs(inputs.net_debt)),
+                ),
+                ("Equity value", _money_precise(dcf.equity_value)),
+            ],
+        ),
+    )
 
 
 def free_cash_flow_history(
@@ -807,4 +906,11 @@ def free_cash_flow_history(
         f'x2="{key_x - label_width - 4:.1f}" y2="{pad_t - 10:.1f}" '
         f'stroke="{theme.ACCENT_2}" stroke-width="1.4" stroke-dasharray="4 3"/>'
     )
-    return _frame(width, height, "".join(body))
+    return _frame(
+        width, height, "".join(body),
+        label="Free cash flow by filed year",
+        describe=_describe(
+            "Operating cash flow less capital expenditure, by filed year",
+            [(p.frame_label, _money_precise(p.value)) for p in cash],
+        ),
+    )
