@@ -312,25 +312,47 @@ def _about_text() -> str:
 
 
 @st.cache_resource(show_spinner=False)
+def _load_samples(key: str, stamp: float):
+    """Open the sealed notes. Cached on the key and the file's mtime.
+
+    Both arguments are cache keys, and that is the whole point. This took
+    none, so the first call decided the answer for the life of the
+    process: an app that started before SAMPLES_KEY was set cached the
+    empty list and went on returning it after the secret was added, with
+    the only symptom a missing button.
+    """
+    if not key:
+        return []
+    return samples.load(key)
+
+
 def _samples():
     """The packed sample notes, or an empty list.
 
-    Cached because opening them derives a scrypt key, which is
-    deliberately expensive and would otherwise run on every rerun. The
-    passphrase is the key, so this can only run after the gate.
+    Returns empty for a deployment that ships none, which is a normal
+    state. A key that is set but does not open the archive is not: that
+    is a misconfiguration, and it is recorded so the next render can say
+    so rather than quietly dropping the feature.
     """
-    # SAMPLES_KEY, not the gate passphrase. See samples.py: the blob is
-    # public, so sealing it with the phrase that guards the API key would
-    # publish an offline oracle for that phrase.
     key = os.environ.get("SAMPLES_KEY", "")
+    st.session_state["samples_problem"] = ""
     if not key:
         return []
     try:
-        return samples.load(key)
+        stamp = samples.SAMPLES_PATH.stat().st_mtime
+    except OSError:
+        st.session_state["samples_problem"] = (
+            "SAMPLES_KEY is set but no sample archive shipped with this "
+            "build."
+        )
+        return []
+    try:
+        return _load_samples(key, stamp)
     except ValueError:
-        # Shipped under a different passphrase than this deployment uses.
-        # The live tool still works, so this is a missing feature rather
-        # than a failure, and the samples view simply does not offer.
+        st.session_state["samples_problem"] = (
+            "SAMPLES_KEY does not open the sample archive. It must be the "
+            "key the notes were packed under, not the demo passphrase."
+        )
         return []
 
 
@@ -655,19 +677,17 @@ if st.session_state["view"] == "home" and report is None:
     # gutters set the spacing and the three buttons read as unrelated
     # objects 140px apart rather than as one choice.
     has_samples = bool(_samples())
-    actions = st.columns([1.3, 1.3, 1.1, 3.3] if has_samples else [1.4, 1.2, 4])
-    column = 0
-    if has_samples:
-        if actions[0].button("Read a sample", type="primary", key="to_samples"):
-            go("samples")
-        column = 1
-    if actions[column].button(
-        "Build a report", type="primary" if not has_samples else "secondary",
-        key="enter",
-    ):
+    actions = st.columns([1.3, 1.2, 1.3, 3.2] if has_samples else [1.4, 1.2, 4])
+    if actions[0].button("Build a report", type="primary", key="enter"):
         go("tool")
-    if actions[column + 1].button("How it works", key="to_about"):
+    if actions[1].button("How it works", key="to_about"):
         go("about")
+    if has_samples and actions[2].button("Read a sample", key="to_samples"):
+        go("samples")
+    # A key that is set and does not work is the owner's problem to see,
+    # not a feature that quietly disappears.
+    if st.session_state.get("samples_problem"):
+        write(ui.status("warning", "Samples", st.session_state["samples_problem"]))
     # What each door costs, said where the choice is made rather than on
     # a screen the reader has already dismissed.
     write(ui.door_costs(has_samples))
