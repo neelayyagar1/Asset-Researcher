@@ -555,7 +555,8 @@ table.ar-table tbody tr.subject td.nm {
   /* A press with no acknowledgement, followed by a rerun most of a second
      later, reads as a button that did not work. These are the product's
      two most consequential clicks. */
-  .stButton > button:active, .stDownloadButton > button:active {
+  .stButton > button:active, .stDownloadButton > button:active,
+  .stFormSubmitButton > button:active {
     transform: translateY(1px); transition-duration: 40ms; }
 
   /* Reading position across a document that measures over ten thousand
@@ -731,10 +732,11 @@ button[data-testid="stExpandSidebarButton"]:hover,
    action rendered #403c33 on #17150f, about 1.8:1, which is invisible.
    Every control's descendants inherit the control's colour instead. */
 .stButton > button *, .stDownloadButton > button *,
+.stFormSubmitButton > button *,
 [data-testid="stExpander"] summary *, .stTabs [data-baseweb="tab"] * {
   color: inherit; }
 
-.stButton > button, .stDownloadButton > button {
+.stButton > button, .stDownloadButton > button, .stFormSubmitButton > button {
   font-family: var(--sans); font-size: var(--t-label);
   letter-spacing: var(--t-label-ls); text-transform: uppercase;
   font-weight: 600; border-radius: 0; border: 1px solid var(--ink);
@@ -748,7 +750,8 @@ button[data-testid="stExpandSidebarButton"]:hover,
   background: transparent; color: var(--ink); }
 .stButton > button[kind="secondary"]:hover { background: var(--ink);
   color: var(--paper); }
-.stButton > button:focus-visible, .stDownloadButton > button:focus-visible {
+.stButton > button:focus-visible, .stDownloadButton > button:focus-visible,
+.stFormSubmitButton > button:focus-visible {
   outline: 2px solid var(--accent); outline-offset: 2px; }
 
 /* `st.status` renders as an expander, not as its own element: there is no
@@ -865,7 +868,7 @@ hr { border-color: var(--rule); margin: var(--s5) 0; }
 .ar-workspace-intro, .ar-workspace { max-width: 34rem; }
 .stTextInput, .stTextArea, .stSelectbox,
 [data-testid="stCaptionContainer"] { max-width: 34rem; }
-.stButton > button { max-width: 34rem; }
+.stButton > button, .stFormSubmitButton > button { max-width: 34rem; }
 .ar-home { border-top: 2px solid var(--ink); padding-top: var(--s5);
   padding-bottom: var(--s5); }
 .ar-home h1 { font-size: var(--t-d0); line-height: var(--t-d0-lh);

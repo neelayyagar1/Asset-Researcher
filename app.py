@@ -351,9 +351,14 @@ def _controls(key: str) -> tuple[str, str, str, bool]:
         "Additional sources", height=70, placeholder="https://",
         key=f"{key}_urls",
     )
+    # No running budget figure here. It used to print the remaining daily
+    # allowance, which told a reviewer a number that is none of their
+    # business and invited them to treat the demo as a meter rather than
+    # as a research tool. The cap still binds; it simply does so quietly,
+    # and says so only in the one case where it has to - when a run is
+    # refused, which is the only moment the figure explains anything.
     st.caption(
-        "Public URLs. Classified as secondary and attributed as opinion. "
-        f"Demo budget remaining today: ${spend.remaining_today():,.2f}"
+        "Public URLs. Classified as secondary and attributed as opinion."
     )
     run = st.button(
         "Generate report", type="primary", use_container_width=True,
