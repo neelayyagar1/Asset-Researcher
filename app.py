@@ -233,30 +233,51 @@ def _sample_label(title: str) -> str:
 
 
 def _about_text() -> str:
-    """The reviewer's guide, read from the file that is also the
-    repository's own.
+    """The how-it-works page, from the guide the repository carries.
 
     One source, so the page a reviewer reads inside the product and the
-    document a reader finds in the repository cannot drift apart. The
-    front matter and the link list are dropped: inside the product the
-    links either point at the page you are on or at a repository the
-    reader may not have.
+    document a reader finds in the repository cannot drift apart - but
+    not the whole of it. The guide also carries a worked example and a
+    link list, and neither answers "how does this work": a reader on this
+    page wants the mechanism, and a finding about one particular company
+    is an outcome, not an explanation. Those sections stay in the
+    repository where they belong.
+
+    Selecting by heading rather than slicing, so adding a section to the
+    guide does not silently add it here.
     """
     path = get_settings().repo_root / "docs" / "FOR-REVIEWERS.md"
     try:
         body = path.read_text(encoding="utf-8")
     except OSError:
-        return "## About\n\nThe written guide did not ship with this build."
-    head, _, tail = body.partition("## Links")
-    # The closing disclaimer sits after the link list, so splitting there
-    # dropped it. The links are what should go - inside the product they
-    # point at the page you are on - not the line that says what this is.
+        return "# How it works\n\nThe written guide did not ship with this build."
+
+    wanted = (
+        "The problem",
+        "What makes it different from a chatbot over filings",
+        "How it is built",
+        "What it does not do",
+    )
+    out: list[str] = []
+    keeping = False
+    for line in body.splitlines():
+        if line.startswith("# ") and not line.startswith("## "):
+            # The document title, which is the page title here.
+            out.append(line)
+            continue
+        if line.startswith("## "):
+            keeping = line[3:].strip() in wanted
+        if keeping:
+            out.append(line)
+
+    # The closing disclaimer, wherever it sits, because it says what this
+    # is and that is squarely a how-it-works matter.
     closing = [
-        line.strip()
-        for line in tail.splitlines()
-        if line.strip() and not line.lstrip().startswith(("-", "#"))
+        ln.strip()
+        for ln in body.splitlines()
+        if ln.strip().startswith("Research assistance")
     ]
-    return (head.strip() + ("\n\n" + closing[-1] if closing else "")).strip()
+    return "\n".join(out + ([""] + closing if closing else [])).strip()
 
 
 @st.cache_resource(show_spinner=False)
@@ -314,6 +335,29 @@ st.session_state.setdefault("report", None)
 # form returns as a dialog once a report is on screen, because at that
 # point it is a thing you reach for occasionally rather than the first
 # thing you meet.
+_VIEWS = ("home", "tool", "samples", "about")
+
+
+def go(view: str) -> None:
+    """Move to a view, and put it in the address bar.
+
+    The three screens used to share one history entry, so the browser's
+    Back - and a two-finger swipe, which is the same gesture - left the
+    site entirely rather than going back a screen. Writing the view into
+    the query string gives each screen its own entry, so Back means what
+    a reader expects it to mean.
+    """
+    st.session_state["view"] = view
+    st.query_params["view"] = view
+    st.rerun()
+
+
+# The URL wins on a fresh load, which is what makes Back and a shared
+# link land where they say they will. Session state carries it from
+# there, because a rerun inside a screen must not be a navigation.
+_requested = st.query_params.get("view")
+if _requested in _VIEWS and _requested != st.session_state.get("view"):
+    st.session_state["view"] = _requested
 st.session_state.setdefault("view", "home")
 report = st.session_state.get("report")
 presets = load_presets()
@@ -522,18 +566,15 @@ if st.session_state["view"] == "home" and report is None:
     column = 0
     if has_samples:
         if actions[0].button("Read a sample", type="primary", key="to_samples"):
-            st.session_state["view"] = "samples"
-            st.rerun()
+            go("samples")
         column = 1
     if actions[column].button(
         "Build a report", type="primary" if not has_samples else "secondary",
         key="enter",
     ):
-        st.session_state["view"] = "tool"
-        st.rerun()
+        go("tool")
     if actions[column + 1].button("How it works", key="to_about"):
-        st.session_state["view"] = "about"
-        st.rerun()
+        go("about")
     # What each door costs, said where the choice is made rather than on
     # a screen the reader has already dismissed.
     write(ui.door_costs(has_samples))
@@ -550,8 +591,7 @@ if st.session_state["view"] == "about" and report is None:
     # than something smaller than its subheadings.
     write(ui.about(markdown.to_html(_about_text(), base_level=2)))
     if st.button("Back", key="about_back"):
-        st.session_state["view"] = "home"
-        st.rerun()
+        go("home")
     st.stop()
 
 
@@ -567,11 +607,9 @@ if st.session_state["view"] == "samples" and report is None:
 
     back = st.columns([1, 1, 3])
     if back[0].button("Back", key="samples_back"):
-        st.session_state["view"] = "home"
-        st.rerun()
+        go("home")
     if back[1].button("Build one instead", key="samples_build"):
-        st.session_state["view"] = "tool"
-        st.rerun()
+        go("tool")
 
     chosen = st.radio(
         "Sample note",
@@ -616,6 +654,14 @@ if report is None:
     # layout that had broken. The form sits at its own measure instead.
     write('<span id="ar-form" tabindex="-1"></span>')
     write(ui.workspace_intro())
+    # A way out. This screen had none: a reader who opened it to look and
+    # decided not to spend a minute and a dollar had no route back to the
+    # samples, and the browser's own Back left the site.
+    leaving = st.columns([1, 1.4, 3])
+    if leaving[0].button("Back", key="form_back"):
+        go("home")
+    if _samples() and leaving[1].button("Read a sample instead", key="form_samples"):
+        go("samples")
     ticker, mandate_text, urls_text, run = _controls("inline")
     if run and ticker:
         st.session_state["pending"] = (ticker, mandate_text, urls_text)

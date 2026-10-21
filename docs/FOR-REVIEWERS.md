@@ -40,24 +40,38 @@ and says so.
 its own thesis and what would falsify it. A report that returns an empty
 one gets a visible warning instead.
 
-## What it actually found on Apple
+## What it found on Realty Income
 
-The note opens with a sentence composed from filed data:
+This one is in the samples, so the claim can be checked against the note
+rather than taken on trust.
 
-> At 51 times free cash flow the price requires 15.8% annual growth. The
-> filed record compounded at 6.1% over five years.
+Realty Income is a net-lease REIT that has grown its asset base steadily
+and says so. The note agrees on the arithmetic and disagrees on who the
+growth went to. Five of eight management claims diverge from the filed
+figures, and the one that matters reads:
 
-Then the part a screen will not give you. Cash conversion has fallen from
-126% of net income to 99%, days sales outstanding have risen from 26 to 35,
-and the accrual ratio has crossed from −6.7% to +0.1%. Management describes
-cost discipline; the receivables are building. That reconciliation is the
-product.
+> The cost-of-capital claim is supported at the enterprise level and
+> contradicted at the per-share level for three consecutive years.
+> External growth was funded at a cost that did not leave a spread for
+> existing holders once dilution is counted.
 
-It also declines to lead with its own price target. A single-stage DCF on a
-company like Apple lands far from the market, and the report says the gap
-describes the model rather than a mispricing, then puts the reverse solve
-first instead. What the price *requires* is arguable. "The model says $210"
-is not.
+Per-share funds from operations, per-share operating cash flow and
+per-share net income all fell across FY2022 to FY2024 while the asset
+base compounded. Both statements are true at once, which is the whole
+point: a screen shows the enterprise growing, and the per-share series
+shows the existing holder standing still. Ninety of ninety citations
+resolve to the filings.
+
+The same note also declines to produce a valuation. A discounted cash
+flow discounts unlevered cash flow to an enterprise value and bridges to
+equity across net debt, which does not describe a company valued on funds
+from operations against asset value. So the headline reads Price / FFO
+14.7x and the target cell reads **Declined**, with the reason in place
+rather than a blank. Truist is refused for the opposite reason: deposits
+are the funding of a bank, not a claim to subtract.
+
+Declining to answer is a feature here, not a gap. A tool that always
+produces a number produces one for the companies where it should not.
 
 ## How it is built
 
@@ -117,9 +131,7 @@ Stated here rather than buried.
   long document and the index marks your place only after a click.
   Mapping scroll position to a nav item needs script, and faking it in CSS
   would mark the wrong section.
-- **`app.py` is not under test.** The pipeline, the components and the
-  export are; the view layer's state transitions are exercised by hand.
-- **Focus does not return to the trigger when the dialog closes.**
+- **Focus does not return to the trigger when a dialog closes.**
   Streamlit owns the dialog. Focus enters it, the trap holds, Escape
   closes it and the background is inert; on close focus lands on the body,
   which is not reachable without script.
