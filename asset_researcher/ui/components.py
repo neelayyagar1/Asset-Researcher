@@ -795,6 +795,66 @@ def home() -> str:
     )
 
 
+_EDGAR_NOISE = re.compile(r"\s*/\w+\s*$")
+# Words that are acronyms rather than words, and would read wrongly in
+# title case. Short all-alpha tokens are kept as-is anyway; these are the
+# longer ones.
+_KEEP_UPPER = {"REIT", "REITS", "ETF", "NYSE", "USA", "AG", "SPA"}
+_SUFFIX = {
+    "INC": "Inc.", "CORP": "Corp.", "CO": "Co.", "LLC": "LLC",
+    "LTD": "Ltd.", "PLC": "plc", "LP": "LP", "NV": "N.V.", "SA": "S.A.",
+    "GROUP": "Group", "HOLDINGS": "Holdings", "TR": "Trust",
+}
+
+
+def display_name(conformed: str) -> str:
+    """An EDGAR conformed name, made fit to show a reader.
+
+    EDGAR stores "COSTCO WHOLESALE CORP /NEW" and "REALTY INCOME CORP".
+    Printed as filed, beside one filer that happens to be stored in title
+    case, they read as a database field nobody looked at - and the "/NEW"
+    is a filing-system artifact, not part of anyone's name. A reader who
+    sees that in a company name concludes nothing was normalised on the
+    way out, which is the opposite of this document's whole claim.
+    """
+    cleaned = _EDGAR_NOISE.sub("", conformed).strip()
+    if not cleaned or not cleaned.isupper():
+        return cleaned or conformed
+
+    words = []
+    for word in cleaned.split():
+        bare = word.strip(".,")
+        if bare in _SUFFIX:
+            words.append(_SUFFIX[bare])
+        elif bare in _KEEP_UPPER or (len(bare) <= 3 and bare.isalpha()):
+            # An acronym stays an acronym: NNN, ADP, REIT, PNC.
+            words.append(bare)
+        else:
+            words.append(word.title())
+    return " ".join(words)
+
+
+def door_costs(has_samples: bool) -> str:
+    """What each way in costs, under the buttons that offer them.
+
+    The home screen offered three doors that cost wildly different
+    things and said so nowhere: a reviewer clicked the filled one and
+    then watched a progress bar for a minute. The information existed,
+    on the gate screen they had already dismissed.
+    """
+    if not has_samples:
+        return _one_line(
+            '<p class="ar-foot ar-doors">A report takes about a minute '
+            "and spends one live API call.</p>"
+        )
+    return _one_line(
+        '<p class="ar-foot ar-doors">'
+        "<span>Samples are already built: instant, and free.</span>"
+        "<span>A new report takes about a minute and spends one live "
+        "API call.</span></p>"
+    )
+
+
 def samples_intro(count: int) -> str:
     """The sample gallery's own header.
 

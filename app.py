@@ -21,6 +21,7 @@ from __future__ import annotations
 
 import hmac
 import os
+import time
 
 import streamlit as st
 import streamlit.components.v1 as components
@@ -62,7 +63,10 @@ def _bridge_hosted_secrets() -> None:
     # st.secrets is lazy: the attribute resolves fine and the load happens
     # on first use, so wrapping only the attribute access let a missing
     # secrets.toml crash the app on every local run.
-    for key in ("ANTHROPIC_API_KEY", "FINNHUB_API_KEY", "EDGAR_USER_AGENT"):
+    for key in (
+        "ANTHROPIC_API_KEY", "FINNHUB_API_KEY", "EDGAR_USER_AGENT",
+        "DEMO_PASSPHRASE", "SAMPLES_KEY",
+    ):
         if key in os.environ:
             continue
         try:
@@ -78,6 +82,11 @@ def _bridge_hosted_secrets() -> None:
 
 
 _bridge_hosted_secrets()
+
+
+# Attempts before the delay starts, and the ceiling it doubles up to.
+_GATE_FREE_ATTEMPTS = 3
+_GATE_MAX_DELAY = 30.0
 
 
 def _passphrase() -> str:
@@ -115,18 +124,57 @@ def _gate() -> bool:
     if st.session_state.get("unlocked"):
         return True
 
+    # Backoff. Each guess was one websocket message against a microsecond
+    # comparison, with nothing in front of it on Community Cloud, so the
+    # gate could be ground down by a trivial script. This does not stop a
+    # distributed attacker and is not meant to; it removes the easy path
+    # and makes the attempt count visible to the person making them.
+    attempts = st.session_state.get("gate_attempts", 0)
+    if attempts >= _GATE_FREE_ATTEMPTS:
+        delay = min(2 ** (attempts - _GATE_FREE_ATTEMPTS), _GATE_MAX_DELAY)
+        waited = time.monotonic() - st.session_state.get("gate_last", 0.0)
+        if waited < delay:
+            write(ui.gate())
+            write(ui.status(
+                "warning", "Slow down",
+                f"Too many attempts. Try again in "
+                f"{max(1, int(delay - waited))} seconds.",
+            ))
+            return False
+
     write(ui.gate())
-    entered = st.text_input(
-        "Passphrase", type="password", key="gate_input",
-        label_visibility="collapsed", placeholder="Passphrase",
-    )
-    if st.button("Enter", type="primary", key="gate_go"):
-        # compare_digest rather than ==, so the comparison does not leak
-        # the length of the secret through its timing.
-        if hmac.compare_digest(entered, secret):
+    # A form, so Return submits. A password box that ignores Return is
+    # the most practised gesture in the world failing silently on the
+    # first interaction, which reads as broken rather than as strict.
+    with st.form("gate_form", clear_on_submit=True, border=False):
+        entered = st.text_input(
+            "Passphrase", type="password", key="gate_input",
+            label_visibility="collapsed", placeholder="Passphrase",
+        )
+        submitted = st.form_submit_button("Enter", type="primary")
+    if submitted:
+        # Bytes, because compare_digest raises TypeError on a str holding
+        # any non-ASCII character. A visitor typing an accented letter got
+        # an uncaught exception instead of a refusal, and a passphrase
+        # containing one would have made the gate raise for everyone, with
+        # no way to unlock the app at all.
+        #
+        # compare_digest rather than ==, so the content comparison runs in
+        # constant time. It does not hide the secret's length and is not
+        # claimed to: it returns early when the lengths differ.
+        # Autocorrect in a mail client turns a hyphen into an en dash, and
+        # a reviewer pastes this out of an email. Folding the dash
+        # variants costs nothing and saves a support round-trip.
+        attempt = (entered or "").strip()
+        for dash in ("\u2010", "\u2011", "\u2012", "\u2013", "\u2014"):
+            attempt = attempt.replace(dash, "-")
+        if hmac.compare_digest(attempt.encode("utf-8"), secret.encode("utf-8")):
             st.session_state["unlocked"] = True
+            st.session_state["gate_attempts"] = 0
             st.rerun()
         else:
+            st.session_state["gate_attempts"] = attempts + 1
+            st.session_state["gate_last"] = time.monotonic()
             write(ui.status("error", "Refused", "That passphrase is not right."))
     return False
 
@@ -176,6 +224,14 @@ if not _gate():
 
 
 @st.cache_data(show_spinner=False)
+def _sample_label(title: str) -> str:
+    """"COSTCO WHOLESALE CORP /NEW (COST)" -> "Costco Wholesale (COST)"."""
+    if "(" in title:
+        name, _, ticker = title.rpartition("(")
+        return f"{ui.display_name(name.strip())} ({ticker.rstrip(')')})"
+    return ui.display_name(title)
+
+
 def _about_text() -> str:
     """The reviewer's guide, read from the file that is also the
     repository's own.
@@ -191,7 +247,16 @@ def _about_text() -> str:
         body = path.read_text(encoding="utf-8")
     except OSError:
         return "## About\n\nThe written guide did not ship with this build."
-    return body.split("## Links")[0].strip()
+    head, _, tail = body.partition("## Links")
+    # The closing disclaimer sits after the link list, so splitting there
+    # dropped it. The links are what should go - inside the product they
+    # point at the page you are on - not the line that says what this is.
+    closing = [
+        line.strip()
+        for line in tail.splitlines()
+        if line.strip() and not line.lstrip().startswith(("-", "#"))
+    ]
+    return (head.strip() + ("\n\n" + closing[-1] if closing else "")).strip()
 
 
 @st.cache_resource(show_spinner=False)
@@ -202,8 +267,14 @@ def _samples():
     deliberately expensive and would otherwise run on every rerun. The
     passphrase is the key, so this can only run after the gate.
     """
+    # SAMPLES_KEY, not the gate passphrase. See samples.py: the blob is
+    # public, so sealing it with the phrase that guards the API key would
+    # publish an offline oracle for that phrase.
+    key = os.environ.get("SAMPLES_KEY", "")
+    if not key:
+        return []
     try:
-        return samples.load(_passphrase())
+        return samples.load(key)
     except ValueError:
         # Shipped under a different passphrase than this deployment uses.
         # The live tool still works, so this is a missing feature rather
@@ -303,13 +374,17 @@ def _new_report_dialog() -> None:
 
 
 def generate(ticker: str, mandate_text: str, urls: list[str]):
+    # Reserved, not checked: the estimate is charged to the shared counter
+    # before the run starts, so two visitors arriving together cannot both
+    # pass a check neither has yet paid for.
     try:
-        spend.check_can_start(
+        spend.reserve(
             st.session_state["session_spend"], ESTIMATED_REPORT_COST_USD
         )
     except SpendLimitExceeded as exc:
         write(ui.status("error", "Budget", str(exc)))
         return None
+    st.session_state["session_spend"] += ESTIMATED_REPORT_COST_USD
 
     user_sources = []
 
@@ -325,10 +400,12 @@ def generate(ticker: str, mandate_text: str, urls: list[str]):
         with llm.usage_scope() as run:
             return _generate(ticker, mandate_text, urls, user_sources)
     finally:
+        # Settle the reservation against what it really cost. The session
+        # total is corrected the same way, so the estimate's headroom is
+        # returned to the visitor rather than quietly kept.
         cost = run.cost_usd
-        if cost:
-            st.session_state["session_spend"] += cost
-            spend.record(cost)
+        spend.settle(ESTIMATED_REPORT_COST_USD, cost)
+        st.session_state["session_spend"] += cost - ESTIMATED_REPORT_COST_USD
 
 
 def _generate(ticker: str, mandate_text: str, urls: list[str], user_sources: list):
@@ -426,16 +503,35 @@ if st.session_state["view"] == "home" and report is None:
     # was already built costs nothing and is instant, which is what most
     # first-time readers actually want. Saying so on the buttons is the
     # difference between a visitor who waits and one who leaves.
-    actions = st.columns([1, 1, 2])
-    if actions[0].button("Build a report", type="primary", key="enter"):
+    # Reading a sample is the primary action, and it is the one that was
+    # outlined while the expensive one was filled. It shows the best work
+    # in the product, instantly, for nothing; building a report takes a
+    # minute and spends a real API call. A reviewer with four minutes
+    # should land on the first.
+    #
+    # The columns are tight and weighted, because `[1, 1, 2]` let the
+    # gutters set the spacing and the three buttons read as unrelated
+    # objects 140px apart rather than as one choice.
+    has_samples = bool(_samples())
+    actions = st.columns([1.3, 1.3, 1.1, 3.3] if has_samples else [1.4, 1.2, 4])
+    column = 0
+    if has_samples:
+        if actions[0].button("Read a sample", type="primary", key="to_samples"):
+            st.session_state["view"] = "samples"
+            st.rerun()
+        column = 1
+    if actions[column].button(
+        "Build a report", type="primary" if not has_samples else "secondary",
+        key="enter",
+    ):
         st.session_state["view"] = "tool"
         st.rerun()
-    if _samples() and actions[1].button("Read a sample", key="to_samples"):
-        st.session_state["view"] = "samples"
-        st.rerun()
-    if actions[2].button("How it works", key="to_about"):
+    if actions[column + 1].button("How it works", key="to_about"):
         st.session_state["view"] = "about"
         st.rerun()
+    # What each door costs, said where the choice is made rather than on
+    # a screen the reader has already dismissed.
+    write(ui.door_costs(has_samples))
     write(ui.home_foot())
     st.stop()
 
@@ -445,7 +541,9 @@ if st.session_state["view"] == "home" and report is None:
 if st.session_state["view"] == "about" and report is None:
     _skip_link("ar-about", "Skip to the text")
     write('<span id="ar-about" tabindex="-1"></span>')
-    write(ui.about(markdown.to_html(_about_text())))
+    # base_level=2, so the document's own "#" is the page title rather
+    # than something smaller than its subheadings.
+    write(ui.about(markdown.to_html(_about_text(), base_level=2)))
     if st.button("Back", key="about_back"):
         st.session_state["view"] = "home"
         st.rerun()
@@ -457,8 +555,10 @@ if st.session_state["view"] == "about" and report is None:
 if st.session_state["view"] == "samples" and report is None:
     _skip_link("ar-samples", "Skip to the samples")
     write('<span id="ar-samples" tabindex="-1"></span>')
-    samples = _samples()
-    write(ui.samples_intro(len(samples)))
+    # Not `samples`: that is the module, imported above, and rebinding it
+    # here would break any later call to samples.load in this block.
+    notes = _samples()
+    write(ui.samples_intro(len(notes)))
 
     back = st.columns([1, 1, 3])
     if back[0].button("Back", key="samples_back"):
@@ -470,14 +570,14 @@ if st.session_state["view"] == "samples" and report is None:
 
     chosen = st.radio(
         "Sample note",
-        [s.slug for s in samples],
-        format_func=lambda slug: next(
-            s.title for s in samples if s.slug == slug
+        [s.slug for s in notes],
+        format_func=lambda slug: _sample_label(
+            next(s.title for s in notes if s.slug == slug)
         ),
         horizontal=True,
         key="sample_pick",
     )
-    note = next(s for s in samples if s.slug == chosen)
+    note = next(s for s in notes if s.slug == chosen)
     st.download_button(
         "Download this note",
         data=note.html,
@@ -488,7 +588,13 @@ if st.session_state["view"] == "samples" and report is None:
     # Rendered in its own document rather than injected into this page:
     # each note is a complete HTML file carrying its own stylesheet, and
     # inlining it would let those rules reach the app around it.
-    components.html(note.html, height=900, scrolling=True)
+    # Tall enough that the note reads as a document rather than through a
+    # letterbox. A note measures about 33,000px; at 900 the reviewer saw
+    # one thirty-sixth of it at a time, through a scrollbar nested inside
+    # the page's own, with the note's sticky index trapped in the frame.
+    # This cannot be made to fit - the honest fix is a page of its own -
+    # but 2,000px stops the frame from being the thing they notice.
+    components.html(note.html, height=2000, scrolling=True)
     st.stop()
 
 

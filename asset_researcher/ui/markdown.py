@@ -32,6 +32,12 @@ _LINK = re.compile(
     r"\[([^\]]+)\]\(([^)\s]+)(?:\s+&quot;([^)]*?)&quot;)?\)"
 )
 _BOLD = re.compile(r"\*\*([^*]+)\*\*")
+_CODE = re.compile(r"`([^`]+)`")
+# Single asterisks, matched only after the double-asterisk pass has run,
+# so bold is never chewed into two emphases. The document leans on this
+# in its sharpest sentence - "the interface says *located*, not
+# *verified*" - where six literal asterisks were surviving into the page.
+_EMPHASIS = re.compile(r"(?<!\*)\*([^*\n]+)\*(?!\*)")
 _SAFE_URL = re.compile(r"^(https?://|/|#)", re.IGNORECASE)
 
 
@@ -56,17 +62,29 @@ def _inline(text: str) -> str:
         )
 
     out = _LINK.sub(link, out)
-    return _BOLD.sub(lambda m: f"<strong>{m.group(1)}</strong>", out)
+    out = _BOLD.sub(lambda m: f"<strong>{m.group(1)}</strong>", out)
+    out = _EMPHASIS.sub(lambda m: f"<em>{m.group(1)}</em>", out)
+    # Backticks last, so a span cannot swallow a link or a bold run. The
+    # text inside was escaped with everything else, which is what makes it
+    # safe to emit as markup here.
+    return _CODE.sub(lambda m: f"<code>{m.group(1)}</code>", out)
 
 
-def to_html(markdown: str) -> str:
-    """The note as HTML, without a wrapping element."""
+def to_html(markdown: str, base_level: int = 3) -> str:
+    """The note as HTML, without a wrapping element.
+
+    `base_level` is the heading level a top-level `#` becomes. The default
+    of 3 suits prose nested inside a report section, whose own label is an
+    h2. A standalone document passes 2, so its title is the page's title
+    rather than something smaller than its own subheadings.
+    """
     if not markdown or not markdown.strip():
         return ""
 
     blocks: list[str] = []
     paragraph: list[str] = []
     items: list[str] = []
+    quote: list[str] = []
 
     def flush_paragraph() -> None:
         if paragraph:
@@ -79,6 +97,15 @@ def to_html(markdown: str) -> str:
             blocks.append(f"<ul>{body}</ul>")
             items.clear()
 
+    def flush_quote() -> None:
+        if quote:
+            blocks.append(f"<blockquote><p>{_inline(' '.join(quote))}</p></blockquote>")
+            quote.clear()
+
+    def level(offset: int) -> int:
+        # Clamped at 6, which is as deep as HTML goes.
+        return min(6, base_level + offset)
+
     for raw in markdown.splitlines():
         line = raw.rstrip()
         stripped = line.strip()
@@ -86,34 +113,48 @@ def to_html(markdown: str) -> str:
         if not stripped:
             flush_paragraph()
             flush_list()
+            flush_quote()
             continue
 
-        if stripped.startswith("### "):
-            flush_paragraph()
+        for marker, offset in (("### ", 2), ("## ", 1), ("# ", 0)):
+            if stripped.startswith(marker):
+                flush_paragraph()
+                flush_list()
+                flush_quote()
+                tag = f"h{level(offset)}"
+                text = _inline(stripped[len(marker):].strip())
+                blocks.append(f"<{tag}>{text}</{tag}>")
+                break
+        else:
+            if stripped.startswith(">"):
+                flush_paragraph()
+                flush_list()
+                quote.append(stripped.lstrip(">").strip())
+                continue
+
+            if stripped.startswith(("- ", "* ")):
+                flush_paragraph()
+                flush_quote()
+                items.append(stripped[2:].strip())
+                continue
+
+            # A line that is indented, or that merely follows a bullet
+            # without starting one, continues that bullet. It used to end
+            # the list and open a paragraph, so every bullet wrapped at
+            # the source's margin was severed into a one-item list plus an
+            # orphan sentence. In a hand-written document where every
+            # bullet wraps, that was all of them.
+            if items and (raw[:1].isspace() or not paragraph):
+                items[-1] += " " + stripped
+                continue
+
             flush_list()
-            blocks.append(f"<h5>{_inline(stripped[4:].strip())}</h5>")
+            flush_quote()
+            paragraph.append(stripped)
             continue
-
-        if stripped.startswith("## "):
-            flush_paragraph()
-            flush_list()
-            blocks.append(f"<h4>{_inline(stripped[3:].strip())}</h4>")
-            continue
-
-        if stripped.startswith("# "):
-            flush_paragraph()
-            flush_list()
-            blocks.append(f"<h3>{_inline(stripped[2:].strip())}</h3>")
-            continue
-
-        if stripped.startswith(("- ", "* ")):
-            flush_paragraph()
-            items.append(stripped[2:].strip())
-            continue
-
-        flush_list()
-        paragraph.append(stripped)
+        continue
 
     flush_paragraph()
     flush_list()
+    flush_quote()
     return "".join(blocks)

@@ -8,10 +8,20 @@ them plainly to a public repository publishes them, and keeping them out
 of it means the deployed app has nothing to show without spending an API
 call per visitor.
 
-So they travel encrypted, under a key derived from the same passphrase
-that opens the demo. A reader of the public repository sees a blob. A
-reviewer who was sent the passphrase sees the notes. There is no second
-host, no second account and no second secret.
+So they travel encrypted, under their own key. A reader of the public
+repository sees a blob; the deployment holds the key and opens it.
+
+**The key is deliberately not the gate passphrase.** It was, and that was
+wrong. The blob is committed to a public repository, so it is
+permanently downloadable by anyone, including from history after a
+rotation. If it were sealed with the passphrase that guards the API key,
+publishing it would hand an attacker an offline oracle for that
+passphrase: unlimited guessing rate, no logs, no detection, against a
+string a human picked to put in an email. Separating them means cracking
+the blob yields these notes - public SEC filings - and nothing else.
+
+SAMPLES_KEY is therefore machine-generated and long, not memorable, and
+never typed by a reviewer. Nobody has to know it but the deployment.
 
 What this is and is not:
 
@@ -26,11 +36,17 @@ blob remains readable to whoever already had the old phrase.
 notes comes from public SEC filings. If the content were sensitive it
 would not belong in a public repository in any form, encrypted or not.
 
-Scrypt rather than a bare hash, so a weak passphrase is expensive to
-attack offline; the parameters below are the `cryptography` library's own
-recommended interactive defaults. Fernet for the sealing, so the payload
-is authenticated: a tampered blob fails to decrypt rather than rendering
-as markup inside the reviewer's browser.
+Scrypt for the derivation and Fernet for the sealing, so the payload is
+authenticated and a tampered blob fails to decrypt rather than rendering
+as markup inside a reviewer's browser. The scrypt parameters below are
+the library's interactive-login defaults, which are calibrated for a
+setting where guessing is rate-limited online - the opposite of a
+ciphertext published forever. They are adequate here only because the key
+is high-entropy; they would not be adequate for a human-chosen phrase,
+and that is the second reason the two secrets are separate.
+
+One more thing this does not hide: the blob is unpadded, so its size
+reveals roughly how much HTML is inside. Immaterial for public filings.
 """
 
 from __future__ import annotations
@@ -68,6 +84,13 @@ class Sample:
 def _key(passphrase: str, salt: bytes) -> bytes:
     kdf = Scrypt(salt=salt, length=32, n=_SCRYPT_N, r=_SCRYPT_R, p=_SCRYPT_P)
     return base64.urlsafe_b64encode(kdf.derive(passphrase.encode("utf-8")))
+
+
+def new_key() -> str:
+    """A fresh sealing key, long enough that the KDF cost is irrelevant."""
+    import secrets
+
+    return secrets.token_urlsafe(32)
 
 
 def pack(notes: dict[str, str], titles: dict[str, str], passphrase: str) -> bytes:

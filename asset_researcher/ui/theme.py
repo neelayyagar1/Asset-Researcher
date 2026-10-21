@@ -824,6 +824,37 @@ hr { border-color: var(--rule); margin: var(--s5) 0; }
 /* The form sits at a measure, not at the window's width. A ticker field
    stretched across 1200px of a wide screen is the look of a layout with
    nothing in it, which is what the empty second column used to be. */
+/* Streamlit's input wrapper, at rest. The inner `input` was themed and
+   the wrapper was not, so a white 8px-rounded box sat around a square
+   cream field on cream paper, with the reveal toggle in a second rounded
+   chip beside it. On the gate screen that is the one element saying
+   "Streamlit app", forty pixels from the headline. */
+.stTextInput [data-baseweb="input"], .stTextArea [data-baseweb="textarea"] {
+  background: var(--paper); border-radius: 0; border: 1px solid var(--rule);
+  box-shadow: none; }
+.stTextInput [data-baseweb="input"] input { background: transparent; }
+.stTextInput [data-baseweb="input"] button,
+.stTextInput [data-baseweb="input"] [role="button"] {
+  background: transparent; border: 0; border-radius: 0; color: var(--ink-muted); }
+
+/* A pull quote in the written guide, set as print sets one. */
+.ar-prose blockquote { margin: var(--s4) 0; padding-left: var(--s4);
+  border-left: 2px solid var(--rule); }
+.ar-prose blockquote p { font-family: var(--display); font-size: var(--t-read);
+  line-height: var(--t-read-lh); color: var(--ink); margin: 0; }
+.ar-prose code { font-family: var(--mono); font-size: 0.88em;
+  background: var(--surface); padding: 0.1em 0.3em; }
+
+/* The guide's own headings, which were falling through to browser
+   defaults and rendering the page title smaller than its sections. */
+.ar-about h2 { font-size: var(--t-d2); letter-spacing: var(--t-d2-ls);
+  margin: 0 0 var(--s4); }
+.ar-about h3 { font-size: var(--t-h1); margin: var(--s6) 0 var(--s3); }
+.ar-about h4 { font-size: var(--t-h2); margin: var(--s5) 0 var(--s2); }
+.ar-about { border-top: 2px solid var(--ink); padding-top: var(--s5); }
+
+.ar-doors { display: flex; gap: var(--s5); flex-wrap: wrap;
+  margin-top: var(--s3); }
 .ar-about { max-width: 42rem; }
 .ar-about h1 { font-size: var(--t-d2); letter-spacing: var(--t-d2-ls);
   margin: 0 0 var(--s4); }

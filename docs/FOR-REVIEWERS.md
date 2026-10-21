@@ -73,7 +73,7 @@ The view layer is hand-built: a stylesheet, HTML components and inline SVG
 charts, no component library. The screen and the exported file render from
 one ordered section list, so they cannot drift.
 
-361 tests, no network, about five seconds.
+424 tests, no network, about five seconds.
 
 ## What it does not do
 

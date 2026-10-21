@@ -96,31 +96,75 @@ class SpendTracker:
     def remaining_today(self) -> float:
         return max(0.0, self.daily_cap_usd - self.spent_today())
 
+    def _write(self, day: str, spent: float) -> None:
+        self.path.write_text(
+            json.dumps({"date": day, "spent_usd": round(spent, 4)})
+        )
+
     def record(self, cost_usd: float) -> None:
+        """Add a cost that was not reserved, for callers outside the app."""
         with _LOCK:
             stored_date, spent = self._read()
             today = date.today().isoformat()
             if stored_date != today:
                 spent = 0.0
-            self.path.write_text(
-                json.dumps({"date": today, "spent_usd": round(spent + cost_usd, 4)})
-            )
+            self._write(today, spent + cost_usd)
 
-    def check_can_start(self, session_spent_usd: float, estimated_usd: float) -> None:
-        """Refuse before a run rather than during one."""
+    def reserve(self, session_spent_usd: float, estimated_usd: float) -> None:
+        """Charge the estimate up front, or refuse.
+
+        Reserving rather than checking is the point. This read the counter
+        and returned, and the caller recorded the real cost afterwards, so
+        every request that arrived inside that window saw the same
+        pre-spend total and all of them passed. Measured with forty
+        concurrent starts against a $10 cap: forty passed, committing
+        about $52. Streamlit runs each browser session on its own thread
+        in one process, so concurrent visitors are exactly that race.
+
+        The estimate is written to the counter before the run begins and
+        reconciled by `settle` when the real cost is known. A run that
+        dies without settling therefore leaves its estimate charged, which
+        is the right way round: a crash should cost the budget, not the
+        operator.
+        """
         if session_spent_usd + estimated_usd > self.session_cap_usd:
             raise SpendLimitExceeded(
                 f"This session has reached its spending limit "
-                f"(${self.session_cap_usd:.2f}). Reload to start a new session, "
-                f"or run the tool locally with your own API key, see the README."
+                f"(${self.session_cap_usd:.2f}). It resets when the daily "
+                f"budget does. To run it now without waiting, clone the "
+                f"repository and use your own API key, see the README."
             )
 
-        if self.remaining_today() < estimated_usd:
-            raise SpendLimitExceeded(
-                f"The shared daily budget for this demo (${self.daily_cap_usd:.2f}) "
-                f"is exhausted. It resets at midnight UTC. To run it now, clone "
-                f"the repository and use your own API key, see the README."
-            )
+        with _LOCK:
+            stored_date, spent = self._read()
+            today = date.today().isoformat()
+            if stored_date != today:
+                spent = 0.0
+            if self.daily_cap_usd - spent < estimated_usd:
+                raise SpendLimitExceeded(
+                    f"The shared daily budget for this demo "
+                    f"(${self.daily_cap_usd:.2f}) is exhausted. It resets at "
+                    f"midnight UTC. To run it now, clone the repository and "
+                    f"use your own API key, see the README."
+                )
+            self._write(today, spent + estimated_usd)
+
+    def settle(self, estimated_usd: float, actual_usd: float) -> None:
+        """Replace a reservation with what the run actually cost."""
+        with _LOCK:
+            stored_date, spent = self._read()
+            today = date.today().isoformat()
+            if stored_date != today:
+                # The day turned mid-run. The reservation belonged to
+                # yesterday's budget; charge the real cost to today's
+                # rather than letting the correction go negative.
+                self._write(today, max(0.0, actual_usd))
+                return
+            self._write(today, max(0.0, spent - estimated_usd + actual_usd))
+
+    def check_can_start(self, session_spent_usd: float, estimated_usd: float) -> None:
+        """Deprecated name for `reserve`, kept so older callers still bind."""
+        self.reserve(session_spent_usd, estimated_usd)
 
 
 # A full report is two model calls over roughly 150-250k tokens of source

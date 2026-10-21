@@ -25,6 +25,10 @@ maxMessageSize = 300
 gatherUsageStats = false
 
 [client]
-# A traceback on screen tells a visitor nothing and shows them our paths.
-# Failures are reported through the status block in app.py instead.
-showErrorDetails = false
+# "none", not false. `false` is a legacy alias that Streamlit maps to
+# "stacktrace": it redacts the exception message and still ships the type
+# and the full traceback, with absolute paths and source lines, to the
+# browser. Verified against streamlit 1.61.1,
+# elements/exception.py:201-209. So the setting that was here did close to
+# nothing, which is worse than knowing it does nothing.
+showErrorDetails = "none"

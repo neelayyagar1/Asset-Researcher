@@ -4,10 +4,12 @@
 The notes cost an API call each to build and should not be rebuilt by a
 deployment, so they travel in the repository. They should also not be
 readable by anyone who browses that repository, so they travel sealed
-under the demo passphrase.
+under SAMPLES_KEY - which is not the demo passphrase, because a blob in
+a public repository must not be an offline oracle for the secret that
+guards the API key.
 
     python scripts/publish-sample.py --ticker COST --ticker O
-    DEMO_PASSPHRASE='...' python scripts/pack-samples.py
+    SAMPLES_KEY='...' python scripts/pack-samples.py
 
 Writes asset_researcher/samples/notes.enc, which is committed. Re-run it
 whenever the notes are rebuilt or the passphrase changes.
@@ -30,11 +32,18 @@ _TITLE = re.compile(r"<title>(.*?)</title>", re.S)
 
 
 def main() -> int:
-    passphrase = os.environ.get("DEMO_PASSPHRASE", "")
+    passphrase = os.environ.get("SAMPLES_KEY", "")
     if not passphrase:
+        from asset_researcher.hosting.samples import new_key
+
         print(
-            "Set DEMO_PASSPHRASE to the phrase the demo is shared under.\n"
-            "It is the key: the app derives the same one to open this.",
+            "Set SAMPLES_KEY to the key these notes are sealed under.\n"
+            "\nIt is deliberately NOT the demo passphrase: this blob is\n"
+            "committed to a public repository, so sealing it with the phrase\n"
+            "that guards the API key would publish an offline oracle for it.\n"
+            "\nNobody types this one. Generate it once, put it in the\n"
+            "deployment's secrets beside DEMO_PASSPHRASE, and forget it:\n"
+            f"\n  SAMPLES_KEY = \"{new_key()}\"\n",
             file=sys.stderr,
         )
         return 1
