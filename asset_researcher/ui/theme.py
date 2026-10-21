@@ -674,6 +674,11 @@ html, body, .stApp, [data-testid="stAppViewContainer"] {
    reopens a collapsed sidebar lives inside it, and hiding the toolbar left
    the sidebar unrecoverable once closed. */
 header[data-testid="stHeader"] { background: transparent; }
+/* The deploy button survived the testid rule on this build, so it is
+   hidden by its own wrapper too. It offers a reader a Streamlit action
+   that has nothing to do with the product. */
+[data-testid="stAppDeployButton"], .stAppDeployButton,
+[data-testid="stToolbar"] { display: none !important; }
 [data-testid="stToolbarActions"], [data-testid="stAppDeployButton"],
 [data-testid="stMainMenu"], [data-testid="stMainMenuButton"],
 [data-testid="stStatusWidget"],
@@ -855,6 +860,11 @@ hr { border-color: var(--rule); margin: var(--s5) 0; }
 .ar-about h3 { font-size: var(--t-h1); margin: var(--s6) 0 var(--s3); }
 .ar-about h4 { font-size: var(--t-h2); margin: var(--s5) 0 var(--s2); }
 .ar-about { border-top: 2px solid var(--ink); padding-top: var(--s5); }
+
+/* Streamlit's "Press Enter to apply" hint. It renders half inside the
+   field and half under the reveal toggle, and it explains a convention
+   nobody needs explaining. */
+[data-testid="InputInstructions"] { display: none !important; }
 
 .ar-doors { display: flex; gap: var(--s5); flex-wrap: wrap;
   margin-top: var(--s3); }

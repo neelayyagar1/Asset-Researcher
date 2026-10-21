@@ -104,6 +104,26 @@ def _passphrase() -> str:
         return ""
 
 
+def _unlock_token() -> str:
+    """A value that proves the passphrase was given, without being it.
+
+    A digest rather than the phrase, so the passphrase itself never
+    appears in a URL, a browser history, a server log or a screenshot.
+
+    It is still password-equivalent for this deployment: anyone holding
+    this token is in, which is the price of surviving the reload that
+    Back requires. The passphrase is already shared by email, so the
+    exposure is the same kind - but a URL travels more easily than a
+    sentence in a message, so treat a pasted link as granting access.
+    """
+    secret = _passphrase()
+    if not secret:
+        return ""
+    return hmac.new(
+        secret.encode("utf-8"), b"asset-researcher-gate-v1", "sha256"
+    ).hexdigest()[:32]
+
+
 def _gate() -> bool:
     """Stop here unless the visitor knows the passphrase.
 
@@ -122,6 +142,15 @@ def _gate() -> bool:
     if not secret:
         return True
     if st.session_state.get("unlocked"):
+        return True
+
+    # A token in the URL reopens the gate after the reload that Back
+    # needs. Compared as a digest against a digest, in constant time.
+    supplied = st.query_params.get("k") or ""
+    if supplied and hmac.compare_digest(
+        supplied.encode("utf-8"), _unlock_token().encode("utf-8")
+    ):
+        st.session_state["unlocked"] = True
         return True
 
     # Backoff. Each guess was one websocket message against a microsecond
@@ -171,6 +200,7 @@ def _gate() -> bool:
         if hmac.compare_digest(attempt.encode("utf-8"), secret.encode("utf-8")):
             st.session_state["unlocked"] = True
             st.session_state["gate_attempts"] = 0
+            st.query_params["k"] = _unlock_token()
             st.rerun()
         else:
             st.session_state["gate_attempts"] = attempts + 1
@@ -221,6 +251,7 @@ def write(html: str) -> None:
 # a visitor who knows the passphrase.
 if not _gate():
     st.stop()
+
 
 
 @st.cache_data(show_spinner=False)
@@ -352,13 +383,67 @@ def go(view: str) -> None:
     st.rerun()
 
 
-# The URL wins on a fresh load, which is what makes Back and a shared
-# link land where they say they will. Session state carries it from
-# there, because a rerun inside a screen must not be a navigation.
-_requested = st.query_params.get("view")
-if _requested in _VIEWS and _requested != st.session_state.get("view"):
-    st.session_state["view"] = _requested
+def _sync_view_from_url() -> None:
+    """Adopt the view the address bar is asking for.
+
+    Streamlit does not rerun when the browser's own Back changes the
+    query string: popstate fires, the URL updates, and the script never
+    runs again, so the address bar said one thing and the page showed
+    another. Reloading would fix that and would also end the Streamlit
+    session, which means re-locking the gate on every Back - a worse
+    outcome than the bug.
+
+    So `_back_bridge` below listens for popstate in the page and asks
+    Streamlit for a rerun instead, and this runs on each rerun to take
+    whatever the URL now says.
+    """
+    # An absent parameter means home, not "leave it alone". Going back to
+    # the bare URL is going back to where the visitor started, and
+    # treating absence as no-opinion left the address bar on the base URL
+    # while the page still showed the screen they had just left.
+    requested = st.query_params.get("view") or "home"
+    if requested in _VIEWS and requested != st.session_state.get("view"):
+        st.session_state["view"] = requested
+
+
+_sync_view_from_url()
 st.session_state.setdefault("view", "home")
+
+
+def _back_bridge() -> None:
+    """Make the browser's Back reload, so the page follows the URL.
+
+    Streamlit keeps query parameters on the server: they are set when the
+    browser first connects and when the app writes them, and a history
+    change never reaches the server. Verified directly - a rerun
+    triggered after Back still read the old value - so there is no way to
+    follow Back without reloading.
+
+    A reload ends the Streamlit session, which would normally re-lock the
+    gate. `_unlock_token` is what makes that survivable: the unlock rides
+    in the URL, so the reloaded page comes back already open.
+    """
+    components.html(
+        """<script>
+        (function () {
+          var host = window.parent;
+          if (!host || host.__arBack) return;
+          host.__arBack = true;
+          host.addEventListener('popstate', function () {
+            // The URL has already changed by the time this fires, so a
+            // reload lands on whatever Back asked for.
+            host.location.reload();
+          });
+        })();
+        </script>""",
+        height=0,
+    )
+
+
+# Below the gate, so nothing renders for a visitor who has not got in,
+# and below the definition, which is where it has to be in a module that
+# executes top to bottom.
+_back_bridge()
 report = st.session_state.get("report")
 presets = load_presets()
 
@@ -404,10 +489,18 @@ def _controls(key: str) -> tuple[str, str, str, bool]:
     st.caption(
         "Public URLs. Classified as secondary and attributed as opinion."
     )
-    run = st.button(
+    # Back sits with the action it is an alternative to, at the foot of
+    # the form, rather than above it where it read as a page control. The
+    # primary keeps most of the width; leaving is the smaller gesture.
+    row = st.columns([3, 1])
+    run = row[0].button(
         "Generate report", type="primary", use_container_width=True,
         key=f"{key}_run",
     )
+    if row[1].button(
+        "Back", use_container_width=True, key=f"{key}_back"
+    ):
+        go("home")
     return ticker, mandate_text, urls_text, run
 
 
@@ -654,14 +747,6 @@ if report is None:
     # layout that had broken. The form sits at its own measure instead.
     write('<span id="ar-form" tabindex="-1"></span>')
     write(ui.workspace_intro())
-    # A way out. This screen had none: a reader who opened it to look and
-    # decided not to spend a minute and a dollar had no route back to the
-    # samples, and the browser's own Back left the site.
-    leaving = st.columns([1, 1.4, 3])
-    if leaving[0].button("Back", key="form_back"):
-        go("home")
-    if _samples() and leaving[1].button("Read a sample instead", key="form_samples"):
-        go("samples")
     ticker, mandate_text, urls_text, run = _controls("inline")
     if run and ticker:
         st.session_state["pending"] = (ticker, mandate_text, urls_text)
