@@ -49,13 +49,20 @@ staged = subprocess.run(
 
 offenders = []
 for path in staged:
+    # Bytes, not text. `text=True` decodes as UTF-8 and raises on the
+    # first binary file staged, and because this hook fails closed by
+    # design that exception blocked every commit to a repository holding
+    # any binary asset. A key is ASCII, so searching the raw bytes finds
+    # it in a text file exactly as before and finds it in a binary one
+    # too, which is the case that matters: a secret embedded in a blob is
+    # the one most likely to be committed by accident.
     blob = subprocess.run(
-        ["git", "show", f":{path}"], capture_output=True, text=True
+        ["git", "show", f":{path}"], capture_output=True
     )
     if blob.returncode != 0:
         continue
     for name, value in secrets.items():
-        if value in blob.stdout:
+        if value.encode("utf-8") in blob.stdout:
             offenders.append(f"{name} in {path}")
 
 if offenders:

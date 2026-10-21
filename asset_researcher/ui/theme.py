@@ -824,6 +824,11 @@ hr { border-color: var(--rule); margin: var(--s5) 0; }
 /* The form sits at a measure, not at the window's width. A ticker field
    stretched across 1200px of a wide screen is the look of a layout with
    nothing in it, which is what the empty second column used to be. */
+.ar-about { max-width: 42rem; }
+.ar-about h1 { font-size: var(--t-d2); letter-spacing: var(--t-d2-ls);
+  margin: 0 0 var(--s4); }
+.ar-about h3 { margin-top: var(--s5); }
+.ar-about h4 { margin-top: var(--s4); }
 .ar-gate { max-width: 34rem; }
 .ar-gate h1 { max-width: none; }
 .ar-workspace-intro, .ar-workspace { max-width: 34rem; }

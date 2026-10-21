@@ -23,6 +23,7 @@ import hmac
 import os
 
 import streamlit as st
+import streamlit.components.v1 as components
 
 from asset_researcher.analysis.assemble import assemble_bundle
 from asset_researcher.analysis.mandate import (
@@ -34,6 +35,7 @@ from asset_researcher.analysis.narrative import generate_narrative
 from asset_researcher.analysis.reconcile import generate_reconciliation
 from asset_researcher.analysis.report import build_report
 from asset_researcher.config import get_settings
+from asset_researcher.hosting import samples
 from asset_researcher.hosting.spend import (
     ESTIMATED_REPORT_COST_USD,
     SpendLimitExceeded,
@@ -43,7 +45,7 @@ from asset_researcher.llm.claude import ClaudeProvider
 from asset_researcher.sources.edgar.client import EdgarClient
 from asset_researcher.sources.finnhub import FinnhubClient
 from asset_researcher.sources.web import UrlRejected, fetch_user_source
-from asset_researcher.ui import document, theme
+from asset_researcher.ui import document, markdown, theme
 from asset_researcher.ui import components as ui
 from asset_researcher.ui.export import report_to_html, report_to_markdown
 from asset_researcher.ui.headline import headline_stats
@@ -171,6 +173,42 @@ def write(html: str) -> None:
 # a visitor who knows the passphrase.
 if not _gate():
     st.stop()
+
+
+@st.cache_data(show_spinner=False)
+def _about_text() -> str:
+    """The reviewer's guide, read from the file that is also the
+    repository's own.
+
+    One source, so the page a reviewer reads inside the product and the
+    document a reader finds in the repository cannot drift apart. The
+    front matter and the link list are dropped: inside the product the
+    links either point at the page you are on or at a repository the
+    reader may not have.
+    """
+    path = get_settings().repo_root / "docs" / "FOR-REVIEWERS.md"
+    try:
+        body = path.read_text(encoding="utf-8")
+    except OSError:
+        return "## About\n\nThe written guide did not ship with this build."
+    return body.split("## Links")[0].strip()
+
+
+@st.cache_resource(show_spinner=False)
+def _samples():
+    """The packed sample notes, or an empty list.
+
+    Cached because opening them derives a scrypt key, which is
+    deliberately expensive and would otherwise run on every rerun. The
+    passphrase is the key, so this can only run after the gate.
+    """
+    try:
+        return samples.load(_passphrase())
+    except ValueError:
+        # Shipped under a different passphrase than this deployment uses.
+        # The live tool still works, so this is a missing feature rather
+        # than a failure, and the samples view simply does not offer.
+        return []
 
 
 @st.cache_resource
@@ -383,10 +421,74 @@ if st.session_state["view"] == "home" and report is None:
     _skip_link("ar-home", "Skip to start")
     write('<span id="ar-home" tabindex="-1"></span>')
     write(ui.home())
-    if st.button("Start a report", type="primary", key="enter"):
+    # Two ways in, because they cost different things. Building a note
+    # spends a real API call and takes about a minute; reading one that
+    # was already built costs nothing and is instant, which is what most
+    # first-time readers actually want. Saying so on the buttons is the
+    # difference between a visitor who waits and one who leaves.
+    actions = st.columns([1, 1, 2])
+    if actions[0].button("Build a report", type="primary", key="enter"):
         st.session_state["view"] = "tool"
         st.rerun()
+    if _samples() and actions[1].button("Read a sample", key="to_samples"):
+        st.session_state["view"] = "samples"
+        st.rerun()
+    if actions[2].button("How it works", key="to_about"):
+        st.session_state["view"] = "about"
+        st.rerun()
     write(ui.home_foot())
+    st.stop()
+
+
+# ------------------------------------------------------------------ about
+
+if st.session_state["view"] == "about" and report is None:
+    _skip_link("ar-about", "Skip to the text")
+    write('<span id="ar-about" tabindex="-1"></span>')
+    write(ui.about(markdown.to_html(_about_text())))
+    if st.button("Back", key="about_back"):
+        st.session_state["view"] = "home"
+        st.rerun()
+    st.stop()
+
+
+# ---------------------------------------------------------------- samples
+
+if st.session_state["view"] == "samples" and report is None:
+    _skip_link("ar-samples", "Skip to the samples")
+    write('<span id="ar-samples" tabindex="-1"></span>')
+    samples = _samples()
+    write(ui.samples_intro(len(samples)))
+
+    back = st.columns([1, 1, 3])
+    if back[0].button("Back", key="samples_back"):
+        st.session_state["view"] = "home"
+        st.rerun()
+    if back[1].button("Build one instead", key="samples_build"):
+        st.session_state["view"] = "tool"
+        st.rerun()
+
+    chosen = st.radio(
+        "Sample note",
+        [s.slug for s in samples],
+        format_func=lambda slug: next(
+            s.title for s in samples if s.slug == slug
+        ),
+        horizontal=True,
+        key="sample_pick",
+    )
+    note = next(s for s in samples if s.slug == chosen)
+    st.download_button(
+        "Download this note",
+        data=note.html,
+        file_name=f"{note.slug}-research-note.html",
+        mime="text/html",
+        key="sample_dl",
+    )
+    # Rendered in its own document rather than injected into this page:
+    # each note is a complete HTML file carrying its own stylesheet, and
+    # inlining it would let those rules reach the app around it.
+    components.html(note.html, height=900, scrolling=True)
     st.stop()
 
 

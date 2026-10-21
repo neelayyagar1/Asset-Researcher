@@ -1,8 +1,9 @@
 # Pinned deliberately — minimal surface, reproducible builds.
+PyYAML==6.0.3
 anthropic==0.120.2
-requests==2.34.2
+cryptography==46.0.3
 lxml==6.1.1
 pydantic==2.13.4
-PyYAML==6.0.3
 python-dotenv==1.2.2
+requests==2.34.2
 streamlit==1.61.1

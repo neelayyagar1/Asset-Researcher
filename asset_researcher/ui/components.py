@@ -795,6 +795,35 @@ def home() -> str:
     )
 
 
+def samples_intro(count: int) -> str:
+    """The sample gallery's own header.
+
+    Says what these are and what they cost, because a reader who does not
+    know whether a page is live output or a canned screenshot discounts
+    it either way.
+    """
+    return _one_line(
+        '<div class="ar-workspace ar-workspace-intro">'
+        "<h1>Sample notes</h1>"
+        f"<p>{escape_text(plural(count, 'note'))}, built from live SEC "
+        "filings by the same pipeline the tool runs. Nothing here is a "
+        "mock-up and nothing is re-generated when you open it, so reading "
+        "one is instant and costs nothing.</p></div>"
+    )
+
+
+def about(body_html: str) -> str:
+    """The written account, rendered inside the product.
+
+    A reader who has to leave for a repository to find out what they are
+    looking at usually does not come back.
+    """
+    return _one_line(
+        '<div class="ar-workspace ar-about">'
+        f'<div class="ar-prose">{body_html}</div></div>'
+    )
+
+
 def gate() -> str:
     """The passphrase screen.
 
