@@ -286,7 +286,7 @@ def report_to_markdown(report: Report, notice: str = "") -> str:
 
     # The summary is the block a reader of the plain-text version most
     # needs, and it was the one the Markdown path did not carry.
-    lines += ["", "## Summary", ""]
+    lines += ["", "## Investment summary", ""]
     lines += [_md_block(line) for line in summary_lines(report)]
 
     _, message = report.verification_banner
@@ -295,7 +295,7 @@ def report_to_markdown(report: Report, notice: str = "") -> str:
         lines += ["", _md_block(bundle.implied.caveat)]
 
     if rec.variant_views:
-        lines += ["", "## Where this analysis departs from consensus", ""]
+        lines += ["", "## Variant perception", ""]
         for view in rec.variant_views:
             lines += [
                 f"**Prevailing view.** {_md_block(view.street_view)}",
@@ -306,8 +306,8 @@ def report_to_markdown(report: Report, notice: str = "") -> str:
                 "",
             ]
 
-    lines += ["", "## Financial trajectory", "", _md_block(rec.financial_trajectory)]
-    lines += ["", "## Narrative against reported figures", ""]
+    lines += ["", "## Trajectory", "", _md_block(rec.financial_trajectory)]
+    lines += ["", "## Management vs. filed figures", ""]
     for item in rec.divergences + rec.corroborations:
         label = "Corroborated" if item.agrees else "Divergence"
         lines += [
@@ -325,13 +325,13 @@ def report_to_markdown(report: Report, notice: str = "") -> str:
     lines += ["", "## Bear case", "", _md_block(rec.bear_case) or "Not stated."]
     lines += [
         "",
-        "## What would have to be true",
+        "## What must be true",
         "",
         _md_block(rec.what_would_have_to_be_true) or "Not stated.",
     ]
-    lines += ["", "## Valuation context", "",
+    lines += ["", "## Current valuation", "",
               _md_block(rec.valuation_context) or "Not stated."]
-    lines += ["", "## Disconfirming evidence", "",
+    lines += ["", "## Bear case", "",
               _md_block(rec.disconfirming_evidence)]
 
     if cases:
@@ -347,7 +347,7 @@ def report_to_markdown(report: Report, notice: str = "") -> str:
         periods = periods_of(bundle.series)
         lines += [
             "",
-            "## Financial summary",
+            "## Financials",
             "",
             "USD millions, as filed. Growth rates, margins and free cash "
             "flow are computed from the filed lines.",
@@ -407,7 +407,7 @@ def report_to_markdown(report: Report, notice: str = "") -> str:
         ]
         lines += [
             "",
-            "## Comparable companies",
+            "## Peers",
             "",
             f"Peer set from {_md(bundle.comps.peer_source)}. Dollar figures "
             f"in millions. EBITDA is operating income plus depreciation and "
@@ -436,7 +436,7 @@ def report_to_markdown(report: Report, notice: str = "") -> str:
         lines += ["", "## Questions for management", ""]
         lines += [f"- {_md_block(q)}" for q in rec.questions_for_management]
 
-    lines += ["", "## Descriptive note", "", _md_block(report.narrative_markdown)]
+    lines += ["", "## Business description", "", _md_block(report.narrative_markdown)]
 
     lines += ["", "## Sources", ""]
     for passage in bundle.passages:

@@ -191,11 +191,11 @@ def test_the_markdown_export_carries_the_argument_not_only_the_figures(report):
     text = report_to_markdown(report)
     for heading in (
         "## Headline",
-        "## Financial trajectory",
-        "## Narrative against reported figures",
+        "## Trajectory",
+        "## Management vs. filed figures",
         "## Bull case",
         "## Bear case",
-        "## Disconfirming evidence",
+        "## Bear case",
         "## Sources",
     ):
         assert heading in text
@@ -203,7 +203,7 @@ def test_the_markdown_export_carries_the_argument_not_only_the_figures(report):
 
 def test_the_markdown_financial_summary_is_a_table_in_statement_order(report):
     text = report_to_markdown(report)
-    summary = text.split("## Financial summary", 1)[1]
+    summary = text.split("## Financials", 1)[1]
     revenue = summary.index("| Revenue |")
     net_income = summary.index("| Net income |")
     assert revenue < net_income

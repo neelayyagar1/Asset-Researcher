@@ -84,10 +84,13 @@ series. They are separate because the API rejects citations and structured
 output in the same request.
 
 The view layer is hand-built: a stylesheet, HTML components and inline SVG
-charts, no component library. The screen and the exported file render from
-one ordered section list, so they cannot drift.
+charts, no component library. The screen and the HTML file a reader
+downloads render from one ordered section list, so those two cannot
+drift. The plain-text export is a third rendering and is kept in step by
+hand, which is a weaker guarantee and is stated as one rather than
+claimed as the same.
 
-439 tests, no network, about five seconds.
+439 tests, no network, about fifteen seconds.
 
 ## What it does not do
 

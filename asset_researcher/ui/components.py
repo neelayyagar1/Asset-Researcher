@@ -812,7 +812,7 @@ def door_costs(has_samples: bool) -> str:
     if not has_samples:
         return _one_line(
             '<p class="ar-foot ar-doors">A report takes about a minute '
-            "and spends one live API call.</p>"
+            "and costs about a dollar in model usage.</p>"
         )
     return _one_line(
         '<p class="ar-foot ar-doors">'
@@ -872,7 +872,7 @@ def door_costs(has_samples: bool) -> str:
     if not has_samples:
         return _one_line(
             '<p class="ar-foot ar-doors">A report takes about a minute '
-            "and spends one live API call.</p>"
+            "and costs about a dollar in model usage.</p>"
         )
     return _one_line(
         '<p class="ar-foot ar-doors">'

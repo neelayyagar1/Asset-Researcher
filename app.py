@@ -452,8 +452,20 @@ def _back_bridge() -> None:
           if (!host || host.__arBack) return;
           host.__arBack = true;
           host.addEventListener('popstate', function () {
-            // The URL has already changed by the time this fires, so a
-            // reload lands on whatever Back asked for.
+            // A reload is the only way to follow Back, and a reload ends
+            // the Streamlit session - which takes any generated report
+            // with it. A report costs a minute and about a dollar, so it
+            // is not something to discard without asking. Navigation that
+            // costs nothing still happens silently.
+            var hasReport = host.document.getElementById('ar-report');
+            if (hasReport && !host.confirm(
+                  'Leaving this page will discard the report you just '
+                  + 'generated. Download it first if you want to keep it.\n\n'
+                  + 'Leave anyway?')) {
+              // Put the entry back, so the address bar matches the page.
+              host.history.forward();
+              return;
+            }
             host.location.reload();
           });
         })();
