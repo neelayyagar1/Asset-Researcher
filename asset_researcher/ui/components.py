@@ -1002,32 +1002,36 @@ def steps(items) -> str:
 def report_rows(rows) -> str:
     """The notes that exist, as a table.
 
-    This is the product's own output on the first screen. The strongest
-    trust signal available is a real research note, and the previous
-    home page showed none of it - a reader had to take three claims on
-    faith and click before seeing anything the tool had made.
+    This is the product's own output on the first screen. The previous
+    home page showed none of it: a reader took three claims on faith and
+    had to click before seeing anything the tool had made.
+
+    The columns are the ones the data actually supports. An earlier
+    version carried "Divergences" and "Built" because the comp did -
+    and filled the first with the metric's NAME and the second with
+    nothing, since neither value exists outside a rendered note. A
+    header promising a count, above a column of labels, is the kind of
+    detail this product cannot afford to get wrong.
     """
     if not rows:
         return _one_line(
             '<div class="ar-empty">No notes yet. Generate one and it '
             "appears here.</div>"
         )
-    head_html = (
-        "<tr><th>Ticker</th><th>Company</th><th class=\"num\">Headline</th>"
-        '<th class="num">Divergences</th><th class="num">Built</th></tr>'
+    header = (
+        "<tr><th>Ticker</th><th>Company</th><th>Headline metric</th>"
+        '<th class="num">Value</th></tr>'
     )
     body = []
     for r in rows:
-        tone = r.get("tone", "")
-        klass = f"ar-count {tone}".strip()
+        metric = _text(r["metric"]) or "&mdash;"
+        value = _text(r["value"]) or "&mdash;"
         body.append(
             f'<tr><td class="tk">{_text(r["ticker"])}</td>'
             f'<td class="co">{_text(r["company"])}</td>'
-            f'<td class="num">{_text(r["headline"])}</td>'
-            f'<td class="num"><span class="{klass}">'
-            f'{_text(r["divergences"])}</span></td>'
-            f'<td class="num co">{_text(r["built"])}</td></tr>'
+            f'<td class="co">{metric}</td>'
+            f'<td class="num">{value}</td></tr>'
         )
     return _one_line(
-        f'<table class="ar-list">{head_html}{"".join(body)}</table>'
+        f'<table class="ar-list">{header}{"".join(body)}</table>'
     )

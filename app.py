@@ -705,10 +705,8 @@ if st.session_state["view"] == "home" and report is None:
                 {
                     "ticker": ticker.rstrip(")") or note.slug.upper(),
                     "company": name.strip() or label,
-                    "headline": value,
-                    "divergences": metric,
-                    "built": "",
-                    "tone": "",
+                    "metric": metric,
+                    "value": value,
                 }
             )
         write(ui.head("Sample reports", "Built from live filings. Open one "

@@ -1080,8 +1080,11 @@ hr { border-color: var(--rule); margin: var(--s5) 0; }
 .ar-step, .ar-step *, .ar-empty, .ar-kv, .ar-kv span, .ar-lbl,
 table.ar-list, table.ar-list th, table.ar-list td, .ar-gate, .ar-gate * {
   font-family: var(--sans); }
-.ar-step code, .ar-kv b, table.ar-list td.num, table.ar-list th.num,
+/* Figures are monospace; the headings above them are not. A column
+   header set in mono AND tracked reads as "V a l u e". */
+.ar-step code, .ar-kv b, table.ar-list td.num,
 .ar-count, .ar-topbar .meta { font-family: var(--mono); }
+table.ar-list th.num { font-family: var(--sans); letter-spacing: .03em; }
 
 .ar-topbar .tabs { display: flex; gap: 4px; align-items: center; }
 .ar-topbar .tabs span {
