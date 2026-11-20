@@ -304,3 +304,15 @@ def test_control_characters_never_reach_either_export(report):
     for bad in ("\x00", "\x07"):
         assert bad not in html
         assert bad not in text
+
+
+def test_a_citation_is_located_never_verified(report):
+    """The product's central claim is that locating a quote is not
+    establishing that it supports the claim, and the interface used to
+    contradict that in its own citations table - ninety times in one
+    note - because the label was taken from the variable's name."""
+    html = report_to_html(report)
+    assert ">Verified<" not in html
+    assert "Citations verified" not in html
+    if report.citations:
+        assert ">Located<" in html

@@ -731,7 +731,16 @@ def sections(report: Report) -> list[Section]:
                         "n": str(c.number),
                         "quote": c.quote[:220],
                         "source": c.source_label,
-                        "status": "Verified" if c.verified else c.status,
+                        # "Located", not "Verified". This said Verified,
+                        # ninety times in one note, directly contradicting
+                        # the sentence this product rests on: that the
+                        # check establishes the quoted text sits where the
+                        # citation says it does, and establishes nothing
+                        # about whether it supports the claim built on it.
+                        # The variable is `verified` because that is what
+                        # the checker's own field is called; the label a
+                        # reader sees is not the variable's name.
+                        "status": "Located" if c.verified else c.status,
                         "link": c.source_url,
                     }
                     for c in report.citations
