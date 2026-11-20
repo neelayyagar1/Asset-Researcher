@@ -725,7 +725,13 @@ button[data-testid="stExpandSidebarButton"]:hover,
   --shell-panel: #ffffff;
   --shell-ink: #15161a;
   --shell-soft: #50535c;
-  --shell-mute: #8b8e98;
+  /* 4.91:1 on the ground and 5.04:1 on a panel. The comp's own muted
+     tone was #8b8e98, which measures 3.19:1 and fails WCAG 2.2 AA for
+     normal text - and this token carries the intro line, every helper
+     caption, the table headers and the step numbers. Darkened until it
+     passes with margin while staying plainly subordinate to
+     --shell-soft at 7.5:1. */
+  --shell-mute: #6b6f78;
   --shell-line: #eceef1;      /* inside a panel */
   --shell-line-2: #e2e4e9;    /* panel edge */
   --shell-sink: #fbfbfc;      /* table head */
