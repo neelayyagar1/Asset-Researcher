@@ -817,8 +817,8 @@ def door_costs(has_samples: bool) -> str:
     return _one_line(
         '<p class="ar-foot ar-doors">'
         "<span>Samples are already built: instant, and free.</span>"
-        "<span>A new report takes about a minute and spends one live "
-        "API call.</span></p>"
+        "<span>A new report takes about a minute and costs about a "
+        "dollar in model usage.</span></p>"
     )
 
 
@@ -877,8 +877,8 @@ def door_costs(has_samples: bool) -> str:
     return _one_line(
         '<p class="ar-foot ar-doors">'
         "<span>Samples are already built: instant, and free.</span>"
-        "<span>A new report takes about a minute and spends one live "
-        "API call.</span></p>"
+        "<span>A new report takes about a minute and costs about a "
+        "dollar in model usage.</span></p>"
     )
 
 

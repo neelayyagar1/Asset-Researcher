@@ -711,11 +711,14 @@ if st.session_state["view"] == "home" and report is None:
     # minute and spends a real API call. A reviewer with four minutes
     # should land on the first.
     #
-    # The columns are tight and weighted, because `[1, 1, 2]` let the
-    # gutters set the spacing and the three buttons read as unrelated
-    # objects 140px apart rather than as one choice.
+    # Equal columns, and only as many as there are buttons. Weighted
+    # columns let the gutters set the spacing, so the three read as
+    # unrelated objects rather than as one choice; a trailing spacer
+    # column then squeezed each label until "Build a report" and "How it
+    # works" both wrapped onto two lines, which makes three buttons look
+    # like six fragments.
     has_samples = bool(_samples())
-    actions = st.columns([1.3, 1.2, 1.3, 3.2] if has_samples else [1.4, 1.2, 4])
+    actions = st.columns(3 if has_samples else 2)
     if actions[0].button("Build a report", type="primary", key="enter"):
         go("tool")
     if actions[1].button("How it works", key="to_about"):
