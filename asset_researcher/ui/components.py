@@ -890,7 +890,14 @@ def samples_intro(count: int) -> str:
     it either way.
     """
     return _one_line(
-        '<div class="ar-centered ar-workspace-intro">'
+        # ar-headline, not ar-centered: this heading centres, and the
+        # column stays full width. Narrowing it to a reading measure made
+        # the note iframe below about 656px wide, which is under the
+        # 900px breakpoint, so a reader on a 1440px screen got the phone
+        # layout of the note - including the rule that unsticks the table
+        # header, which is why the comparables header row scrolled out of
+        # view and looked cut off.
+        '<div class="ar-headline ar-workspace-intro">'
         "<h1>Sample notes</h1>"
         f"<p>{escape_text(plural(count, 'note'))}, built from live SEC "
         "filings by the same pipeline the tool runs. Nothing here is a "

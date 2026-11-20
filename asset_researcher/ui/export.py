@@ -56,6 +56,38 @@ _CHART = 620
 # --------------------------------------------------------------------- HTML
 
 
+# The section bar has to scroll the document itself rather than rely on
+# the browser resolving "#s-valuation" against it.
+#
+# This file is shown two ways. Opened on its own, a fragment link works
+# as fragment links do. Rendered inside the app, it is the srcdoc of an
+# iframe whose baseURI is the PARENT page - measured as
+# "http://host/?k=...&view=samples" - so "#s-valuation" resolves against
+# that page instead, and clicking a section name navigated the frame to
+# the app's own URL rather than scrolling. Every section link in every
+# sample was dead for that reason.
+#
+# Resolving the target by id and scrolling to it is correct in both
+# cases and depends on no base URL at all. The href stays, so the links
+# still work with script disabled and still say where they go.
+_JUMP_SCRIPT = """<script>
+(function () {
+  document.addEventListener('click', function (event) {
+    var link = event.target.closest('nav.ar-nav a[href^="#"]');
+    if (!link) return;
+    var target = document.getElementById(link.getAttribute('href').slice(1));
+    if (!target) return;
+    event.preventDefault();
+    target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    // Moves keyboard focus with the view, so the next Tab continues from
+    // the section the reader just jumped to rather than from the bar.
+    target.setAttribute('tabindex', '-1');
+    target.focus({ preventScroll: true });
+  });
+})();
+</script>"""
+
+
 def report_to_html(report: Report, notice: str = "") -> str:
     """One self-contained document, in reading order.
 
@@ -134,6 +166,7 @@ def report_to_html(report: Report, notice: str = "") -> str:
         # content, so a screen-reader user had no way past the index.
         f'<body><a class="ar-skip" href="#ar-content">Skip to report</a>'
         f'<main id="ar-content" class="ar-page">{"".join(body)}</main>'
+        f"{_JUMP_SCRIPT}"
         f"</body></html>"
     )
 

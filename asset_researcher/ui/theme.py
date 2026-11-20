@@ -715,6 +715,13 @@ button[data-testid="stExpandSidebarButton"]:hover,
    sixteen-column tables need every pixel. */
 .block-container:has(.ar-centered) { max-width: 44rem; }
 .ar-centered { text-align: center; }
+/* Centres its own text and nothing else. For a screen whose heading
+   should sit in the middle while the content below it needs the full
+   column - a rendered note is 16 columns wide and must not be squeezed
+   into a reading measure. */
+.ar-headline { text-align: center; }
+.ar-headline h1 { margin-inline: auto; }
+.ar-headline p { margin-inline: auto; max-width: 46rem; }
 /* Headings and the one-line description centre. Running prose does not:
    a centred paragraph of several lines has a ragged left edge and is
    measurably slower to read, so the written page centres its heading and

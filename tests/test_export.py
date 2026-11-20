@@ -117,9 +117,23 @@ def test_model_and_filing_text_cannot_reach_the_export_as_markup(report):
     )
     report.bundle.company_name = "Widget & Co <b>Holdings</b>"
     html = report_to_html(report)
-    assert "<script>" not in html
+
+    # The payload is escaped, not executed.
+    assert "alert('x')" not in html
+    assert "&lt;script&gt;" in html
     assert "<b>Holdings</b>" not in html
     assert "Widget &amp; Co" in html
+
+    # The document carries exactly one script, the one this project
+    # writes: the section bar needs it, because inside the app the note
+    # is an iframe whose baseURI is the parent page and a fragment link
+    # therefore resolves against the wrong document. Asserting the count
+    # rather than the absence keeps the guarantee that matters - no text
+    # from a model or a filing can become a second one - while letting
+    # the one known script through. A new script appearing here fails
+    # this test, which is the point.
+    assert html.count("<script>") == 1
+    assert "nav.ar-nav a" in html
 
 
 def test_an_absent_dcf_is_stated_rather_than_left_blank(report):
