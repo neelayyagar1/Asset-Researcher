@@ -746,6 +746,13 @@ button[data-testid="stExpandSidebarButton"]:hover,
 /* The report view needs every pixel a sixteen-column table asks for. */
 .block-container:has(.ar-report-view) { max-width: 1280px; }
 
+/* A form gets a narrower column, because a text field stretched to the
+   full page is unpleasant to type into and a label sitting a thousand
+   pixels from its input is hard to associate with it. This narrows the
+   ONE column rather than adding a second width inside it: every element
+   on the screen still shares one set of edges. */
+.block-container:has(.ar-form-head) { max-width: 760px; }
+
 /* ----------------------------------------------------- shell furniture */
 
 .ar-topbar {

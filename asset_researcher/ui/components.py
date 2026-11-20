@@ -927,7 +927,7 @@ def home_foot() -> str:
 def workspace_intro() -> str:
     """The empty workspace, which is a form and should say what it wants."""
     return _one_line(
-        '<div class="ar-head"><h1>Generate a report</h1>'
+        '<div class="ar-head ar-form-head"><h1>Generate a report</h1>'
         "<p>About a minute. Every figure is read from the filing; the "
         "model may not write a number.</p></div>"
     )

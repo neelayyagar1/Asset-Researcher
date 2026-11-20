@@ -421,8 +421,16 @@ def _back_bridge() -> None:
     gate. `_unlock_token` is what makes that survivable: the unlock rides
     in the URL, so the reloaded page comes back already open.
     """
+    # A RAW string. The JavaScript below contains `\n` escapes inside a
+    # JS string literal, and in a non-raw Python literal Python consumed
+    # them first: the browser was served a single-quoted JS string with
+    # two real newlines inside it, which is a SyntaxError, so the whole
+    # listener never parsed and browser Back silently did nothing. The
+    # in-app Back buttons kept working because those are server-side
+    # widgets, which is exactly why the fault looked like "only your
+    # buttons work".
     components.html(
-        """<script>
+        r"""<script>
         (function () {
           var host = window.parent;
           if (!host || host.__arBack) return;
@@ -798,6 +806,7 @@ if report is None:
     # whether the tool is serious was 46% empty cream and looked like a
     # layout that had broken. The form sits at its own measure instead.
     write('<span id="ar-form" tabindex="-1"></span>')
+    write(ui.topbar("reports"))
     write(ui.workspace_intro())
     ticker, mandate_text, urls_text, run = _controls("inline")
     if run and ticker:
