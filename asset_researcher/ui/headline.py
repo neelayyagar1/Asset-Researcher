@@ -125,7 +125,26 @@ def headline_stats(report: Report) -> list[Stat]:
                 "An enterprise model does not describe this sector",
             )]
 
-    model_is_load_bearing = implied is None or implied.caveat is None
+    # A model is load-bearing only when it was solved AND nothing about it
+    # drew a caveat. This read `implied is None or implied.caveat is None`,
+    # which treated a FAILED solve as a clean bill of health: when the
+    # reverse solve could not run, the strip fell through to the
+    # full-confidence branch and led, at the largest size on the page,
+    # with a target nothing had checked. That is how Ford shipped a
+    # headline of +564% upside and Lumen one of -91%.
+    #
+    # The second clause is a backstop, not a second opinion. Ordinary
+    # disagreement with the market is what the caveat above handles, and a
+    # model calling a stock worth 40% of its price is a real call that
+    # should still be shown. This catches only the arithmetic that has
+    # plainly broken: a target of +564% of the traded price, or one of
+    # -91%, is not a mispricing anybody will entertain, and a figure like
+    # that on the first screen costs more credibility than the rest of the
+    # note can earn back. Both shipped.
+    implausible = upside is not None and not (-0.75 < upside < 3.0)
+    model_is_load_bearing = (
+        implied is not None and implied.caveat is None and not implausible
+    )
     if model_is_load_bearing:
         return [
             price_stat,

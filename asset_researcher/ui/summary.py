@@ -18,9 +18,9 @@ Five lines, in the order an investment committee reads them:
 
 1. **The gap.** What the price requires against what the record delivered.
    The only figure in the note that is neither a filed value nor a target.
-2. **The variant view.** A note that agrees with consensus throughout has
+2. **The variant perception.** A note that agrees with consensus throughout has
    said nothing the price does not already reflect, so if there is no
-   variant view the absence is the finding and is stated.
+   variant perception the absence is the finding and is stated.
 3. **Earnings quality.** The fastest available falsifier of the cash flow
    the whole valuation discounts.
 4. **The material divergence.** Management's claim against the filed
@@ -28,7 +28,7 @@ Five lines, in the order an investment committee reads them:
 5. **The nearest catalyst, and what the note could not read.**
 
 Lines two to four reorder by mandate: a capital-preservation reader meets
-earnings quality before the variant view, and a reader who can short meets
+earnings quality before the variant perception, and a reader who can short meets
 the divergence first.
 """
 
@@ -87,7 +87,7 @@ def _variant_line(report: Report) -> str:
     views = report.reconciliation.variant_views
     if not views:
         return (
-            "No variant view was identified against the prevailing read, so "
+            "No variant perception was identified against the prevailing read, so "
             "this analysis says nothing the price does not already reflect."
         )
     view = views[0]

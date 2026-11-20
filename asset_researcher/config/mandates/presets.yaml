@@ -26,8 +26,7 @@ presets:
       both books. We size to conviction and hedge sector exposure. On the
       short side we look for deteriorating unit economics, aggressive revenue
       recognition, inventory or receivables building faster than sales, and
-      management guidance that keeps slipping. Catalysts matter more than
-      terminal value to us.
+      management guidance that keeps slipping.
 
   - id: event_driven
     name: Event-driven / special situations
@@ -36,13 +35,12 @@ presets:
       catalysts: earnings, spin-offs, divestitures, management changes,
       regulatory decisions, and merger arbitrage. Horizon is typically one to
       two quarters, sometimes weeks. We care about catalyst timing, the
-      probability-weighted payoff, and what breaks the setup. Long-run
-      terminal value is largely irrelevant to us.
+      probability-weighted payoff, and what breaks the setup.
 
   - id: income_stability
     name: Income and capital preservation
     description: >
-      Income-oriented mandate with a multi-year horizon and low turnover.
+      Income mandate with a multi-year horizon and low turnover.
       Priorities are dividend safety and coverage, balance-sheet strength,
       interest coverage, and the durability of cash flows through a downturn.
       A dividend cut, covenant pressure, or leverage rising without a clear

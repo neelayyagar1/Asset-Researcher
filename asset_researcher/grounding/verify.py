@@ -144,6 +144,20 @@ _YEAR = re.compile(r"^(?:19|20)\d{2}$")
 # "Item 2.02", "Item 5.07", form structure, not financial claims.
 _ITEM_CODE = re.compile(r"\bitems?\s+[\d.,\s]*$", re.IGNORECASE)
 
+# A number that is part of a name is not an assertion about a company.
+# "the S&P 500" was being read as an unverified financial figure, and
+# because one figure failing flips the whole banner, two otherwise clean
+# notes told their reader to treat every number in the prose as
+# unsupported - on the strength of an index being mentioned.
+_INDEX_NAME = re.compile(
+    r"""(?:
+        s\s?&\s?p | standard\s*&\s*poor | russell | nasdaq | ftse
+      | nikkei | dow(?:\s+jones)? | msci | stoxx | dax | cac | hang\s+seng
+      | wilshire | s\s?&\s?p/asx
+    )\s*$""",
+    re.VERBOSE | re.IGNORECASE,
+)
+
 
 def _normalize_number(raw: str) -> str:
     """Compare figures by their digits, so '$1,234.5 million' and
@@ -160,6 +174,9 @@ def _figures_in(text: str) -> list[str]:
             continue
         # Skip numbers introduced as a form item reference.
         if _ITEM_CODE.search(text[: match.start()]):
+            continue
+        # Skip the numeral in an index's name.
+        if _INDEX_NAME.search(text[: match.start()]):
             continue
         out.append(raw)
     return out

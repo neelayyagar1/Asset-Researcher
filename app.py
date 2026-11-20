@@ -481,8 +481,14 @@ def _controls(key: str) -> tuple[str, str, str, bool]:
         "ticker list, so anything that files with the SEC works and "
         "anything else is refused by name."
     )
+    # "Strategy", not "Mandate". The word mandate is real and citable -
+    # CFA Standard III(C) uses "mandate, strategy, or style" in sequence -
+    # but a mandate is a document agreed between an asset owner and a
+    # manager, not a line someone types into a box, and "Long-only,
+    # quality compounders" is a style. The word stays where the object
+    # genuinely is one: MandateProfile, and the note's "Prepared for" line.
     choice = st.selectbox(
-        "Investment mandate",
+        "Strategy",
         ["Describe my own"] + [p.name for p in presets],
         index=1,
         key=f"{key}_preset",
@@ -497,7 +503,7 @@ def _controls(key: str) -> tuple[str, str, str, bool]:
     # reader saw of the field they most need to read was the app failing
     # to hold its own text.
     mandate_text = st.text_area(
-        "What this fund invests in", value=prefill, height=150,
+        "How you invest", value=prefill, height=150,
         key=f"{key}_mandate",
     )
     # Plain words first, then the term of art, rather than the term alone.
@@ -508,14 +514,13 @@ def _controls(key: str) -> tuple[str, str, str, bool]:
     # a reader needs no glossary, and a portfolio manager still sees the
     # word they would use themselves.
     st.caption(
-        "A fund's mandate is the brief it is run to: what it may hold, "
-        "over what horizon, and what it is trying to achieve. It changes "
-        "which findings the note leads with and in what order. It does not "
-        "change a single reported figure, a citation, or which "
+        "Horizon, what you hold, and what would make you sell. This "
+        "changes which findings the note leads with and in what order. It "
+        "does not change a single reported figure, a citation, or which "
         "disagreements with management get disclosed."
     )
     urls_text = st.text_area(
-        "Other sources to read (optional)", height=70,
+        "Other documents to read (URLs, optional)", height=70,
         placeholder="https://  one per line",
         key=f"{key}_urls",
     )

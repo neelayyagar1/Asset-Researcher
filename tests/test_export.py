@@ -86,7 +86,11 @@ def test_the_export_carries_the_verification_state_and_the_counter_case(report):
     # sits where the citation says, not that it supports the claim.
     assert "Citations located" in html or "Citations partial" in html
     assert "Citations verified" not in html
-    assert "Disconfirming evidence" in html
+    # The section is "Bear case" now. "Counter-case" had no professional
+    # usage anywhere - not in filings, not in CFA material, not in
+    # published notes - while "bear case" is the published convention and
+    # describes the same content.
+    assert "Bear case" in html
     assert "Against this thesis" in html
 
 

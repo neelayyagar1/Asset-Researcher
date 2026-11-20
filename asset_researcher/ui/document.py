@@ -131,13 +131,13 @@ def sections(report: Report) -> list[Section]:
     table = bundle.comps
     management = rec.management
 
-    emit("Summary", "What the price requires, and where this departs")
+    emit("Investment summary", "What the price requires, and where this departs")
     add(ui.block(summary_block(report)))
 
-    # -------------------------------------------------------- variant view
+    # -------------------------------------------------------- variant perception
 
     emit(
-        "Variant view",
+        "Variant perception",
         "Where this analysis departs from consensus"
         + (f", {ui.plural(len(rec.variant_views), 'view')}"
        if rec.variant_views else ""),
@@ -161,7 +161,7 @@ def sections(report: Report) -> list[Section]:
         add(
             ui.block(
                 ui.note(
-                    "No variant view was identified against the prevailing read. "
+                    "No variant perception was identified against the prevailing read. "
                     "A note that agrees with consensus throughout has said "
                     "nothing the price does not already reflect."
                 )
@@ -171,7 +171,7 @@ def sections(report: Report) -> list[Section]:
     # ------------------------------------------------------- market pricing
 
     if context and context.summary():
-        emit("Market pricing", "What the market is paying for this cash flow")
+        emit("Current valuation", "What the market is paying for this cash flow")
         add(
             ui.block(
                 ui.stat_strip(
@@ -221,7 +221,7 @@ def sections(report: Report) -> list[Section]:
             )
         )
     else:
-        emit("Implied expectations", "The primary output")
+        emit("Price-implied expectations", "The primary output")
         add(
             ui.block(
                 ui.caption(
@@ -363,7 +363,7 @@ def sections(report: Report) -> list[Section]:
     add(ui.block(ui.paragraphs(rec.what_would_have_to_be_true)))
 
     emit(
-        "Counter-case", "Disconfirming evidence, produced on every report")
+        "Bear case", "The case against, produced on every report")
     add(
         ui.block(
             ui.caption(
@@ -381,7 +381,7 @@ def sections(report: Report) -> list[Section]:
     # -------------------------------------------------------- reconciliation
 
     emit(
-        "Reconciliation",
+        "Management vs. filed figures",
         f"Narrative against reported figures: "
         f"{ui.plural(len(rec.divergences), 'divergence')}, "
         f"{len(rec.corroborations)} corroborated",
@@ -430,7 +430,7 @@ def sections(report: Report) -> list[Section]:
         )
 
     if rec.questions_for_management:
-        emit("Questions", "What the disclosure does not answer")
+        emit("Questions for management", "What the disclosure does not answer")
         add(ui.block(ui.bullets(rec.questions_for_management)))
 
     # ----------------------------------------------------------- financials
@@ -486,7 +486,8 @@ def sections(report: Report) -> list[Section]:
     )
 
     if bundle.health_scores:
-        emit("Health", "Published screens, where the balance sheet fits them")
+        emit("Distress and manipulation screens",
+             "Altman Z, Piotroski F and Beneish M, where the balance sheet fits them")
         add(
             ui.block(
                 ui.table(
@@ -646,7 +647,7 @@ def sections(report: Report) -> list[Section]:
     # ---------------------------------------------------------------- note
 
     emit(
-        "Note", "The descriptive sections, every claim cited")
+        "Business description", "Descriptive sections, every claim cited")
     add(
         ui.block(
             ui.caption(

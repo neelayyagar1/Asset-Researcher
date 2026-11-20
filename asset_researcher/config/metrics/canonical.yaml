@@ -219,7 +219,15 @@ derived:
     # denominator was used rather than claiming the standard one.
     formula: net_interest_income / total_assets
   npl_ratio:
-    label: Nonperforming Loan Ratio
+    # Named for the arithmetic, because it is NOT the NPL ratio a bank
+    # analyst means. That ratio divides nonperforming loans by gross
+    # loans (World Bank FB.AST.NPER.ZS, and every bank's own disclosure);
+    # this divides by total assets, which is a larger denominator, so the
+    # figure prints at roughly half what a reader would expect under the
+    # borrowed name. Gross loans are not in the canonical set, so the
+    # honest move is to say what is actually being divided - the same
+    # rule already applied to nim_on_assets two entries below.
+    label: Nonperforming loans / total assets
     sectors: [financial]
     formula: nonperforming_loans / total_assets
 

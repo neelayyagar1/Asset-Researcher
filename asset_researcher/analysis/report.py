@@ -90,14 +90,21 @@ class Report:
 
         if v.unsupported_numbers:
             shown = ", ".join(sorted(v.unsupported_numbers)[:5])
+            count = len(v.unsupported_numbers)
+            # Name the figures and stop. This used to end "treat any
+            # number in the prose as unsupported", which is a sentence
+            # about every figure on the page triggered by a single one -
+            # and on two otherwise clean notes the single one was the
+            # numeral in an index's name. A reader who is told to
+            # disbelieve everything disbelieves the tables too, which are
+            # filed values and were never in question.
             return (
                 "warning",
-                f"{len(v.unsupported_numbers)} "
-                f"{'figure' if len(v.unsupported_numbers) == 1 else 'figures'} "
-                f"in the prose could "
-                f"not be matched to a filed value ({shown}). Figures in the "
-                f"tables are as filed; treat any number in the prose as "
-                f"unsupported. {scope}",
+                f"{count} {'figure' if count == 1 else 'figures'} in the "
+                f"prose ({shown}) could not be matched to a cited quote or "
+                f"a filed value, and {'is' if count == 1 else 'are'} "
+                f"unverified. Every other figure in the prose matched, and "
+                f"the tables are filed values throughout. {scope}",
             )
 
         if v.failures:
