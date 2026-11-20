@@ -719,6 +719,16 @@ button[data-testid="stExpandSidebarButton"]:hover,
    should sit in the middle while the content below it needs the full
    column - a rendered note is 16 columns wide and must not be squeezed
    into a reading measure. */
+/* A form inside a centred screen keeps its labels flush left. A label
+   centred over its own field is harder to scan down, and a caption of
+   two or three lines centred is the ragged-left problem again. The block
+   centres; its contents read normally. */
+.block-container:has(.ar-centered) .stTextInput,
+.block-container:has(.ar-centered) .stTextArea,
+.block-container:has(.ar-centered) .stSelectbox,
+.block-container:has(.ar-centered) [data-testid="stCaptionContainer"] {
+  text-align: left; }
+
 .ar-headline { text-align: center; }
 .ar-headline h1 { margin-inline: auto; }
 .ar-headline p { margin-inline: auto; max-width: 46rem; }
@@ -752,13 +762,21 @@ button[data-testid="stExpandSidebarButton"]:hover,
   [data-testid="stElementContainer"]:has(.stDownloadButton) {
   margin-inline: auto; }
 
-/* The field sits at a measure a passphrase needs, not at the width of
-   the column it happens to be in. */
-.block-container:has(.ar-centered) [data-testid="stForm"],
-.block-container:has(.ar-centered) .stTextInput {
+/* The passphrase field sits at the measure a passphrase needs. Scoped to
+   the gate: applied to every centred screen it also squeezed the ticker
+   field on the build form, where the fields beside it are full width. */
+.block-container:has(.ar-gate) [data-testid="stForm"],
+.block-container:has(.ar-gate) .stTextInput {
   max-width: 22rem; margin-inline: auto; }
-.block-container:has(.ar-centered) [data-testid="stForm"] {
+.block-container:has(.ar-gate) [data-testid="stForm"] {
   border: 0; padding: 0; }
+
+/* The build form reads as one column of fields at a form's measure. */
+.block-container:has(.ar-centered) .stTextInput,
+.block-container:has(.ar-centered) .stTextArea,
+.block-container:has(.ar-centered) .stSelectbox,
+.block-container:has(.ar-centered) [data-testid="stCaptionContainer"] {
+  max-width: 32rem; margin-inline: auto; }
 .ar-centered .lede, .ar-centered p { margin-inline: auto; }
 .block-container:has(.ar-centered) .stButton > button,
 .block-container:has(.ar-centered) .stFormSubmitButton > button {

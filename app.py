@@ -476,8 +476,13 @@ def _controls(key: str) -> tuple[str, str, str, bool]:
     ticker = st.text_input(
         "Ticker", value="AAPL", max_chars=8, key=f"{key}_ticker"
     ).strip().upper()
+    st.caption(
+        "A US-listed company symbol. The tool looks it up in the SEC's own "
+        "ticker list, so anything that files with the SEC works and "
+        "anything else is refused by name."
+    )
     choice = st.selectbox(
-        "Mandate",
+        "Investment mandate",
         ["Describe my own"] + [p.name for p in presets],
         index=1,
         key=f"{key}_preset",
@@ -492,14 +497,26 @@ def _controls(key: str) -> tuple[str, str, str, bool]:
     # reader saw of the field they most need to read was the app failing
     # to hold its own text.
     mandate_text = st.text_area(
-        "Mandate description", value=prefill, height=150, key=f"{key}_mandate"
+        "What this fund invests in", value=prefill, height=150,
+        key=f"{key}_mandate",
     )
+    # Plain words first, then the term of art, rather than the term alone.
+    # A reviewer who does not work in finance read "Mandate" and could not
+    # tell whether it was real vocabulary or invented, which is a fair
+    # reaction to a one-word label with nothing around it. A mandate is
+    # the standing brief a fund is run to; saying what it does here means
+    # a reader needs no glossary, and a portfolio manager still sees the
+    # word they would use themselves.
     st.caption(
-        "Sets emphasis and ordering only. It does not change the reported "
-        "figures, the citations, or which divergences are disclosed."
+        "A fund's mandate is the brief it is run to: what it may hold, "
+        "over what horizon, and what it is trying to achieve. It changes "
+        "which findings the note leads with and in what order. It does not "
+        "change a single reported figure, a citation, or which "
+        "disagreements with management get disclosed."
     )
     urls_text = st.text_area(
-        "Additional sources", height=70, placeholder="https://",
+        "Other sources to read (optional)", height=70,
+        placeholder="https://  one per line",
         key=f"{key}_urls",
     )
     # No running budget figure here. It used to print the remaining daily
@@ -509,7 +526,11 @@ def _controls(key: str) -> tuple[str, str, str, bool]:
     # and says so only in the one case where it has to - when a run is
     # refused, which is the only moment the figure explains anything.
     st.caption(
-        "Public URLs. Classified as secondary and attributed as opinion."
+        "Leave this empty and the note is built from SEC filings alone. "
+        "Paste a public web page - a transcript, a press release, a broker "
+        "note - and it is read alongside them. Anything found this way is "
+        "labelled as a secondary source and attributed as opinion, never "
+        "mixed in with the filed figures."
     )
     # Back sits with the action it is an alternative to, at the foot of
     # the form, rather than above it where it read as a page control. The
