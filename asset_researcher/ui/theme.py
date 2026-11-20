@@ -699,7 +699,69 @@ button[data-testid="stExpandSidebarButton"]:hover,
 [data-testid="stSidebarCollapseButton"] button:hover {
   background: var(--ink); color: var(--paper); border-color: var(--ink); }
 
-.block-container { max-width: 1240px; padding: var(--s6) var(--s5) var(--s8); }
+.block-container { max-width: 1240px; padding: var(--s6) var(--s5) var(--s8);
+  margin-inline: auto; }
+
+/* The narrow screens sit in the middle of the page, not against its left
+   edge. Measured before this rule at 1440px: the content column was 1240
+   and centred, but the gate inside it was 544 wide starting at x=124,
+   leaving 772px of empty paper to its right. The container was centred
+   and its contents were not, which reads as a layout that broke.
+ 
+   Narrowing the container itself rather than the block inside it is what
+   centres the Streamlit widgets too - a button and a text input are
+   block elements in that column, so they follow its width and nothing
+   has to be centred twice. The report view carries no marker, because
+   sixteen-column tables need every pixel. */
+.block-container:has(.ar-centered) { max-width: 44rem; }
+.ar-centered { text-align: center; }
+/* Headings and the one-line description centre. Running prose does not:
+   a centred paragraph of several lines has a ragged left edge and is
+   measurably slower to read, so the written page centres its heading and
+   sets its body flush left. */
+.ar-centered h1 { margin-inline: auto; max-width: none; }
+.ar-centered .lede, .ar-centered > p { max-width: 34rem; }
+.ar-about { margin-inline: auto; text-align: left; }
+.ar-about h2 { text-align: center; }
+
+/* The blocks themselves centre inside the column. Several carried a
+   max-width from when they sat against the left margin and had no auto
+   margin to go with it, so a 544px block sat at the left of a 704px
+   column - centred container, off-centre contents, which is the thing
+   that reads as broken. */
+.ar-centered, .ar-gate, .ar-home, .ar-workspace-intro {
+  margin-inline: auto; }
+
+/* A control centres by its own margins, not by justifying its parent.
+   Streamlit lays each element out in a flex column and the container
+   shrink-wraps the button - measured at 87px inside a 656px column - so
+   `justify-content` on the parent moves nothing along the horizontal
+   axis, while an auto inline margin on a flex child does exactly that. */
+.block-container:has(.ar-centered)
+  [data-testid="stElementContainer"]:has(.stButton),
+.block-container:has(.ar-centered)
+  [data-testid="stElementContainer"]:has(.stFormSubmitButton),
+.block-container:has(.ar-centered)
+  [data-testid="stElementContainer"]:has(.stDownloadButton) {
+  margin-inline: auto; }
+
+/* The field sits at a measure a passphrase needs, not at the width of
+   the column it happens to be in. */
+.block-container:has(.ar-centered) [data-testid="stForm"],
+.block-container:has(.ar-centered) .stTextInput {
+  max-width: 22rem; margin-inline: auto; }
+.block-container:has(.ar-centered) [data-testid="stForm"] {
+  border: 0; padding: 0; }
+.ar-centered .lede, .ar-centered p { margin-inline: auto; }
+.block-container:has(.ar-centered) .stButton > button,
+.block-container:has(.ar-centered) .stFormSubmitButton > button {
+  max-width: none; }
+/* A row of buttons centres as a row. Streamlit lays columns out as
+   flex, so the row is told to pack rather than spread. */
+.block-container:has(.ar-centered) [data-testid="stHorizontalBlock"] {
+  justify-content: center; }
+.block-container:has(.ar-centered) [data-testid="stColumn"] {
+  flex: 0 0 auto; min-width: 0; }
 
 /* ------------------------------------------------------------- sidebar */
 

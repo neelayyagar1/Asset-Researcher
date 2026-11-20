@@ -776,22 +776,49 @@ def bullets(items: Sequence[str]) -> str:
 
 
 def home() -> str:
-    """The first screen a stranger meets.
+    """The first screen past the gate.
 
-    It states the proposition and nothing else. The tool used to open on a
-    form, which asks someone to supply an input before anything has told
-    them what they get back for it.
+    One sentence, in the plainest words that are still accurate, and then
+    the ways in. What stood here before - "Read the filings, then read
+    what management said about them" over a second sentence about "the
+    narrative management wrapped around it" - was writing that enjoyed
+    itself. A reader who has not seen the product yet cannot tell from it
+    what the product does, which is the only job this screen has.
+
+    "Reads a company's SEC filings and writes a research note" is what it
+    does, in words that need no finance to parse. The three guarantees
+    beneath it carry the argument; this line only has to get a reader to
+    the buttons.
     """
     return _one_line(
-        '<div class="ar-home">'
-        # Spaces before each break: without them textContent read
-        # "Read the filings,then read whatmanagement saidabout them."
-        "<h1>Read the filings, then read what management said "
-        "about them.</h1>"
-        '<p class="lede">A ticker in, a sourced research note out: the '
-        "filed financial record, the narrative management wrapped around "
-        "it, and the places where the two do not agree.</p>"
+        '<div class="ar-centered ar-home">'
+        "<h1>Asset Researcher</h1>"
+        '<p class="lede">Enter a US-listed ticker. The tool reads that '
+        "company's filings to the SEC, pulls the financial record out of "
+        "them, and writes a research note that cites every figure back to "
+        "the filing it came from.</p>"
         "</div>"
+    )
+
+
+def door_costs(has_samples: bool) -> str:
+    """What each way in costs, under the buttons that offer them.
+
+    The home screen offered three doors that cost wildly different
+    things and said so nowhere: a reviewer clicked the filled one and
+    then watched a progress bar for a minute. The information existed,
+    on the gate screen they had already dismissed.
+    """
+    if not has_samples:
+        return _one_line(
+            '<p class="ar-foot ar-doors">A report takes about a minute '
+            "and spends one live API call.</p>"
+        )
+    return _one_line(
+        '<p class="ar-foot ar-doors">'
+        "<span>Samples are already built: instant, and free.</span>"
+        "<span>A new report takes about a minute and spends one live "
+        "API call.</span></p>"
     )
 
 
@@ -863,7 +890,7 @@ def samples_intro(count: int) -> str:
     it either way.
     """
     return _one_line(
-        '<div class="ar-workspace ar-workspace-intro">'
+        '<div class="ar-centered ar-workspace-intro">'
         "<h1>Sample notes</h1>"
         f"<p>{escape_text(plural(count, 'note'))}, built from live SEC "
         "filings by the same pipeline the tool runs. Nothing here is a "
@@ -885,22 +912,18 @@ def about(body_html: str) -> str:
 
 
 def gate() -> str:
-    """The passphrase screen.
+    """The passphrase screen: a name and a field.
 
-    Says what the thing is before asking for anything, because a bare
-    password box on an unexplained page reads as a phishing form. It also
-    states why the gate exists: every report spends real money, and a
-    reader who understands that is less likely to assume the tool is
-    hiding something.
+    It used to explain, before asking, what the product was and why it
+    was gated. That reasoning was sound for a page a stranger lands on
+    cold, and wrong here: everyone who reaches this screen was sent the
+    link and the passphrase by the author, so the explanation answered a
+    question nobody was asking and put three lines of prose between them
+    and the only thing they came to do.
     """
     return _one_line(
-        '<div class="ar-home ar-gate">'
+        '<div class="ar-centered ar-gate">'
         "<h1>Asset Researcher</h1>"
-        '<p class="lede">Equity research built from the filings themselves. '
-        "This demo is shared with named reviewers rather than published, "
-        "because each report it builds is a real call against a metered "
-        "API.</p>"
-        '<p class="ar-foot">Enter the passphrase you were sent.</p>'
         "</div>"
     )
 
@@ -941,8 +964,9 @@ def home_foot() -> str:
 def workspace_intro() -> str:
     """The empty workspace, which is a form and should say what it wants."""
     return _one_line(
-        '<div class="ar-workspace ar-workspace-intro">'
+        '<div class="ar-centered ar-workspace-intro">'
         '<h1 class="ar-workspace-title">Build a note</h1>'
-        '<p>Enter a ticker. The report takes about a minute and reads every '
-        "filing it cites.</p></div>"
+        '<p>Enter a US-listed ticker. The tool reads that company\'s SEC '
+        "filings and writes a note from them. It takes about a minute.</p>"
+        "</div>"
     )
