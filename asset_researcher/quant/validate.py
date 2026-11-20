@@ -268,6 +268,55 @@ def check_income_statement_foots(
 # dollar, and fires on a period that mixes restated and original lines.
 
 
+def check_latest_year_is_complete(
+    series: MetricSeries, result: ValidationResult
+) -> None:
+    """The newest column must carry the lines every filer reports.
+
+    A missing tag in the most recent year is not a small gap. It cascades:
+    every ratio built on that line renders n.d. for that period, so the
+    earnings-quality sentence quietly reports the year before and reads as
+    current, growth rates lose their endpoint, and the note presents a
+    stale picture while looking complete. Observed on a filer whose FY2025
+    revenue and net income are both plainly in the 10-K and neither
+    resolved - the note then derived earnings per share from a net loss it
+    claimed not to have.
+
+    Raised as an error rather than a warning because the right response is
+    to fix the mapping and rebuild, not to publish and hope the reader
+    does not look at the last column.
+    """
+    labels = sorted({
+        period.frame_label
+        for points in series.series.values()
+        for period in points
+    })
+    if not labels:
+        return
+    latest = labels[-1]
+
+    missing = [
+        metric
+        for metric in ("revenue", "net_income")
+        if not any(
+            p.frame_label == latest
+            for p in (series.series.get(metric) or ())
+        )
+    ]
+    if not missing:
+        return
+    result.add(
+        "latest_year_incomplete",
+        f"{latest} is the most recent period in this filer's data and "
+        f"{' and '.join(missing)} did not resolve for it. Every figure "
+        f"derived from {'that line' if len(missing) == 1 else 'those lines'} "
+        f"is unavailable for {latest}, so the newest column is incomplete "
+        f"and any ratio or growth rate ending there should not be relied "
+        f"on.",
+        severity="error",
+    )
+
+
 def check_reporting_currency(series: MetricSeries, result: ValidationResult) -> None:
     """A filer reporting in anything but dollars cannot be priced here.
 
@@ -302,6 +351,7 @@ _ALL_CHECKS = [
     check_required_metrics_present,
     check_reporting_currency,
     check_income_statement_foots,
+    check_latest_year_is_complete,
 ]
 
 
