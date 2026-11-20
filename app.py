@@ -216,6 +216,11 @@ st.set_page_config(
     initial_sidebar_state="collapsed",
 )
 st.markdown(theme.stylesheet(), unsafe_allow_html=True)
+# The direction this shell was built to, in the page a reader receives,
+# so the built surface can be checked against what it promised. Emitted
+# with st.markdown rather than `write`, which is defined further down
+# this module and does not exist yet at this point in the script.
+st.markdown(ui.direction_contract(), unsafe_allow_html=True)
 
 # A bypass link. The report carries twenty section anchors ahead of its
 # content, so without this a keyboard user tabs through the whole index to

@@ -1035,3 +1035,36 @@ def report_rows(rows) -> str:
     return _one_line(
         f'<table class="ar-list">{header}{"".join(body)}</table>'
     )
+
+
+def direction_contract() -> str:
+    """The build's direction, emitted into the page a reader receives.
+
+    Written as an HTML comment in the markup rather than only in a
+    repository file, because a contract that lives beside the code is a
+    contract the next change can quietly contradict. Anyone can open the
+    page source and check the built surface against what it promised.
+    """
+    return _one_line(
+        "<!--\n"
+        "  THESIS: the research note is the product, so the shell is the\n"
+        "  quietest possible frame around it. Refuses the marketing\n"
+        "  landing page bolted onto a tool.\n"
+        "  OWN-WORLD: near-white #fcfcfd ground, #15161a ink, hairline\n"
+        "  borders, 7px and 10px radii, monospace for every figure, and\n"
+        "  colour withheld from the whole surface except a divergence\n"
+        "  count. The category canon at the Linear/Stripe craft bar,\n"
+        "  chosen by the owner from four rendered comps.\n"
+        "  STORY: a reader sees real notes before any claim about them,\n"
+        "  learns the three steps, and generates one.\n"
+        "  FIRST VIEWPORT: topbar; one-line proposition; the sample\n"
+        "  notes as a table on the left; Get started and the primary\n"
+        "  action in the right rail.\n"
+        "  FORM: one column, declared once, inherited by everything. No\n"
+        "  descendant sets its own width, and no width is expressed in\n"
+        "  `ch`, which is how four container widths and three centre\n"
+        "  axes happened.\n"
+        "  FINISH: unreviewed and undocumented is unfinished; this build\n"
+        "  ends with the finish review, the verdict, and DESIGN.md.\n"
+        "-->"
+    )
