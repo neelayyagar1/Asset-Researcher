@@ -317,6 +317,77 @@ def check_latest_year_is_complete(
     )
 
 
+# Lines the valuation and the balance-sheet bridge are built on. A gap in
+# any of these is not cosmetic: it changes a number a reader acts on.
+_LOAD_BEARING = (
+    "revenue",
+    "net_income",
+    "operating_cash_flow",
+    "capital_expenditures",
+    "total_debt",
+    "total_equity",
+)
+
+# One period of lag is ordinary - a filer can file a line late, and a
+# series one year behind the newest column is a late tag, not a dead one.
+# Two or more is a concept the filer stopped using.
+_STALE_AFTER_PERIODS = 1
+
+
+def check_metrics_are_current(
+    series: MetricSeries, result: ValidationResult
+) -> None:
+    """A populated series can still have stopped years ago.
+
+    Measured on real filers: Lumen's capital expenditure resolves to a
+    concept abandoned after FY2013 and ADP's total debt to one abandoned
+    after FY2011. Both carry six annual points, so every check that
+    asked "is this metric present" was satisfied.
+
+    What it cost: the discounted cash flow pairs operating cash flow
+    with capital expenditure on matching period end dates, so Lumen's
+    model was built from pre-2014 free cash flow for a company since
+    rebuilt - the source of that note's -91% headline target. ADP's
+    net-debt bridge subtracted $37m against real debt near $3bn, which
+    flatters equity value per share.
+
+    An error rather than a warning, because the response is to fix the
+    concept mapping and rebuild, not to publish a figure derived from a
+    line the company stopped reporting before the analysis window.
+    """
+    labels = sorted({
+        period.end
+        for points in series.series.values()
+        for period in points
+    })
+    if not labels:
+        return
+    newest = labels[-1]
+    # Position of the newest period, so "how far behind" is counted in
+    # filed periods rather than in days - fiscal years are not 365 days
+    # apart and a 53-week year must not read as a gap.
+    order = {end: index for index, end in enumerate(labels)}
+
+    for metric in _LOAD_BEARING:
+        points = series.series.get(metric)
+        if not points:
+            continue  # absence is a different check's business
+        last = points[-1]
+        behind = order[newest] - order.get(last.end, 0)
+        if behind <= _STALE_AFTER_PERIODS:
+            continue
+        result.add(
+            "metric_not_current",
+            f"'{metric}' stops at {last.frame_label} while this filer's "
+            f"most recent period is {newest[:4]}. The series is populated, "
+            f"so it looks complete, but the concept behind it was "
+            f"abandoned: anything derived from this line - a free cash "
+            f"flow, a net-debt bridge, a multiple - is built on a figure "
+            f"the company no longer reports.",
+            severity="error",
+        )
+
+
 def check_reporting_currency(series: MetricSeries, result: ValidationResult) -> None:
     """A filer reporting in anything but dollars cannot be priced here.
 
@@ -352,6 +423,7 @@ _ALL_CHECKS = [
     check_reporting_currency,
     check_income_statement_foots,
     check_latest_year_is_complete,
+    check_metrics_are_current,
 ]
 
 

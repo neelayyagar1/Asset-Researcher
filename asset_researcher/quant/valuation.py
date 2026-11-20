@@ -226,6 +226,30 @@ def _latest(series: MetricSeries, metric: str) -> float | None:
     return points[-1].value if points else None
 
 
+def _is_current(series: MetricSeries, metric: str, lag: int = 1) -> bool:
+    """Is this metric's newest period within `lag` periods of the file's?
+
+    A series can be fully populated and have stopped years ago, because
+    a filer abandoned the concept it resolves to. Lumen's capital
+    expenditure ends FY2013 with six points behind it; `_free_cash_flows`
+    then intersects cash flow and capex on matching end dates and finds
+    only pre-2014 years, so the model's base was a decade stale and the
+    note led with a -91% target.
+    """
+    points = series.series.get(metric)
+    if not points:
+        return False
+    ends = sorted({
+        period.end
+        for metric_points in series.series.values()
+        for period in metric_points
+    })
+    if not ends:
+        return False
+    order = {end: index for index, end in enumerate(ends)}
+    return order[ends[-1]] - order.get(points[-1].end, 0) <= lag
+
+
 def _cagr(series: MetricSeries, metric: str) -> tuple[float, int] | None:
     """Compound annual growth, with the number of years it spans.
 
@@ -383,6 +407,18 @@ def derive_dcf_inputs(
     revenue = _latest(series, "revenue")
 
     if operating_cash_flow is None or revenue is None or not shares_outstanding:
+        return None
+
+    # A stale line refuses the model outright. The guard below already
+    # refuses when capital expenditure is ABSENT, with a comment about
+    # exactly this class of error - but it had no notion of a capex
+    # series that exists, looks complete, and stopped twelve years ago.
+    # Refusing here reuses the established path: the caller prints NM and
+    # the note says it declined, which is what a REIT or a bank already
+    # gets, instead of a target built on a decade-old cash flow.
+    if not _is_current(series, "operating_cash_flow") or not _is_current(
+        series, "capital_expenditures"
+    ):
         return None
 
     # A bank or a REIT does not get one of these, at all.

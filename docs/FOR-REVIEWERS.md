@@ -90,7 +90,7 @@ drift. The plain-text export is a third rendering and is kept in step by
 hand, which is a weaker guarantee and is stated as one rather than
 claimed as the same.
 
-443 tests, no network, about fifteen seconds.
+448 tests, no network, about fifteen seconds.
 
 ## What it does not do
 
