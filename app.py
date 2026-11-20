@@ -767,6 +767,14 @@ if st.session_state["view"] == "samples" and report is None:
         mime="text/html",
         key="sample_dl",
     )
+    # NOTE: `components.v1.html` is deprecated and Streamlit's own warning
+    # gives a removal date that has now passed, so this call is on
+    # borrowed time. `st.iframe` is not a replacement for it: that takes a
+    # URL or a path, and this needs to render a complete HTML document
+    # held in memory. Migrating means serving each note at its own route,
+    # which is the right answer for other reasons too - it would end the
+    # scroll-within-a-scroll - but it is a change of shape, not a swap.
+    #
     # Rendered in its own document rather than injected into this page:
     # each note is a complete HTML file carrying its own stylesheet, and
     # inlining it would let those rules reach the app around it.
