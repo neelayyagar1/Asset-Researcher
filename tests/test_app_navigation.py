@@ -49,19 +49,19 @@ def test_the_gate_stops_an_unauthenticated_visitor(monkeypatch):
     text = " ".join(m.value for m in at.markdown)
     assert "Asset Researcher" in text
     # Nothing that spends money is on the page.
-    assert not any("Build a report" in lab for lab in _labels(at))
+    assert not any("Generate a report" in lab for lab in _labels(at))
 
 
 def test_the_right_passphrase_opens_it(monkeypatch):
     at = _unlock(_app(monkeypatch).run())
-    assert any("Build a report" in lab for lab in _labels(at))
+    assert any("Generate a report" in lab for lab in _labels(at))
 
 
 def test_a_wrong_passphrase_does_not(monkeypatch):
     at = _app(monkeypatch).run()
     at.text_input(key="gate_input").set_value("not the phrase")
     at.button[0].click().run()
-    assert not any("Build a report" in lab for lab in _labels(at))
+    assert not any("Generate a report" in lab for lab in _labels(at))
 
 
 def test_an_en_dash_is_forgiven(monkeypatch):
@@ -71,12 +71,12 @@ def test_an_en_dash_is_forgiven(monkeypatch):
     at = AppTest.from_file(APP, default_timeout=60).run()
     at.text_input(key="gate_input").set_value("ar–26")
     at.button[0].click().run()
-    assert any("Build a report" in lab for lab in _labels(at))
+    assert any("Generate a report" in lab for lab in _labels(at))
 
 
 def test_no_passphrase_configured_leaves_it_open(monkeypatch):
     at = _app(monkeypatch, passphrase=None).run()
-    assert any("Build a report" in lab for lab in _labels(at))
+    assert any("Generate a report" in lab for lab in _labels(at))
 
 
 def test_the_gate_raises_nothing_on_any_of_these(monkeypatch):
@@ -91,15 +91,29 @@ def test_the_gate_raises_nothing_on_any_of_these(monkeypatch):
 
 # ------------------------------------------------- moving between views
 
-@pytest.mark.parametrize(
-    "label,marker",
-    [("Build a report", "Generate a report"), ("How it works", "Asset Researcher")],
-)
-def test_each_home_button_reaches_its_screen(monkeypatch, label, marker):
+def test_the_home_button_reaches_the_form(monkeypatch):
+    """Home has one primary action now. The "How it works" page was
+    deleted and its instructions moved onto home as Get started, so a
+    reader learns how to drive the tool without leaving the first
+    screen."""
     at = _unlock(_app(monkeypatch).run())
-    next(b for b in at.button if b.label == label).click().run()
+    next(b for b in at.button if b.label == "Generate a report").click().run()
     assert not at.exception
-    assert marker in " ".join(m.value for m in at.markdown)
+    assert "Generate a report" in " ".join(m.value for m in at.markdown)
+
+
+def test_home_carries_the_instructions_itself(monkeypatch):
+    at = _unlock(_app(monkeypatch).run())
+    text = " ".join(m.value for m in at.markdown)
+    assert "Get started" in text
+    assert "US-listed ticker" in text
+
+
+def test_the_how_it_works_page_is_gone(monkeypatch):
+    """Pinned: it duplicated the landing copy and sent a first-time
+    reader to a second screen to understand the first."""
+    at = _unlock(_app(monkeypatch).run())
+    assert not any("How it works" in lab for lab in _labels(at))
 
 
 def test_the_form_screen_has_a_way_back(monkeypatch):
@@ -107,23 +121,23 @@ def test_the_form_screen_has_a_way_back(monkeypatch):
     minute and a dollar was stuck, and the browser's own Back left the
     site entirely."""
     at = _unlock(_app(monkeypatch).run())
-    next(b for b in at.button if b.label == "Build a report").click().run()
+    next(b for b in at.button if b.label == "Generate a report").click().run()
     assert any(b.label == "Back" for b in at.button)
 
     next(b for b in at.button if b.label == "Back").click().run()
-    assert any("Build a report" in lab for lab in _labels(at))
+    assert any("Generate a report" in lab for lab in _labels(at))
 
 
 def test_every_screen_can_be_reached_and_left(monkeypatch):
     """A round trip through each view, ending where it started."""
     at = _unlock(_app(monkeypatch).run())
-    for label in ("How it works", "Build a report"):
+    for label in ("Generate a report",):
         next(b for b in at.button if b.label == label).click().run()
         assert not at.exception, f"{label} raised"
         back = [b for b in at.button if b.label == "Back"]
         assert back, f"no way back from {label}"
         back[0].click().run()
-        assert any("Build a report" in lab for lab in _labels(at)), (
+        assert any("Generate a report" in lab for lab in _labels(at)), (
             f"did not return home from {label}"
         )
 
@@ -131,10 +145,10 @@ def test_every_screen_can_be_reached_and_left(monkeypatch):
 def test_the_view_is_in_the_url(monkeypatch):
     """So the browser's Back has something to go back to."""
     at = _unlock(_app(monkeypatch).run())
-    next(b for b in at.button if b.label == "How it works").click().run()
+    next(b for b in at.button if b.label == "Generate a report").click().run()
     # AppTest hands back the raw multi-value form.
     got = at.query_params.get("view")
-    assert (got[0] if isinstance(got, list) else got) == "about"
+    assert (got[0] if isinstance(got, list) else got) == "tool"
 
 
 def test_an_unknown_view_in_the_url_falls_back_to_home(monkeypatch):
@@ -142,7 +156,7 @@ def test_an_unknown_view_in_the_url_falls_back_to_home(monkeypatch):
     at.query_params["view"] = "nonsense"
     at.run()
     at = _unlock(at)
-    assert any("Build a report" in lab for lab in _labels(at))
+    assert any("Generate a report" in lab for lab in _labels(at))
 
 
 # --------------------------------------------------------- the samples

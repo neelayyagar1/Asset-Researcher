@@ -83,6 +83,18 @@ None inherited. No logo, no wordmark, no existing palette the user is
 attached to. The current editorial/print look is the builder's own earlier
 attempt and is explicitly up for replacement.
 
+**Standing visual commitment (chosen 2026-11-20).** The application shell
+executes the category canon at a high craft bar: the restraint register of
+Linear and Stripe. Near-white ground, hairline borders, a tight spacing
+scale, monospace for every figure, and colour withheld everywhere except
+the divergence count, which is the one number on the page that carries a
+judgement. This was chosen from four rendered comps against an
+accountant's-worksheet, an engineering-drawing and a giant-type direction;
+the owner picked the canon deliberately for a specific professional
+audience and asked for minimalism rather than invention. Execute it
+straight, at full fidelity, with no smuggled quirk. The research note keeps
+its own document world and is not restyled.
+
 Two commitments that are product truth rather than taste: published research
 conventions in tables and figures (fixed column order, dollars in millions,
 negatives in parentheses, multiples to one decimal with a trailing x, NM

@@ -776,29 +776,39 @@ def bullets(items: Sequence[str]) -> str:
 
 
 def home() -> str:
-    """The first screen past the gate.
+    """The first screen past the gate: what it is, and how to drive it.
 
-    One sentence, in the plainest words that are still accurate, and then
-    the ways in. What stood here before - "Read the filings, then read
-    what management said about them" over a second sentence about "the
-    narrative management wrapped around it" - was writing that enjoyed
-    itself. A reader who has not seen the product yet cannot tell from it
-    what the product does, which is the only job this screen has.
-
-    "Reads a company's SEC filings and writes a research note" is what it
-    does, in words that need no finance to parse. The three guarantees
-    beneath it carry the argument; this line only has to get a reader to
-    the buttons.
+    One sentence in the plainest words that are still accurate. What
+    stood here before - "Read the filings, then read what management
+    said about them" over a second sentence about "the narrative
+    management wrapped around it" - was writing that enjoyed itself. A
+    reader who has not seen the product cannot tell from it what the
+    product does, which is the only job this screen has.
     """
     return _one_line(
-        '<div class="ar-centered ar-home">'
-        "<h1>Asset Researcher</h1>"
-        '<p class="lede">Enter a US-listed ticker. The tool reads that '
-        "company's filings to the SEC, pulls the financial record out of "
-        "them, and writes a research note that cites every figure back to "
-        "the filing it came from.</p>"
-        "</div>"
+        '<div class="ar-head"><h1>Research notes from the filings '
+        "themselves</h1><p>Enter a US-listed ticker. Every figure is read "
+        "from the company's own SEC submissions, and every claim is traced "
+        "back to the document it came from.</p></div>"
     )
+
+
+def door_costs(has_samples: bool) -> str:
+    """Nothing, now, and the signature is kept because the caller is real.
+
+    This used to print what each way in cost - a minute and about a
+    dollar for a live report, free for a sample. It was removed on
+    request. The reasoning it was added for still holds (a reader who
+    clicks the filled button should not be surprised by a progress bar),
+    but a price quoted under the buttons reads as a product's pricing
+    page, and this is not a product being sold.
+
+    Returning the empty string rather than deleting the call, because
+    `write` is already a no-op on it and the home screen's composition
+    stays legible at the call site.
+    """
+    _ = has_samples
+    return ""
 
 
 _EDGAR_NOISE = re.compile(r"\s*/\w+\s*$")
@@ -840,24 +850,6 @@ def display_name(conformed: str) -> str:
     return " ".join(words)
 
 
-def door_costs(has_samples: bool) -> str:
-    """Nothing, now, and the signature is kept because the caller is real.
-
-    This used to print what each way in cost - a minute and about a
-    dollar for a live report, free for a sample. It was removed on
-    request. The reasoning it was added for still holds (a reader who
-    clicks the filled button should not be surprised by a progress bar),
-    but a price quoted under the buttons reads as a product's pricing
-    page, and this is not a product being sold.
-
-    Returning the empty string rather than deleting the call, because
-    `write` is already a no-op on it and the home screen's composition
-    stays legible at the call site.
-    """
-    _ = has_samples
-    return ""
-
-
 def samples_intro(count: int) -> str:
     """The sample gallery's own header.
 
@@ -882,18 +874,6 @@ def samples_intro(count: int) -> str:
     )
 
 
-def about(body_html: str) -> str:
-    """The written account, rendered inside the product.
-
-    A reader who has to leave for a repository to find out what they are
-    looking at usually does not come back.
-    """
-    return _one_line(
-        '<div class="ar-workspace ar-about">'
-        f'<div class="ar-prose">{body_html}</div></div>'
-    )
-
-
 def gate() -> str:
     """The passphrase screen: a name and a field.
 
@@ -905,9 +885,9 @@ def gate() -> str:
     and the only thing they came to do.
     """
     return _one_line(
-        '<div class="ar-centered ar-gate">'
+        '<div class="ar-gate"><span class="brand"><i></i></span>'
         "<h1>Asset Researcher</h1>"
-        "</div>"
+        "<p>Enter the passphrase you were sent.</p></div>"
     )
 
 
@@ -931,7 +911,7 @@ def home_foot() -> str:
             "it supports the claim, and the report says so.",
         ),
         (
-            "The counter-case is mandatory",
+            "The bear case is mandatory",
             "Each report states the strongest evidence against its own "
             "thesis, what would falsify it, and what the sources could not "
             "see.",
@@ -947,9 +927,107 @@ def home_foot() -> str:
 def workspace_intro() -> str:
     """The empty workspace, which is a form and should say what it wants."""
     return _one_line(
-        '<div class="ar-centered ar-workspace-intro">'
-        '<h1 class="ar-workspace-title">Generate a report</h1>'
-        '<p>Enter a US-listed ticker. The tool reads that company\'s SEC '
-        "filings and writes a note from them. It takes about a minute.</p>"
-        "</div>"
+        '<div class="ar-head"><h1>Generate a report</h1>'
+        "<p>About a minute. Every figure is read from the filing; the "
+        "model may not write a number.</p></div>"
+    )
+
+
+def topbar(active: str = "reports") -> str:
+    """The shell's one piece of persistent chrome.
+
+    A product that opens on a bare heading reads as a page; one that
+    opens on a bar reads as an application. The bar also gives the
+    reader a fixed place to find out where they are, which the previous
+    shell had nowhere at all.
+
+    The tabs are not links. Streamlit owns navigation and a real control
+    has to be a widget, so these are the labels and the buttons sit in
+    the page; marking the current one here keeps the reader oriented
+    without claiming to be clickable.
+    """
+    tabs = ("reports", "samples")
+    marks = "".join(
+        f'<span class="{"on" if name == active else ""}">{name.title()}</span>'
+        for name in tabs
+    )
+    return _one_line(
+        '<div class="ar-topbar"><span class="brand"><i></i>'
+        "Asset Researcher</span>"
+        f'<span class="tabs">{marks}</span>'
+        '<span class="meta">SEC EDGAR &middot; XBRL</span></div>'
+    )
+
+
+def head(title: str, note: str = "") -> str:
+    """A section heading and its one line of context."""
+    sub = f"<p>{_text(note)}</p>" if note else ""
+    return _one_line(
+        f'<div class="ar-head"><h1>{_text(title)}</h1>{sub}</div>'
+    )
+
+
+def card(body: str, label: str = "") -> str:
+    """A panel. Hairline edge, near-white fill, one radius."""
+    lbl = f'<div class="ar-lbl">{_text(label)}</div>' if label else ""
+    return _one_line(f'<div class="ar-card"><div class="pad">{lbl}{body}</div></div>')
+
+
+def flush_card(body: str) -> str:
+    """A panel whose content runs to its own edge, for a table."""
+    return _one_line(f'<div class="ar-card">{body}</div>')
+
+
+def kv_rows(pairs) -> str:
+    rows = "".join(
+        f'<div class="ar-kv"><span>{_text(k)}</span><b>{_text(v)}</b></div>'
+        for k, v in pairs
+    )
+    return _one_line(rows)
+
+
+def steps(items) -> str:
+    """Get Started: numbered actions, not claims.
+
+    The screen this replaces carried three guarantees about the product
+    and no instructions for using it, so a first-time reader learned
+    what it promised and not what to do. Instructions are a numbered
+    list because that is what instructions are.
+    """
+    rows = "".join(f'<div class="ar-step"><div class="t">{body}</div></div>'
+                   for body in items)
+    return _one_line(f'<div class="ar-steps">{rows}</div>')
+
+
+def report_rows(rows) -> str:
+    """The notes that exist, as a table.
+
+    This is the product's own output on the first screen. The strongest
+    trust signal available is a real research note, and the previous
+    home page showed none of it - a reader had to take three claims on
+    faith and click before seeing anything the tool had made.
+    """
+    if not rows:
+        return _one_line(
+            '<div class="ar-empty">No notes yet. Generate one and it '
+            "appears here.</div>"
+        )
+    head_html = (
+        "<tr><th>Ticker</th><th>Company</th><th class=\"num\">Headline</th>"
+        '<th class="num">Divergences</th><th class="num">Built</th></tr>'
+    )
+    body = []
+    for r in rows:
+        tone = r.get("tone", "")
+        klass = f"ar-count {tone}".strip()
+        body.append(
+            f'<tr><td class="tk">{_text(r["ticker"])}</td>'
+            f'<td class="co">{_text(r["company"])}</td>'
+            f'<td class="num">{_text(r["headline"])}</td>'
+            f'<td class="num"><span class="{klass}">'
+            f'{_text(r["divergences"])}</span></td>'
+            f'<td class="num co">{_text(r["built"])}</td></tr>'
+        )
+    return _one_line(
+        f'<table class="ar-list">{head_html}{"".join(body)}</table>'
     )

@@ -21,6 +21,7 @@ from __future__ import annotations
 
 import hmac
 import os
+import re
 import time
 
 import streamlit as st
@@ -263,56 +264,27 @@ def _sample_label(title: str) -> str:
     return ui.display_name(title)
 
 
-def _about_text() -> str:
-    """The how-it-works page, from the guide the repository carries.
+_LEAD_STAT = re.compile(
+    r'<div class="ar-stat lead"><div class="ar-stat-label">(.*?)</div>'
+    r'<div class="ar-stat-value[^"]*">(.*?)</div>',
+    re.S,
+)
 
-    One source, so the page a reviewer reads inside the product and the
-    document a reader finds in the repository cannot drift apart - but
-    not the whole of it. The guide also carries a worked example and a
-    link list, and neither answers "how does this work": a reader on this
-    page wants the mechanism, and a finding about one particular company
-    is an outcome, not an explanation. Those sections stay in the
-    repository where they belong.
 
-    Selecting by heading rather than slicing, so adding a section to the
-    guide does not silently add it here.
+def _headline_of(html: str) -> tuple[str, str]:
+    """The note's own lead statistic, or two empty strings.
+
+    Read out of the built note rather than recomputed, so the figure on
+    the index is the figure in the document by construction. A note that
+    declined to produce one returns empty and the cell stays blank: the
+    index may not be the one place in this product where a number
+    appears without a filing behind it.
     """
-    path = get_settings().repo_root / "docs" / "FOR-REVIEWERS.md"
-    try:
-        body = path.read_text(encoding="utf-8")
-    except OSError:
-        return "# How it works\n\nThe written guide did not ship with this build."
-
-    # "The problem" and "What makes it different from a chatbot over
-    # filings" are deliberately not here. Both argue for the tool, and
-    # this page was asked to explain how it works rather than to sell
-    # it; the pitch also repeated what the landing screen already says.
-    # They stay in docs/FOR-REVIEWERS.md, which is a written guide and
-    # is allowed to argue.
-    wanted = (
-        "How it is built",
-        "What it does not do",
-    )
-    out: list[str] = []
-    keeping = False
-    for line in body.splitlines():
-        if line.startswith("# ") and not line.startswith("## "):
-            # The document title, which is the page title here.
-            out.append(line)
-            continue
-        if line.startswith("## "):
-            keeping = line[3:].strip() in wanted
-        if keeping:
-            out.append(line)
-
-    # The closing disclaimer, wherever it sits, because it says what this
-    # is and that is squarely a how-it-works matter.
-    closing = [
-        ln.strip()
-        for ln in body.splitlines()
-        if ln.strip().startswith("Research assistance")
-    ]
-    return "\n".join(out + ([""] + closing if closing else [])).strip()
+    match = _LEAD_STAT.search(html or "")
+    if not match:
+        return "", ""
+    label, value = (re.sub(r"<[^>]+>", "", g).strip() for g in match.groups())
+    return label, value
 
 
 @st.cache_resource(show_spinner=False)
@@ -392,7 +364,7 @@ st.session_state.setdefault("report", None)
 # form returns as a dialog once a report is on screen, because at that
 # point it is a thing you reach for occasionally rather than the first
 # thing you meet.
-_VIEWS = ("home", "tool", "samples", "about")
+_VIEWS = ("home", "tool", "samples")
 
 
 def go(view: str) -> None:
@@ -703,53 +675,60 @@ def _run_pending() -> None:
 if st.session_state["view"] == "home" and report is None:
     _skip_link("ar-home", "Skip to start")
     write('<span id="ar-home" tabindex="-1"></span>')
+    write(ui.topbar("reports"))
     write(ui.home())
-    # Two ways in, because they cost different things. Building a note
-    # spends a real API call and takes about a minute; reading one that
-    # was already built costs nothing and is instant, which is what most
-    # first-time readers actually want. Saying so on the buttons is the
-    # difference between a visitor who waits and one who leaves.
-    # Reading a sample is the primary action, and it is the one that was
-    # outlined while the expensive one was filled. It shows the best work
-    # in the product, instantly, for nothing; building a report takes a
-    # minute and spends a real API call. A reviewer with four minutes
-    # should land on the first.
-    #
-    # Equal columns, and only as many as there are buttons. Weighted
-    # columns let the gutters set the spacing, so the three read as
-    # unrelated objects rather than as one choice; a trailing spacer
-    # column then squeezed each label until "Build a report" and "How it
-    # works" both wrapped onto two lines, which makes three buttons look
-    # like six fragments.
-    has_samples = bool(_samples())
-    actions = st.columns(3 if has_samples else 2)
-    if actions[0].button("Build a report", type="primary", key="enter"):
-        go("tool")
-    if actions[1].button("How it works", key="to_about"):
-        go("about")
-    if has_samples and actions[2].button("Read a sample", key="to_samples"):
-        go("samples")
-    # A key that is set and does not work is the owner's problem to see,
-    # not a feature that quietly disappears.
-    if st.session_state.get("samples_problem"):
-        write(ui.status("warning", "Samples", st.session_state["samples_problem"]))
-    # What each door costs, said where the choice is made rather than on
-    # a screen the reader has already dismissed.
-    write(ui.door_costs(has_samples))
-    write(ui.home_foot())
-    st.stop()
 
+    notes = _samples()
+    has_samples = bool(notes)
 
-# ------------------------------------------------------------------ about
+    # A real two-column layout, which is what host columns are for. The
+    # layout bug this shell replaced was host columns used to *centre* a
+    # button: each one centred inside its own column, so two buttons sat
+    # 167px apart at two different widths.
+    listing, rail = st.columns([1.9, 1], gap="medium")
 
-if st.session_state["view"] == "about" and report is None:
-    _skip_link("ar-about", "Skip to the text")
-    write('<span id="ar-about" tabindex="-1"></span>')
-    # base_level=2, so the document's own "#" is the page title rather
-    # than something smaller than its subheadings.
-    write(ui.about(markdown.to_html(_about_text(), base_level=2)))
-    if st.button("Back", key="about_back"):
-        go("home")
+    with listing:
+        rows = []
+        for note in notes:
+            label = _sample_label(note.title)
+            name, _, ticker = label.rpartition("(")
+            metric, value = _headline_of(note.html)
+            rows.append(
+                {
+                    "ticker": ticker.rstrip(")") or note.slug.upper(),
+                    "company": name.strip() or label,
+                    "headline": value,
+                    "divergences": metric,
+                    "built": "",
+                    "tone": "",
+                }
+            )
+        write(ui.head("Sample reports", "Built from live filings. Open one "
+                      "to see what the tool produces."))
+        write(ui.flush_card(ui.report_rows(rows)))
+
+    with rail:
+        write(ui.head("Get started"))
+        write(
+            ui.card(
+                ui.steps(
+                    (
+                        "Enter a US-listed ticker. For example <code>AAPL</code>",
+                        "Say how you invest, so the note is written to the "
+                        "way you actually hold things.",
+                        "Read the note. Every figure links back to the "
+                        "filing it was read from.",
+                    )
+                )
+            )
+        )
+        if st.button("Generate a report", type="primary", key="enter"):
+            go("tool")
+        if has_samples and st.button("Read a sample", key="to_samples"):
+            go("samples")
+        if st.session_state.get("samples_problem"):
+            write(ui.status("warning", "Samples",
+                            st.session_state["samples_problem"]))
     st.stop()
 
 

@@ -213,10 +213,13 @@ table.ar-table thead th, .ar-status .tag, .ar-finding-grid .lbl,
    Streamlit's own voice: 14px sentence-case regular, directly above a
    button that is 10px uppercase tracked. One label style means this one
    too. */
+/* Field labels in the shell's register: small, sentence case, quiet.
+   Tracked uppercase belonged to the editorial world this replaced, and
+   a label is read far more often than it is admired. */
 .stTextInput label, .stTextArea label, .stSelectbox label {
-  font-family: var(--sans); font-size: var(--t-label);
-  line-height: var(--t-label-lh); letter-spacing: var(--t-label-ls);
-  font-weight: 600; text-transform: uppercase; }
+  font-family: var(--sans); font-size: 12px; line-height: 1.4;
+  letter-spacing: -.004em; font-weight: 500; text-transform: none;
+  color: var(--shell-ink); }
 
 /* ------------------------------------------------------------ masthead */
 
@@ -699,94 +702,168 @@ button[data-testid="stExpandSidebarButton"]:hover,
 [data-testid="stSidebarCollapseButton"] button:hover {
   background: var(--ink); color: var(--paper); border-color: var(--ink); }
 
-.block-container { max-width: 1240px; padding: var(--s6) var(--s5) var(--s8);
+/* ===================================================== application shell
+
+   The shell executes the category canon at the Linear/Stripe craft bar,
+   recorded as a standing commitment in PRODUCT.md. Near-white ground,
+   hairline borders, one spacing scale, monospace figures, and colour
+   withheld everywhere except the divergence count.
+
+   It replaces a layout that measured, on one screen, four container
+   max-widths and three centre axes - because `text-align: center` was
+   applied to blocks carrying a max-width and no auto margin, so each
+   block centred inside its own box instead of on the page. The rule
+   below is the whole fix: ONE column, declared once, inherited by
+   everything. No descendant sets its own width.
+
+   Widths are whole pixels, never `ch`. A `ch` resolves against a
+   proportional face and produced 394.017px, 528.62px and 630.59px -
+   three edges no two blocks could ever share. */
+
+:root {
+  --shell-bg: #fcfcfd;
+  --shell-panel: #ffffff;
+  --shell-ink: #15161a;
+  --shell-soft: #50535c;
+  --shell-mute: #8b8e98;
+  --shell-line: #eceef1;      /* inside a panel */
+  --shell-line-2: #e2e4e9;    /* panel edge */
+  --shell-sink: #fbfbfc;      /* table head */
+  --shell-r: 7px;
+  --shell-r-lg: 10px;
+  --shell-shadow: 0 1px 2px rgba(18, 20, 26, .04);
+  --shell-col: 1120px;        /* the one column */
+  --shell-gut: 28px;
+}
+
+.stApp, [data-testid="stAppViewContainer"] { background: var(--shell-bg); }
+
+.block-container {
+  max-width: var(--shell-col);
+  padding: 26px var(--shell-gut) 64px;
   margin-inline: auto; }
 
-/* The narrow screens sit in the middle of the page, not against its left
-   edge. Measured before this rule at 1440px: the content column was 1240
-   and centred, but the gate inside it was 544 wide starting at x=124,
-   leaving 772px of empty paper to its right. The container was centred
-   and its contents were not, which reads as a layout that broke.
- 
-   Narrowing the container itself rather than the block inside it is what
-   centres the Streamlit widgets too - a button and a text input are
-   block elements in that column, so they follow its width and nothing
-   has to be centred twice. The report view carries no marker, because
-   sixteen-column tables need every pixel. */
-.block-container:has(.ar-centered) { max-width: 44rem; }
-.ar-centered { text-align: center; }
-/* Centres its own text and nothing else. For a screen whose heading
-   should sit in the middle while the content below it needs the full
-   column - a rendered note is 16 columns wide and must not be squeezed
-   into a reading measure. */
-/* A form inside a centred screen keeps its labels flush left. A label
-   centred over its own field is harder to scan down, and a caption of
-   two or three lines centred is the ragged-left problem again. The block
-   centres; its contents read normally. */
-.block-container:has(.ar-centered) .stTextInput,
-.block-container:has(.ar-centered) .stTextArea,
-.block-container:has(.ar-centered) .stSelectbox,
-.block-container:has(.ar-centered) [data-testid="stCaptionContainer"] {
-  text-align: left; }
+/* The report view needs every pixel a sixteen-column table asks for. */
+.block-container:has(.ar-report-view) { max-width: 1280px; }
 
-.ar-headline { text-align: center; }
-.ar-headline h1 { margin-inline: auto; }
-.ar-headline p { margin-inline: auto; max-width: 46rem; }
-/* Headings and the one-line description centre. Running prose does not:
-   a centred paragraph of several lines has a ragged left edge and is
-   measurably slower to read, so the written page centres its heading and
-   sets its body flush left. */
-.ar-centered h1 { margin-inline: auto; max-width: none; }
-.ar-centered .lede, .ar-centered > p { max-width: 34rem; }
-.ar-about { margin-inline: auto; text-align: left; }
-.ar-about h2 { text-align: center; }
+/* ----------------------------------------------------- shell furniture */
 
-/* The blocks themselves centre inside the column. Several carried a
-   max-width from when they sat against the left margin and had no auto
-   margin to go with it, so a 544px block sat at the left of a 704px
-   column - centred container, off-centre contents, which is the thing
-   that reads as broken. */
-.ar-centered, .ar-gate, .ar-home, .ar-workspace-intro {
-  margin-inline: auto; }
+.ar-topbar {
+  display: flex; align-items: center; gap: 28px;
+  height: 52px; margin: -26px calc(-1 * var(--shell-gut)) 24px;
+  padding: 0 var(--shell-gut);
+  border-bottom: 1px solid var(--shell-line); }
+.ar-topbar .brand {
+  display: flex; align-items: center; gap: 9px;
+  font-size: 13.5px; font-weight: 600; letter-spacing: -.012em;
+  color: var(--shell-ink); }
+.ar-topbar .brand i {
+  width: 16px; height: 16px; border-radius: 4px;
+  background: var(--shell-ink); display: block; }
+.ar-topbar .meta {
+  margin-left: auto; font-family: var(--mono); font-size: 11px;
+  color: var(--shell-mute); letter-spacing: .02em; }
 
-/* A control centres by its own margins, not by justifying its parent.
-   Streamlit lays each element out in a flex column and the container
-   shrink-wraps the button - measured at 87px inside a 656px column - so
-   `justify-content` on the parent moves nothing along the horizontal
-   axis, while an auto inline margin on a flex child does exactly that. */
-.block-container:has(.ar-centered)
-  [data-testid="stElementContainer"]:has(.stButton),
-.block-container:has(.ar-centered)
-  [data-testid="stElementContainer"]:has(.stFormSubmitButton),
-.block-container:has(.ar-centered)
-  [data-testid="stElementContainer"]:has(.stDownloadButton) {
-  margin-inline: auto; }
+.ar-head { margin-bottom: 14px; }
+.ar-head h1 {
+  font-family: var(--sans) !important; font-size: 15px !important;
+  font-weight: 600 !important; letter-spacing: -.015em !important;
+  line-height: 1.3 !important; color: var(--shell-ink); margin: 0; }
+.ar-head p {
+  font-size: 12.5px; color: var(--shell-mute); margin: 3px 0 0;
+  line-height: 1.5; }
 
-/* The passphrase field sits at the measure a passphrase needs. Scoped to
-   the gate: applied to every centred screen it also squeezed the ticker
-   field on the build form, where the fields beside it are full width. */
-.block-container:has(.ar-gate) [data-testid="stForm"],
-.block-container:has(.ar-gate) .stTextInput {
-  max-width: 22rem; margin-inline: auto; }
+.ar-card {
+  background: var(--shell-panel); border: 1px solid var(--shell-line-2);
+  border-radius: var(--shell-r-lg); box-shadow: var(--shell-shadow);
+  overflow: hidden; }
+.ar-card + .ar-card { margin-top: 16px; }
+.ar-card .pad { padding: 14px; }
+
+.ar-lbl {
+  font-size: 11px; letter-spacing: .04em; text-transform: uppercase;
+  color: var(--shell-mute); margin-bottom: 9px; }
+
+/* The reports table. Figures are monospace and right-aligned so a
+   column of them reads as a column. */
+table.ar-list { width: 100%; border-collapse: collapse; }
+table.ar-list th {
+  text-align: left; font-size: 11px; font-weight: 500;
+  color: var(--shell-mute); letter-spacing: .03em;
+  padding: 9px 16px; background: var(--shell-sink);
+  border-bottom: 1px solid var(--shell-line); }
+table.ar-list td {
+  padding: 11px 16px; border-bottom: 1px solid var(--shell-line);
+  font-size: 13px; color: var(--shell-ink); }
+table.ar-list tr:last-child td { border-bottom: 0; }
+table.ar-list td.co { color: var(--shell-soft); }
+table.ar-list td.tk { font-weight: 600; letter-spacing: -.01em; }
+table.ar-list th.num, table.ar-list td.num {
+  text-align: right; font-family: var(--mono); font-size: 12.5px;
+  font-feature-settings: "tnum" 1, "lnum" 1; }
+
+/* The only colour on the page. A divergence count is the one figure
+   here that carries a judgement, so it is the one that is allowed to
+   catch the eye. */
+/* Named `ar-count`, not `ar-pill`: the document stylesheet already owns
+   `.ar-pill` for the note's provenance chips, and two meanings on one
+   class name is how a shell change silently restyles a report. */
+.ar-count {
+  display: inline-flex; align-items: center; font-family: var(--mono);
+  font-size: 11px; padding: 2px 7px; border-radius: 5px;
+  background: #f3f4f6; color: var(--shell-soft); }
+.ar-count.hot { background: #fdf2f1; color: #b4231a; }
+.ar-count.cool { background: #f0f8f4; color: #16794f; }
+
+.ar-kv {
+  display: flex; justify-content: space-between; gap: 16px;
+  padding: 7px 0; font-size: 12.5px; color: var(--shell-soft); }
+.ar-kv + .ar-kv { border-top: 1px solid var(--shell-line); }
+.ar-kv b {
+  color: var(--shell-ink); font-weight: 500; font-family: var(--mono);
+  font-size: 12px; font-feature-settings: "tnum" 1; }
+
+/* Numbered steps. Get Started is instructions, so it is a list of
+   actions and not a row of marketing claims. */
+.ar-steps { counter-reset: step; }
+.ar-step {
+  display: grid; grid-template-columns: 26px 1fr; gap: 12px;
+  align-items: baseline; padding: 11px 0; }
+.ar-step + .ar-step { border-top: 1px solid var(--shell-line); }
+.ar-step:before {
+  counter-increment: step; content: counter(step, decimal-leading-zero);
+  font-family: var(--mono); font-size: 11px; color: var(--shell-mute); }
+.ar-step .t { font-size: 13px; color: var(--shell-ink); line-height: 1.5; }
+.ar-step .t span { color: var(--shell-soft); }
+.ar-step code {
+  font-family: var(--mono); font-size: 12px; background: #f4f5f7;
+  border-radius: 4px; padding: 1px 5px; color: var(--shell-ink); }
+
+.ar-empty {
+  padding: 28px 16px; text-align: center; color: var(--shell-mute);
+  font-size: 12.5px; line-height: 1.6; }
+
+/* ------------------------------------------------------------- the gate
+
+   One screen with one field. Everything on it - the mark, the title,
+   the line, the field and the button - is a child of one 320px column
+   that is itself centred, so there is a single centre line and nothing
+   can drift off it. The previous gate centred each block inside its own
+   max-width box and produced three. */
+.block-container:has(.ar-gate) { max-width: 320px; padding-top: 128px; }
+.ar-gate { text-align: center; margin-bottom: 20px; }
+.ar-gate .brand i {
+  width: 22px; height: 22px; border-radius: 6px; display: inline-block;
+  background: var(--shell-ink); margin-bottom: 18px; }
+.ar-gate h1 {
+  font-family: var(--sans) !important; font-size: 17px !important;
+  font-weight: 600 !important; letter-spacing: -.02em !important;
+  color: var(--shell-ink); margin: 0 !important; }
+.ar-gate p {
+  font-size: 12.5px; color: var(--shell-mute); margin: 5px 0 0; }
 .block-container:has(.ar-gate) [data-testid="stForm"] {
   border: 0; padding: 0; }
-
-/* The build form reads as one column of fields at a form's measure. */
-.block-container:has(.ar-centered) .stTextInput,
-.block-container:has(.ar-centered) .stTextArea,
-.block-container:has(.ar-centered) .stSelectbox,
-.block-container:has(.ar-centered) [data-testid="stCaptionContainer"] {
-  max-width: 32rem; margin-inline: auto; }
-.ar-centered .lede, .ar-centered p { margin-inline: auto; }
-.block-container:has(.ar-centered) .stButton > button,
-.block-container:has(.ar-centered) .stFormSubmitButton > button {
-  max-width: none; }
-/* A row of buttons centres as a row. Streamlit lays columns out as
-   flex, so the row is told to pack rather than spread. */
-.block-container:has(.ar-centered) [data-testid="stHorizontalBlock"] {
-  justify-content: center; }
-.block-container:has(.ar-centered) [data-testid="stColumn"] {
-  flex: 0 0 auto; min-width: 0; }
+.block-container:has(.ar-gate) .stTextInput label { display: none; }
 
 /* ------------------------------------------------------------- sidebar */
 
@@ -806,16 +883,17 @@ button[data-testid="stExpandSidebarButton"]:hover,
 
 .stTextInput input, .stTextArea textarea,
 .stSelectbox [data-baseweb="select"] > div {
-  font-family: var(--sans); font-size: var(--t-body); background: var(--paper);
-  border: 1px solid var(--rule); border-radius: 0; color: var(--ink);
-  box-shadow: none; transition: border-color 120ms var(--ease); }
+  font-family: var(--sans); font-size: 13px; background: var(--shell-panel);
+  border: 1px solid var(--shell-line-2); border-radius: var(--shell-r);
+  color: var(--shell-ink); box-shadow: none;
+  transition: border-color 120ms var(--ease); }
+.stTextInput input { font-family: var(--mono); font-size: 12.5px; }
 /* The ring is on the wrapper, because that is where the visible border
    is; `outline: none` on the inner input beat the global focus-visible
    rule and left keyboard users with no indication at all. */
 .stTextInput [data-baseweb="input"]:focus-within,
 .stTextArea [data-baseweb="textarea"]:focus-within {
-  border-color: var(--accent); outline: 2px solid var(--accent);
-  outline-offset: 1px; }
+  border-color: #a5a0f0; outline: 2px solid #4f46e5; outline-offset: 1px; }
 .stTextInput input::placeholder, .stTextArea textarea::placeholder {
   color: var(--ink-muted); opacity: 1; }
 
@@ -828,23 +906,35 @@ button[data-testid="stExpandSidebarButton"]:hover,
 [data-testid="stExpander"] summary *, .stTabs [data-baseweb="tab"] * {
   color: inherit; }
 
+/* Sentence case, not uppercase tracked: a tracked-caps button is the
+   editorial world this shell replaced, and at 11px it is measurably
+   slower to read than the label it encodes. Full width within its own
+   column, so two buttons in a row are the same size - they measured
+   166px and 155px with a 167px gap between them, because each was
+   centring inside its own host column rather than sharing a row. */
 .stButton > button, .stDownloadButton > button, .stFormSubmitButton > button {
-  font-family: var(--sans); font-size: var(--t-label);
-  letter-spacing: var(--t-label-ls); text-transform: uppercase;
-  font-weight: 600; border-radius: 0; border: 1px solid var(--ink);
-  background: var(--ink); color: var(--paper);
-  padding: var(--s3) var(--s4); box-shadow: none;
-  transition: color 120ms var(--ease), background-color 120ms var(--ease),
-    border-color 120ms var(--ease); }
-.stButton > button:hover, .stDownloadButton > button:hover {
-  background: var(--accent); border-color: var(--accent); color: #fff; }
+  font-family: var(--sans); font-size: 13px; letter-spacing: -.005em;
+  text-transform: none; font-weight: 500; border-radius: var(--shell-r);
+  border: 1px solid var(--shell-ink); background: var(--shell-ink);
+  color: #fff; width: 100%; min-height: 36px; padding: 0 16px;
+  box-shadow: 0 1px 2px rgba(18, 20, 26, .16);
+  transition: background-color 120ms var(--ease),
+    border-color 120ms var(--ease), color 120ms var(--ease); }
+.stButton > button:hover, .stFormSubmitButton > button:hover {
+  background: #26272d; border-color: #26272d; }
 .stDownloadButton > button, .stButton > button[kind="secondary"] {
-  background: transparent; color: var(--ink); }
-.stButton > button[kind="secondary"]:hover { background: var(--ink);
-  color: var(--paper); }
+  background: var(--shell-panel); color: var(--shell-ink);
+  border-color: var(--shell-line-2); box-shadow: var(--shell-shadow); }
+.stDownloadButton > button:hover,
+.stButton > button[kind="secondary"]:hover {
+  background: #f7f8f9; border-color: #d6d9df; color: var(--shell-ink); }
 .stButton > button:focus-visible, .stDownloadButton > button:focus-visible,
 .stFormSubmitButton > button:focus-visible {
-  outline: 2px solid var(--accent); outline-offset: 2px; }
+  outline: 2px solid #4f46e5; outline-offset: 2px; }
+
+/* A row of buttons shares one row and splits it evenly. */
+[data-testid="stHorizontalBlock"] { gap: 10px; }
+[data-testid="stColumn"] { min-width: 0; }
 
 /* `st.status` renders as an expander, not as its own element: there is no
    `stStatus` test id in this Streamlit build, and the rules that targeted
@@ -955,49 +1045,42 @@ hr { border-color: var(--rule); margin: var(--s5) 0; }
 
 .ar-doors { display: flex; gap: var(--s5); flex-wrap: wrap;
   margin-top: var(--s3); }
-.ar-about { max-width: 42rem; }
-.ar-about h1 { font-size: var(--t-d2); letter-spacing: var(--t-d2-ls);
-  margin: 0 0 var(--s4); }
-.ar-about h3 { margin-top: var(--s5); }
-.ar-about h4 { margin-top: var(--s4); }
-.ar-gate { max-width: 34rem; }
-.ar-gate h1 { max-width: none; }
-.ar-workspace-intro, .ar-workspace { max-width: 34rem; }
-.stTextInput, .stTextArea, .stSelectbox,
-[data-testid="stCaptionContainer"] { max-width: 34rem; }
-.stButton > button, .stFormSubmitButton > button { max-width: 34rem; }
-.ar-home { border-top: 2px solid var(--ink); padding-top: var(--s5);
-  padding-bottom: var(--s5); }
-.ar-home h1 { font-size: var(--t-d0); line-height: var(--t-d0-lh);
-  letter-spacing: var(--t-d0-ls); margin: 0 0 var(--s5);
-  /* Wraps on its own measure rather than on four hard `<br>`s, which
-     could not respond to width. */
-  max-width: 15ch; }
-.ar-home .lede { font-size: var(--t-read); line-height: var(--t-read-lh);
-  color: var(--ink-soft); margin: 0; max-width: 54ch; }
+/* The editorial shell that stood here is gone: `.ar-about` (its page
+   is deleted), `.ar-home`, `.ar-gate` and `.ar-workspace-intro` display
+   rules, the three-column `.ar-claims` row, and a block of `max-width`
+   declarations on controls.
 
-/* The three guarantees, ruled rather than boxed. Cards would make them
-   look like features; rules make them look like terms. */
-.ar-claims { display: grid; grid-template-columns: repeat(3, 1fr);
-  border-top: 1px solid var(--rule); margin-top: var(--s7); }
-.ar-claims > div { padding: var(--s5) var(--s5) var(--s6) 0; }
-.ar-claims > div + div { border-left: 1px solid var(--rule);
-  padding-left: var(--s5); }
-.ar-claims h2 { font-size: var(--t-h2); margin: 0 0 var(--s2); }
-.ar-claims p { font-size: var(--t-micro); line-height: 1.55; margin: 0; }
+   Those max-widths are the measured defect. `34rem` on a button, on
+   every input and on every caption, plus `15ch` on a heading and `54ch`
+   on a lede, is five independent widths inside one column - and `ch`
+   resolves against a proportional face, which is where 394.017px,
+   528.62px and 630.59px came from. Nothing in the shell sets its own
+   width now; everything inherits the one column. */
 
-/* ------------------------------------------------------- the workspace */
+/* Streamlit sizes an element container to its content, so a button
+   inside it measured 148px in a 362px column however wide the button
+   asked to be. The container is what has to fill the column. */
+[data-testid="stElementContainer"]:has(.stButton),
+[data-testid="stElementContainer"]:has(.stFormSubmitButton),
+[data-testid="stElementContainer"]:has(.stDownloadButton) { width: 100%; }
 
-.ar-workspace-intro { border-top: 2px solid var(--ink);
-  padding-top: var(--s4); margin-bottom: var(--s5); }
-/* An h1, because this screen's only heading was an h2 and a hierarchy
-   that starts at level two tells a screen-reader user the page title is
-   missing. Set at the same size it always was. */
-.ar-workspace-intro h1 { font-size: var(--t-d2);
-  letter-spacing: var(--t-d2-ls);
-  margin: 0 0 var(--s2); }
-.ar-workspace-intro p { font-size: var(--t-body); color: var(--ink-muted);
-  margin: 0; max-width: 46ch; }
+/* Every shell element names its own face. Streamlit's default
+   (Source Sans) reaches anything inside a markdown container that does
+   not, which put a third family on a page whose system has two plus a
+   monospace - and a third family is a Layer 2 fluency defect a reader
+   registers without being able to name it. */
+.ar-topbar, .ar-topbar *, .ar-head, .ar-head *, .ar-card, .ar-card *,
+.ar-step, .ar-step *, .ar-empty, .ar-kv, .ar-kv span, .ar-lbl,
+table.ar-list, table.ar-list th, table.ar-list td, .ar-gate, .ar-gate * {
+  font-family: var(--sans); }
+.ar-step code, .ar-kv b, table.ar-list td.num, table.ar-list th.num,
+.ar-count, .ar-topbar .meta { font-family: var(--mono); }
+
+.ar-topbar .tabs { display: flex; gap: 4px; align-items: center; }
+.ar-topbar .tabs span {
+  font-size: 13px; color: var(--shell-mute); padding: 5px 10px;
+  border-radius: 6px; font-weight: 500; }
+.ar-topbar .tabs span.on { color: var(--shell-ink); background: #f1f2f4; }
 
 /* The dialog that carries the form once a report is on screen. */
 [data-testid="stDialog"] div[role="dialog"] { border-radius: 0;
