@@ -801,27 +801,6 @@ def home() -> str:
     )
 
 
-def door_costs(has_samples: bool) -> str:
-    """What each way in costs, under the buttons that offer them.
-
-    The home screen offered three doors that cost wildly different
-    things and said so nowhere: a reviewer clicked the filled one and
-    then watched a progress bar for a minute. The information existed,
-    on the gate screen they had already dismissed.
-    """
-    if not has_samples:
-        return _one_line(
-            '<p class="ar-foot ar-doors">A report takes about a minute '
-            "and costs about a dollar in model usage.</p>"
-        )
-    return _one_line(
-        '<p class="ar-foot ar-doors">'
-        "<span>Samples are already built: instant, and free.</span>"
-        "<span>A new report takes about a minute and costs about a "
-        "dollar in model usage.</span></p>"
-    )
-
-
 _EDGAR_NOISE = re.compile(r"\s*/\w+\s*$")
 # Words that are acronyms rather than words, and would read wrongly in
 # title case. Short all-alpha tokens are kept as-is anyway; these are the
@@ -862,24 +841,21 @@ def display_name(conformed: str) -> str:
 
 
 def door_costs(has_samples: bool) -> str:
-    """What each way in costs, under the buttons that offer them.
+    """Nothing, now, and the signature is kept because the caller is real.
 
-    The home screen offered three doors that cost wildly different
-    things and said so nowhere: a reviewer clicked the filled one and
-    then watched a progress bar for a minute. The information existed,
-    on the gate screen they had already dismissed.
+    This used to print what each way in cost - a minute and about a
+    dollar for a live report, free for a sample. It was removed on
+    request. The reasoning it was added for still holds (a reader who
+    clicks the filled button should not be surprised by a progress bar),
+    but a price quoted under the buttons reads as a product's pricing
+    page, and this is not a product being sold.
+
+    Returning the empty string rather than deleting the call, because
+    `write` is already a no-op on it and the home screen's composition
+    stays legible at the call site.
     """
-    if not has_samples:
-        return _one_line(
-            '<p class="ar-foot ar-doors">A report takes about a minute '
-            "and costs about a dollar in model usage.</p>"
-        )
-    return _one_line(
-        '<p class="ar-foot ar-doors">'
-        "<span>Samples are already built: instant, and free.</span>"
-        "<span>A new report takes about a minute and costs about a "
-        "dollar in model usage.</span></p>"
-    )
+    _ = has_samples
+    return ""
 
 
 def samples_intro(count: int) -> str:
@@ -972,7 +948,7 @@ def workspace_intro() -> str:
     """The empty workspace, which is a form and should say what it wants."""
     return _one_line(
         '<div class="ar-centered ar-workspace-intro">'
-        '<h1 class="ar-workspace-title">Build a note</h1>'
+        '<h1 class="ar-workspace-title">Generate a report</h1>'
         '<p>Enter a US-listed ticker. The tool reads that company\'s SEC '
         "filings and writes a note from them. It takes about a minute.</p>"
         "</div>"

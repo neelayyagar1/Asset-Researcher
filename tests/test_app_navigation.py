@@ -93,7 +93,7 @@ def test_the_gate_raises_nothing_on_any_of_these(monkeypatch):
 
 @pytest.mark.parametrize(
     "label,marker",
-    [("Build a report", "Build a note"), ("How it works", "Asset Researcher")],
+    [("Build a report", "Generate a report"), ("How it works", "Asset Researcher")],
 )
 def test_each_home_button_reaches_its_screen(monkeypatch, label, marker):
     at = _unlock(_app(monkeypatch).run())

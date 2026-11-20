@@ -283,9 +283,13 @@ def _about_text() -> str:
     except OSError:
         return "# How it works\n\nThe written guide did not ship with this build."
 
+    # "The problem" and "What makes it different from a chatbot over
+    # filings" are deliberately not here. Both argue for the tool, and
+    # this page was asked to explain how it works rather than to sell
+    # it; the pitch also repeated what the landing screen already says.
+    # They stay in docs/FOR-REVIEWERS.md, which is a written guide and
+    # is allowed to argue.
     wanted = (
-        "The problem",
-        "What makes it different from a chatbot over filings",
         "How it is built",
         "What it does not do",
     )
