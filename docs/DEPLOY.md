@@ -154,6 +154,30 @@ people who can reach it are named, not that they cannot spend your
 balance: each report is a real API call against your key. Keep a separate
 key on anything deployed, and read the section below.
 
+### What a visitor's own reports do on that filesystem
+
+A report a visitor generates is written to disk so that clicking a row
+on the index cannot destroy it. Three things follow on Community
+Cloud, and all three are deliberate:
+
+- **It does not survive the container.** The filesystem is ephemeral,
+  which is the right lifetime for a demo and the wrong one for anything
+  a reviewer wants to keep. The note says so, and the download button
+  is the answer.
+- **Each visitor sees only their own.** The store is one directory per
+  container and every visitor shares the container, so reports are
+  written under a random per-session scope carried in the URL as `sid`.
+  Without it, a reviewer who generated a report on a name they were
+  considering would put that ticker at the top of the index for
+  everyone else holding the link.
+- **That scope is in the URL, so the URL carries it.** Anyone you send
+  a link to, after you have generated reports in that session, sees
+  those reports. Send the bare link.
+
+Nothing needs configuring for this. `REPORTS_DIR` overrides the
+location if you want it somewhere specific; unset, it is `.reports`
+beside the app, and it is gitignored.
+
 ### Before you make that link public
 
 The spend caps in `asset_researcher/config/settings.yaml` are the only
