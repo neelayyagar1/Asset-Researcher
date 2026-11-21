@@ -339,3 +339,35 @@ def test_a_title_without_a_ticker_does_not_fill_the_ticker_column(
         f"the company name is in the Ticker column: {ticker_cell!r}"
     )
     assert ticker_cell == saved.slug.split("-")[0].upper()
+
+
+def test_the_figures_are_still_readable_to_a_screen_reader():
+    """Taking the row down to one tab stop by marking six anchors
+    aria-hidden hid the TEXT inside them as well - the price, the
+    metric, the value, the filing date and the citation count are all
+    inside those anchors. A financial index whose figures are
+    invisible to a screen reader is worse than one with seven tab
+    stops, which is what the first version of this shipped.
+
+    The link is an overlay now: the anchor fills the cell and carries
+    no text, and the cell's text sits beside it in the open."""
+    html = ui.report_rows(WIDE, token="t")
+    row = html[html.index("<tr><td"):]
+    for figure in ("$301.71", "6.8%", "2026-08-05", "113/113",
+                   "Automatic Data Processing"):
+        # The LAST occurrence: the company name also appears inside
+        # the lead anchor's aria-label, which is the one place it is
+        # legitimately inside a tag.
+        index = row.rindex(figure)
+        before = row[:index]
+        opened = before.rfind("<a ")
+        closed = before.rfind("</a>")
+        assert closed > opened, (
+            f"{figure!r} sits inside an anchor; if that anchor is "
+            f"aria-hidden the figure is hidden with it"
+        )
+
+
+def test_the_overlay_links_carry_no_text_of_their_own():
+    html = ui.report_rows(WIDE, token="t")
+    assert "></a>" in html, "the row links still wrap their cell text"

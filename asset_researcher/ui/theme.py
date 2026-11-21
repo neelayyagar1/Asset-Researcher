@@ -958,12 +958,7 @@ button[data-testid="stExpandSidebarButton"]:hover,
 
 /* The reports table. Figures are monospace and right-aligned so a
    column of them reads as a column. */
-/* `height: 1px` is not the table's height - content wins - it is the
-   one portable way to give a cell a definite height for a percentage
-   child to resolve against. Without it `height: 100%` on the row link
-   computes to auto, which is what left a 21px dead band in every row
-   whose company name wrapped. */
-table.ar-list { width: 100%; border-collapse: collapse; height: 1px; }
+table.ar-list { width: 100%; border-collapse: collapse; }
 table.ar-list th {
   text-align: left; font-size: 11px; font-weight: 500;
   color: var(--shell-mute); letter-spacing: .03em;
@@ -983,18 +978,20 @@ table.ar-list tr:last-child td { border-bottom: 0; }
    that is the object the reader is pointing at - and the focus ring is
    drawn with an outline offset inward, since an outline on a table
    cell is otherwise clipped by the card's own edge. */
-table.ar-list td { padding: 0; height: 100%; }
-/* The anchor fills its cell's full height, not just its own text's.
-   Measured at 768px, where a company name wraps to two lines: the row
-   stood 62px and the single-line anchors beside it 41px, so a third
-   of five of the six rows was dead to a click - in the one design
-   whose whole point is that the row is the target. A table stretches
-   its cells to the row; a block inside one only takes its content. */
-a.ar-row-link {
-  display: flex; align-items: center; height: 100%;
-  padding: 11px 16px; color: inherit;
-  text-decoration: none; font: inherit; letter-spacing: inherit; }
-table.ar-list td.num a.ar-row-link { justify-content: flex-end; }
+/* The row link is an overlay: it fills its cell and carries no text,
+   so the figures stay in the cell where a screen reader can read
+   them. An earlier version wrapped the text and hid six anchors from
+   the accessibility tree to get the row to one tab stop, which hid
+   the figures with them.
+
+   Filling the cell is what makes the row a target with no dead
+   strip - a table stretches its cells to the row's height, and a
+   block inside one takes only its own content, which left 21px of a
+   62px row dead at the width where a company name wraps. `inset: 0`
+   on an absolutely positioned child of a positioned cell needs no
+   percentage height to resolve. */
+table.ar-list td { position: relative; padding: 11px 16px; }
+a.ar-row-link { position: absolute; inset: 0; }
 table.ar-list tr:hover td { background: var(--shell-row-hover); }
 table.ar-list tr:has(a.ar-row-link:focus-visible) td {
   background: var(--shell-row-hover); }
@@ -1005,12 +1002,11 @@ table.ar-list td.tk { font-weight: 600; letter-spacing: -.01em; }
 /* Filed and Cited are context rather than the figure a reader came
    for, so they are set a step back. They are still figures, so they
    keep the mono face and the right edge. */
-table.ar-list td.dim a.ar-row-link { color: var(--shell-mute); }
+table.ar-list td.dim { color: var(--shell-mute); }
 /* A figure does not wrap. At tablet width the Filed column broke
    "2026-08-05" across two lines, which makes a date look like two
    numbers and adds a line's height to every row in the table. */
-table.ar-list th.num, table.ar-list td.num a.ar-row-link {
-  white-space: nowrap; }
+table.ar-list th.num, table.ar-list td.num { white-space: nowrap; }
 table.ar-list th.num, table.ar-list td.num {
   text-align: right; font-family: var(--mono); font-size: 12.5px;
   font-feature-settings: "tnum" 1, "lnum" 1; }
@@ -1468,8 +1464,7 @@ table.ar-list th.num { font-family: var(--sans); letter-spacing: .03em; }
   /* The padding moved onto the row link, so the phone rule has to
      follow it there or the rows keep their desktop height. */
   table.ar-list th { padding: 9px 10px; }
-  table.ar-list td { padding: 0; }
-  a.ar-row-link { padding: 9px 10px; }
+  table.ar-list td { padding: 9px 10px; }
 }
 
 /* The note's section index, lifted into the shell so it has a

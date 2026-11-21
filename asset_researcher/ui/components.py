@@ -1113,39 +1113,40 @@ def report_rows(rows, token: str = "", scope: str = "") -> str:
         if scope:
             query["sid"] = scope
         href = _text("?" + urlencode(query))
-        # One anchor in the tab order, named for the whole row; the
-        # other six clickable and silent.
+        # The link is an OVERLAY, not a wrapper.
         #
-        # Every cell carries an anchor so the row is a hit target with
-        # no dead strip - `<a>` cannot sit between `<tr>` and `<td>`,
-        # so a row-shaped target has to be built from cells. That is
-        # right for a pointer and was wrong for everything else: seven
-        # tab stops per row, forty-two for six reports, each
-        # announcing only its own cell ("6.8%, link"), and a cell with
-        # no figure giving an anchor whose entire accessible name was
-        # an em dash.
+        # Every cell carries one so the row is a hit target with no
+        # dead strip - `<a>` cannot sit between `<tr>` and `<td>`, so
+        # a row-shaped target has to be built from cells. The first
+        # version wrapped each cell's text in its anchor and marked
+        # six of the seven aria-hidden to get the row down to one tab
+        # stop. That hid the TEXT with them: the price, the metric,
+        # the value, the filing date and the citation count are
+        # inside those anchors, so the whole table went silent to a
+        # screen reader. Worse than the seven stops it fixed.
         #
-        # The pointer behaviour is unchanged: `tabindex="-1"` and
-        # `aria-hidden` remove an element from the tab order and the
-        # accessibility tree, not from the mouse, and the row's
-        # focus-within rule still fires because the focusable anchor
-        # is inside the row.
+        # So the anchor carries no text, fills its cell from the
+        # stylesheet, and the cell's text sits beside it in the open.
+        # One anchor is focusable and named for the whole row; the
+        # other six are out of the tab order and the accessibility
+        # tree, and remain clickable, because neither attribute
+        # removes an element from the mouse.
         named = _text(f'{r["ticker"]}, {r["company"]}, open report')
         lead_link = (
-            f'<a href="{href}" class="ar-row-link" aria-label="{named}">'
+            f'<a href="{href}" class="ar-row-link" aria-label="{named}"></a>'
         )
         link = (
             f'<a href="{href}" class="ar-row-link" tabindex="-1" '
-            f'aria-hidden="true">'
+            f'aria-hidden="true"></a>'
         )
         body.append(
-            f'<tr><td class="tk">{lead_link}{_text(r["ticker"])}</a></td>'
-            f'<td class="co">{link}{_text(r["company"])}</a></td>'
-            f'<td class="num">{link}{price}</a></td>'
-            f'<td class="co">{link}{metric}</a></td>'
-            f'<td class="num">{link}{value}</a></td>'
-            f'<td class="num dim">{link}{filed}</a></td>'
-            f'<td class="num dim">{link}{cited}</a></td></tr>'
+            f'<tr><td class="tk">{lead_link}{_text(r["ticker"])}</td>'
+            f'<td class="co">{link}{_text(r["company"])}</td>'
+            f'<td class="num">{link}{price}</td>'
+            f'<td class="co">{link}{metric}</td>'
+            f'<td class="num">{link}{value}</td>'
+            f'<td class="num dim">{link}{filed}</td>'
+            f'<td class="num dim">{link}{cited}</td></tr>'
         )
     return _one_line(
         f'<table class="ar-list">{header}{"".join(body)}</table>'
