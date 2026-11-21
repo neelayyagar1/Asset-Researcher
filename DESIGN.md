@@ -14,7 +14,10 @@ colors:
   shell-ink-hover: "#26272d"
   shell-secondary-hover: "#f7f8f9"
   shell-secondary-hover-line: "#d6d9df"
-  focus-ring: "#4f46e5"
+  # Declared in the stylesheet as --shell-focus and used by every
+  # focus ring in the shell, including the bypass link, whose ring was
+  # the replaced world's paper colour at 1.04:1 until it was measured.
+  shell-focus: "#4f46e5"
   count-fill: "#f3f4f6"
   count-hot-ink: "#b4231a"
   count-hot-fill: "#fdf2f1"
@@ -698,9 +701,11 @@ lift, and no shadow on the note.
 **The shell is softly rounded on a two-step pair.** `--shell-r` (7px) is the
 control radius - every button, text input, textarea and select. `--shell-r-lg`
 (10px) is the panel radius, used on the card and nothing else. Below those sit
-two small radii for small objects: 5px on the count chip, 4px on inline code, on
-the topbar's brand mark (16px square) and on the reveal toggle's focus ring. The
-gate's brand mark is the same square at 22px with a 6px radius. The recurring
+one small radius for small objects, `--shell-r-sm` (5px): the product mark in
+the bar (16px square) and on the gate (22px square), inline code, and the reveal
+toggle's focus ring. The mark was drawn at 4px in the bar and 6px on the gate -
+the same object at two shapes, forty pixels apart on the only screen that shows
+both in sequence - and that is now one declared token. The recurring
 shell silhouettes are the hairline-bordered rounded panel, the rounded figure
 chip, and the small solid ink square that stands in for a logo.
 
@@ -715,7 +720,14 @@ with surface text, nudged `-0.34em` onto the title's baseline.
 
 ### Named Rules
 **The Two Radii Rule (shell).** 7px for anything a user operates, 10px for a
-panel. A third structural radius is a new rank nobody asked for.
+panel. A third STRUCTURAL radius is a new rank nobody asked for; `--shell-r-sm`
+(5px) is not one, because it dresses objects smaller than a control rather than
+introducing a rank between them.
+
+**Mask stops are not palette colours.** The nav's overflow fade uses `#000` and
+`transparent` inside a `mask-image`, where a mask reads luminance: black means
+opaque and transparent means cut. It is an alpha value wearing a colour's
+notation, and it is the only `#000` in the stylesheet.
 
 **The Square Note Rule.** Nothing in the exported note has a corner radius. A
 rounded element inside the note is a host-framework default that escaped.

@@ -519,6 +519,8 @@ table.ar-table tbody tr.subject td.nm {
   /* Seventeen sections overflow the measure at any realistic width. The
      mask says so: without it the last label was cut mid-word and 600px of
      navigation was invisible and unsignalled. */
+  /* #000 here is an alpha stop, not a palette colour: a mask reads
+     luminance, so black means opaque and transparent means cut. */
   mask-image: linear-gradient(90deg, #000 calc(100% - 44px), transparent);
   -webkit-mask-image: linear-gradient(90deg, #000 calc(100% - 44px), transparent); }
 .ar-nav::-webkit-scrollbar { display: none; }
@@ -740,6 +742,11 @@ button[data-testid="stExpandSidebarButton"]:hover,
      ring is drawn. */
   --shell-focus: #4f46e5;
   --shell-sink: #fbfbfc;      /* table head */
+  /* Three radii, and the mark is one of them. The two product marks
+     were drawn at 4px in the bar and 6px on the gate - the same object
+     at two shapes, forty pixels apart on the only screen that shows
+     both in sequence. */
+  --shell-r-sm: 5px;
   --shell-r: 7px;
   --shell-r-lg: 10px;
   --shell-shadow: 0 1px 2px rgba(18, 20, 26, .04);
@@ -776,7 +783,7 @@ button[data-testid="stExpandSidebarButton"]:hover,
   font-size: 13.5px; font-weight: 600; letter-spacing: -.012em;
   color: var(--shell-ink); }
 .ar-topbar .brand i {
-  width: 16px; height: 16px; border-radius: 4px;
+  width: 16px; height: 16px; border-radius: var(--shell-r-sm);
   background: var(--shell-ink); display: block; }
 .ar-topbar .meta {
   margin-left: auto; font-family: var(--mono); font-size: 11px;
@@ -878,7 +885,8 @@ table.ar-list th.num, table.ar-list td.num {
 .block-container:has(.ar-gate) { max-width: 320px; padding-top: 128px; }
 .ar-gate { text-align: center; margin-bottom: 20px; }
 .ar-gate .brand i {
-  width: 22px; height: 22px; border-radius: 6px; display: inline-block;
+  width: 22px; height: 22px; border-radius: var(--shell-r-sm);
+  display: inline-block;
   background: var(--shell-ink); margin-bottom: 18px; }
 .ar-gate h1 {
   font-family: var(--sans) !important; font-size: 17px !important;
