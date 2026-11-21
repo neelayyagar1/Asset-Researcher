@@ -20,6 +20,8 @@ import pathlib
 import pytest
 from streamlit.testing.v1 import AppTest
 
+from tests.apptest_helpers import page_text, rendered_markup
+
 from asset_researcher.hosting import samples as samples_mod
 
 APP = str(pathlib.Path(__file__).resolve().parents[1] / "app.py")
@@ -111,7 +113,7 @@ def test_the_samples_screen_can_be_left_in_both_directions(
 
     next(b for b in at.button if b.label == "Back").click().run()
     assert not at.exception
-    assert "Get started" in " ".join(m.value for m in at.markdown)
+    assert "Get started" in page_text(at)
 
 
 def test_home_lists_the_notes_with_their_own_headline_figure(
@@ -121,11 +123,12 @@ def test_home_lists_the_notes_with_their_own_headline_figure(
     document. Breaking it: change the regex in `_headline_of` and the
     cells fall back to em dashes."""
     at = _unlock(_app(monkeypatch, samples_key=KEY).run())
-    text = " ".join(m.value for m in at.markdown)
+    text = page_text(at)
     assert "31.4x" in text and "14.7x" in text
     assert "Price / earnings" in text and "Price / FFO" in text
     # And the ticker is pulled out of the EDGAR-conformed title.
-    assert ">AAPL<" in text and ">O<" in text
+    markup = rendered_markup(at)
+    assert ">AAPL<" in markup and ">O<" in markup
 
 
 # ------------------------------------------------------------- the form
@@ -138,7 +141,7 @@ def test_the_form_refuses_an_empty_ticker_and_queues_nothing(monkeypatch):
     next(b for b in at.button if b.label == "Generate report").click().run()
 
     assert not at.exception
-    assert "Enter a ticker" in " ".join(m.value for m in at.markdown)
+    assert "Enter a ticker" in page_text(at)
     assert "pending" not in at.session_state or not at.session_state["pending"]
 
 
@@ -202,8 +205,21 @@ def built_report(tmp_path):
 
 
 def _with_report(monkeypatch, report):
+    """A session holding a report, on the report view.
+
+    Both are needed now. The report used to render whenever one existed,
+    whatever the view said, which is precisely what made Home a dead
+    button; setting the view here is the test following the fix rather
+    than the fix being bent to the test.
+    """
     at = _unlock(_app(monkeypatch).run())
     at.session_state["report"] = report
+    # The query string, not session state: the URL is authoritative and
+    # `_sync_view_from_url` runs on every rerun, so a view written only
+    # into session state is overwritten on the next pass. That is the
+    # app behaving correctly - the address bar is the source of truth -
+    # and the test has to enter the screen the way a reader does.
+    at.query_params["view"] = "report"
     return at.run()
 
 
@@ -221,21 +237,51 @@ def test_the_report_screen_carries_the_shell_chrome(monkeypatch, built_report):
     # a markdown block and contains every selector as text, so a bare
     # substring search passes even when nothing renders the component -
     # confirmed by blanking the write() and watching this still pass.
-    text = " ".join(m.value for m in at.markdown)
-    assert '<div class="ar-topbar">' in text
+    assert '<div class="ar-topbar">' in rendered_markup(at)
 
 
 def test_the_report_screen_can_be_left_without_the_browser(
     monkeypatch, built_report
 ):
-    """The only exit used to be the browser's Back, which discards the
-    report. Leaving is a control in the page."""
+    """Home has to actually go home.
+
+    It did not. Every other screen was gated on `report is None`, so a
+    session holding a report rendered the report whatever the view said:
+    the button changed the view, the page re-rendered the note, and the
+    only real exit remained the browser's Back - which discards it.
+    """
     at = _with_report(monkeypatch, built_report)
     assert any(b.label == "Home" for b in at.button), _labels(at)
 
     next(b for b in at.button if b.label == "Home").click().run()
     assert not at.exception
-    assert "Get started" in " ".join(m.value for m in at.markdown)
+    assert "Get started" in page_text(at), (
+        "Home did not leave the report screen"
+    )
+
+
+def test_leaving_the_report_does_not_discard_it(monkeypatch, built_report):
+    """A note costs a minute and about a dollar. Navigating away from one
+    may not be the same act as throwing it away."""
+    at = _with_report(monkeypatch, built_report)
+    next(b for b in at.button if b.label == "Home").click().run()
+    assert at.session_state["report"] is not None, (
+        "going home destroyed the report"
+    )
+
+
+def test_home_offers_the_way_back_to_a_report_it_still_holds(
+    monkeypatch, built_report
+):
+    """Keeping it is only useful if it can be reached again."""
+    at = _with_report(monkeypatch, built_report)
+    next(b for b in at.button if b.label == "Home").click().run()
+    # On home, not still on the report: otherwise "New report" satisfies
+    # a loose match and the test proves nothing.
+    assert "Get started" in page_text(at)
+    assert any(b.label == "Return to report" for b in at.button), (
+        f"no way back to the held report; buttons were {_labels(at)}"
+    )
 
 
 def test_the_report_offers_both_exports(monkeypatch, built_report):
@@ -275,5 +321,4 @@ def test_the_report_marks_itself_for_the_wider_column(
     was declared and never emitted, so the screen that needs the width
     for a sixteen-column comparables table rendered in the standard one."""
     at = _with_report(monkeypatch, built_report)
-    text = " ".join(m.value for m in at.markdown)
-    assert '<span class="ar-report-view"' in text
+    assert '<span class="ar-report-view"' in rendered_markup(at)

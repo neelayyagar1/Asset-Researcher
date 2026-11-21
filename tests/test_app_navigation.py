@@ -19,6 +19,8 @@ import pathlib
 import pytest
 from streamlit.testing.v1 import AppTest
 
+from tests.apptest_helpers import page_text, rendered_markup
+
 APP = str(pathlib.Path(__file__).resolve().parents[1] / "app.py")
 PHRASE = "test-only-passphrase"
 
@@ -46,7 +48,7 @@ def _unlock(at):
 
 def test_the_gate_stops_an_unauthenticated_visitor(monkeypatch):
     at = _app(monkeypatch).run()
-    text = " ".join(m.value for m in at.markdown)
+    text = page_text(at)
     assert "Asset Researcher" in text
     # Nothing that spends money is on the page.
     assert not any("Generate a report" in lab for lab in _labels(at))
@@ -99,12 +101,12 @@ def test_the_home_button_reaches_the_form(monkeypatch):
     at = _unlock(_app(monkeypatch).run())
     next(b for b in at.button if b.label == "Generate a report").click().run()
     assert not at.exception
-    assert "Generate a report" in " ".join(m.value for m in at.markdown)
+    assert "Generate a report" in page_text(at)
 
 
 def test_home_carries_the_instructions_itself(monkeypatch):
     at = _unlock(_app(monkeypatch).run())
-    text = " ".join(m.value for m in at.markdown)
+    text = page_text(at)
     assert "Get started" in text
     assert "US-listed ticker" in text
 
@@ -176,7 +178,7 @@ def test_a_key_that_does_not_open_the_archive_is_reported(monkeypatch):
     at.text_input(key="gate_input").set_value(PHRASE)
     at.button[0].click().run()
     assert not at.exception
-    text = " ".join(m.value for m in at.markdown)
+    text = page_text(at)
     assert "SAMPLES_KEY" in text
 
 
@@ -197,7 +199,7 @@ def test_the_samples_view_survives_having_no_samples(monkeypatch):
     at = _unlock(at.run())
     assert not at.exception, "the samples view raised with no archive"
 
-    text = " ".join(m.value for m in at.markdown)
+    text = page_text(at)
     assert "No sample notes shipped" in text
     # And it offers a way on, rather than being a dead end.
     assert any("Generate a report" in b.label for b in at.button)

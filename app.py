@@ -370,7 +370,7 @@ st.session_state.setdefault("report", None)
 # form returns as a dialog once a report is on screen, because at that
 # point it is a thing you reach for occasionally rather than the first
 # thing you meet.
-_VIEWS = ("home", "tool", "samples")
+_VIEWS = ("home", "tool", "samples", "report")
 
 
 def go(view: str) -> None:
@@ -748,11 +748,15 @@ def _run_pending() -> None:
         return
     if fresh is not None:
         st.session_state["report"] = fresh
+        # A finished run is its own screen. Without this the report was
+        # not a view at all: it rendered whenever one existed, whatever
+        # the view said, which is what made Home a dead button.
+        st.session_state["view"] = "report"
 
 
 # ------------------------------------------------------------------- home
 
-if st.session_state["view"] == "home" and report is None:
+if st.session_state["view"] == "home":
     _skip_link("ar-home", "Skip to start")
     write('<span id="ar-home" tabindex="-1"></span>')
     write(ui.topbar("reports"))
@@ -806,6 +810,13 @@ if st.session_state["view"] == "home" and report is None:
         )
         if st.button("Generate a report", type="primary", key="enter"):
             go("tool")
+        # A held report is reachable again. Leaving one is navigation,
+        # not disposal: it cost a minute and about a dollar, so the only
+        # thing that throws it away is the browser's own Back, which
+        # asks first.
+        if st.session_state.get("report") is not None:
+            if st.button("Return to report", key="back_to_report"):
+                go("report")
         if has_samples and st.button("Read a sample", key="to_samples"):
             go("samples")
         if st.session_state.get("samples_problem"):
@@ -816,7 +827,7 @@ if st.session_state["view"] == "home" and report is None:
 
 # ---------------------------------------------------------------- samples
 
-if st.session_state["view"] == "samples" and report is None:
+if st.session_state["view"] == "samples":
     _skip_link("ar-samples", "Skip to the samples")
     write('<span id="ar-samples" tabindex="-1"></span>')
     # Not `samples`: that is the module, imported above, and rebinding it
@@ -893,7 +904,13 @@ if st.session_state["view"] == "samples" and report is None:
 _run_pending()
 report = st.session_state.get("report")
 
-if report is None:
+# Only the report view shows a report, and it needs one to show. A view
+# asking for a report that is no longer held falls back to the form
+# rather than rendering a blank screen.
+if st.session_state["view"] == "report" and report is None:
+    st.session_state["view"] = "tool"
+
+if st.session_state["view"] != "report" or report is None:
     _skip_link("ar-form", "Skip to the form")
     # One column. This was `st.columns([1.15, 1])` with nothing ever
     # written to the right half, so the screen where a reader decides
