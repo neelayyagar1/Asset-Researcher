@@ -788,8 +788,9 @@ def home() -> str:
     return _one_line(
         '<div class="ar-head"><h1>Research notes from the filings '
         "themselves</h1><p>Enter a US-listed ticker. Every figure is read "
-        "from the company's own SEC submissions, and every claim is traced "
-        "back to the document it came from.</p></div>"
+        "from the company's own SEC submissions, and every claim carries a "
+        "quote located in the filing it came from &mdash; located, which is "
+        "not the same as supporting it.</p></div>"
     )
 
 
@@ -851,26 +852,38 @@ def display_name(conformed: str) -> str:
 
 
 def samples_intro(count: int) -> str:
-    """The sample gallery's own header.
+    """The samples screen's own header.
 
-    Says what these are and what they cost, because a reader who does not
-    know whether a page is live output or a canned screenshot discounts
-    it either way.
+    Says what these are, because a reader who cannot tell live output
+    from a canned screenshot discounts it either way. Phrased for a
+    count it actually has: the previous version interpolated the number
+    unconditionally and rendered "0 notes, built from live SEC filings"
+    on a screen that had crashed below the fold.
     """
     return _one_line(
-        # ar-headline, not ar-centered: this heading centres, and the
-        # column stays full width. Narrowing it to a reading measure made
-        # the note iframe below about 656px wide, which is under the
-        # 900px breakpoint, so a reader on a 1440px screen got the phone
-        # layout of the note - including the rule that unsticks the table
-        # header, which is why the comparables header row scrolled out of
-        # view and looked cut off.
-        '<div class="ar-headline ar-workspace-intro">'
-        "<h1>Sample notes</h1>"
+        '<div class="ar-head"><h1>Sample notes</h1>'
         f"<p>{escape_text(plural(count, 'note'))}, built from live SEC "
-        "filings by the same pipeline the tool runs. Nothing here is a "
-        "mock-up and nothing is re-generated when you open it, so reading "
-        "one is instant and costs nothing.</p></div>"
+        "filings by the same pipeline the tool runs. Nothing is a mock-up "
+        "and nothing is regenerated when you open it, so reading one is "
+        "instant and costs nothing.</p></div>"
+    )
+
+
+def samples_empty() -> str:
+    """What the samples screen says when no archive shipped.
+
+    A normal state for a deployment that carries none, and a reachable
+    one here: the view is addressable by URL, so a bookmark, a paste or
+    the browser's Back reaches it whether or not the button that leads
+    there was rendered. It used to build a radio over an empty list and
+    raise StopIteration into a red panel - the single most expensive
+    thing that can happen on a credibility artifact.
+    """
+    return _one_line(
+        '<div class="ar-head"><h1>Sample notes</h1></div>'
+        '<div class="ar-card"><div class="ar-empty">No sample notes '
+        "shipped with this build. Generate a report and it will be built "
+        "from live filings.</div></div>"
     )
 
 
@@ -891,39 +904,6 @@ def gate() -> str:
     )
 
 
-def home_foot() -> str:
-    """Three claims, under the fold, as a ruled row rather than cards.
-
-    What the product guarantees, stated where it can be read after the
-    proposition has landed rather than competing with it.
-    """
-    claims = (
-        (
-            "Every figure is filed",
-            "Financial data is read from the company's own XBRL submissions "
-            "to the SEC. No figure is model-generated, and the ones computed "
-            "from filed lines are marked as computed.",
-        ),
-        (
-            "Every claim is located",
-            "Narrative statements carry a citation resolved against the "
-            "stored source text. Locating a quote is not establishing that "
-            "it supports the claim, and the report says so.",
-        ),
-        (
-            "The bear case is mandatory",
-            "Each report states the strongest evidence against its own "
-            "thesis, what would falsify it, and what the sources could not "
-            "see.",
-        ),
-    )
-    blocks = "".join(
-        f"<div><h2>{_text(title)}</h2><p>{_text(body)}</p></div>"
-        for title, body in claims
-    )
-    return _one_line(f'<div class="ar-claims">{blocks}</div>')
-
-
 def workspace_intro() -> str:
     """The empty workspace, which is a form and should say what it wants."""
     return _one_line(
@@ -937,24 +917,29 @@ def topbar(active: str = "reports") -> str:
     """The shell's one piece of persistent chrome.
 
     A product that opens on a bare heading reads as a page; one that
-    opens on a bar reads as an application. The bar also gives the
-    reader a fixed place to find out where they are, which the previous
-    shell had nowhere at all.
+    opens on a bar reads as an application, and the bar gives a reader a
+    fixed place to learn where they are.
 
-    The tabs are not links. Streamlit owns navigation and a real control
-    has to be a widget, so these are the labels and the buttons sit in
-    the page; marking the current one here keeps the reader oriented
-    without claiming to be clickable.
+    It used to carry two rounded, padded pills - "Reports" and
+    "Samples" - with the current one chipped in a tint. In this register
+    that shape means "tab", and neither was clickable from anywhere:
+    Streamlit owns navigation and a real control has to be a widget, so
+    these were spans. A dead tab bar is the first thing a reader tries
+    and the first thing that fails. The tint also measured 1.09:1
+    against the page, so the state it signalled was invisible anyway,
+    and being spans rather than links it reached a screen reader as
+    nothing at all.
+
+    Now it names the current screen in words, once, with no pill, no
+    radius and no inactive sibling to invite a click. Navigation lives
+    in the page, in real buttons.
     """
-    tabs = ("reports", "samples")
-    marks = "".join(
-        f'<span class="{"on" if name == active else ""}">{name.title()}</span>'
-        for name in tabs
-    )
+    name = {"reports": "Reports", "samples": "Samples",
+            "tool": "New report"}.get(active, active.title())
     return _one_line(
         '<div class="ar-topbar"><span class="brand"><i></i>'
         "Asset Researcher</span>"
-        f'<span class="tabs">{marks}</span>'
+        f'<span class="where" aria-current="page">{_text(name)}</span>'
         '<span class="meta">SEC EDGAR &middot; XBRL</span></div>'
     )
 
@@ -1024,8 +1009,12 @@ def report_rows(rows) -> str:
     )
     body = []
     for r in rows:
-        metric = _text(r["metric"]) or "&mdash;"
-        value = _text(r["value"]) or "&mdash;"
+        # Tested before escaping: `_text("")` returns "&nbsp;", which is
+        # truthy, so an `or` after it never fell through and a note that
+        # declined a lead statistic rendered a non-breaking space under a
+        # column headed "Value".
+        metric = _text(r["metric"]) if r["metric"] else "&mdash;"
+        value = _text(r["value"]) if r["value"] else "&mdash;"
         body.append(
             f'<tr><td class="tk">{_text(r["ticker"])}</td>'
             f'<td class="co">{_text(r["company"])}</td>'

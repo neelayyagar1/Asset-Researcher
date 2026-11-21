@@ -178,3 +178,43 @@ def test_a_key_that_does_not_open_the_archive_is_reported(monkeypatch):
     assert not at.exception
     text = " ".join(m.value for m in at.markdown)
     assert "SAMPLES_KEY" in text
+
+
+# ------------------------------------------------- reachable-by-URL views
+
+def test_the_samples_view_survives_having_no_samples(monkeypatch):
+    """It did not. With no archive the view built a radio over an empty
+    option list and `next()` raised StopIteration, which Streamlit shows
+    as a red error panel.
+
+    The button that leads here is hidden without an archive, but the view
+    is addressable: `go()` writes the view into the query string and the
+    URL is adopted on load, so a bookmark, a pasted link, a reload or the
+    browser's Back all reach it. A hidden entry point is not a guard.
+    """
+    at = _app(monkeypatch)
+    at.query_params["view"] = "samples"
+    at = _unlock(at.run())
+    assert not at.exception, "the samples view raised with no archive"
+
+    text = " ".join(m.value for m in at.markdown)
+    assert "No sample notes shipped" in text
+    # And it offers a way on, rather than being a dead end.
+    assert any("Generate a report" in b.label for b in at.button)
+
+
+def test_every_known_view_renders_without_an_archive(monkeypatch):
+    """Each addressable view, entered cold by URL."""
+    for view in ("home", "tool", "samples"):
+        at = _app(monkeypatch)
+        at.query_params["view"] = view
+        at = _unlock(at.run())
+        assert not at.exception, f"?view={view} raised"
+
+
+def test_an_unknown_view_still_falls_back(monkeypatch):
+    at = _app(monkeypatch)
+    at.query_params["view"] = "../../etc/passwd"
+    at = _unlock(at.run())
+    assert not at.exception
+    assert any("Generate a report" in lab for lab in _labels(at))

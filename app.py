@@ -751,12 +751,32 @@ if st.session_state["view"] == "samples" and report is None:
     # Not `samples`: that is the module, imported above, and rebinding it
     # here would break any later call to samples.load in this block.
     notes = _samples()
+    write(ui.topbar("samples"))
+
+    # Before any control. This view is addressable by URL, so a bookmark,
+    # a pasted link or the browser's Back reaches it whether or not the
+    # button that leads here was ever rendered - and with no archive the
+    # radio below was built over an empty list and raised StopIteration
+    # into a red error panel, which is the most expensive single thing
+    # that can happen on a page a reader is judging.
+    if not notes:
+        write(ui.samples_empty())
+        if st.session_state.get("samples_problem"):
+            write(ui.status("warning", "Samples",
+                            st.session_state["samples_problem"]))
+        gone = st.columns([1, 1, 3])
+        if gone[0].button("Back", key="samples_back_empty"):
+            go("home")
+        if gone[1].button("Generate a report", key="samples_build_empty"):
+            go("tool")
+        st.stop()
+
     write(ui.samples_intro(len(notes)))
 
     back = st.columns([1, 1, 3])
     if back[0].button("Back", key="samples_back"):
         go("home")
-    if back[1].button("Build one instead", key="samples_build"):
+    if back[1].button("Generate a report", key="samples_build"):
         go("tool")
 
     chosen = st.radio(

@@ -733,7 +733,12 @@ button[data-testid="stExpandSidebarButton"]:hover,
      --shell-soft at 7.5:1. */
   --shell-mute: #6b6f78;
   --shell-line: #eceef1;      /* inside a panel */
-  --shell-line-2: #e2e4e9;    /* panel edge */
+  --shell-line-2: #e2e4e9;    /* panel edge, decorative */
+  /* A control's boundary is information, not decoration: WCAG 2.2
+     SC 1.4.11 wants 3:1 for the edge that identifies a field. The panel
+     hairline measures 1.27:1 on white, which is right for a card and
+     wrong for an input. This is 3.27:1. */
+  --shell-field-line: #8b8e98;
   --shell-sink: #fbfbfc;      /* table head */
   --shell-r: 7px;
   --shell-r-lg: 10px;
@@ -894,19 +899,20 @@ table.ar-list th.num, table.ar-list td.num {
 
 /* ------------------------------------------------------------ controls */
 
-.stTextInput input, .stTextArea textarea,
 .stSelectbox [data-baseweb="select"] > div {
   font-family: var(--sans); font-size: 13px; background: var(--shell-panel);
-  border: 1px solid var(--shell-line-2); border-radius: var(--shell-r);
+  border: 1px solid var(--shell-field-line); border-radius: var(--shell-r);
   color: var(--shell-ink); box-shadow: none;
   transition: border-color 120ms var(--ease); }
+.stTextInput input, .stTextArea textarea {
+  font-family: var(--sans); font-size: 13px; color: var(--shell-ink);
+  box-shadow: none; }
 .stTextInput input { font-family: var(--mono); font-size: 12.5px; }
 /* The ring is on the wrapper, because that is where the visible border
    is; `outline: none` on the inner input beat the global focus-visible
    rule and left keyboard users with no indication at all. */
-.stTextInput [data-baseweb="input"]:focus-within,
-.stTextArea [data-baseweb="textarea"]:focus-within {
-  border-color: #a5a0f0; outline: 2px solid #4f46e5; outline-offset: 1px; }
+/* The Baseweb focus rule that stood here addressed nothing in this
+   build; the live one is on the root element further down. */
 .stTextInput input::placeholder, .stTextArea textarea::placeholder {
   color: var(--ink-muted); opacity: 1; }
 
@@ -1027,13 +1033,49 @@ hr { border-color: var(--rule); margin: var(--s5) 0; }
    cream field on cream paper, with the reveal toggle in a second rounded
    chip beside it. On the gate screen that is the one element saying
    "Streamlit app", forty pixels from the headline. */
-.stTextInput [data-baseweb="input"], .stTextArea [data-baseweb="textarea"] {
-  background: var(--paper); border-radius: 0; border: 1px solid var(--rule);
-  box-shadow: none; }
-.stTextInput [data-baseweb="input"] input { background: transparent; }
-.stTextInput [data-baseweb="input"] button,
-.stTextInput [data-baseweb="input"] [role="button"] {
-  background: transparent; border: 0; border-radius: 0; color: var(--ink-muted); }
+/* Controls, addressed by the hooks this Streamlit build actually emits.
+
+   Every `[data-baseweb="..."]` rule that stood here was dead: this
+   build renders react-aria widgets and the page contains zero elements
+   carrying a `data-baseweb` attribute. They were inherited from a
+   Streamlit that did use Baseweb, and they had been "styling" the form
+   for some time while the browser applied none of them.
+
+   The consequence was not cosmetic. Streamlit's own default gives the
+   field root a 1px WHITE border on a white fill, so a text input had no
+   visible boundary at all, and the focus ring written for
+   `[data-baseweb="input"]:focus-within` never applied to anything - a
+   keyboard reader had no indication of which field held focus.
+
+   A control's boundary is information rather than decoration, so it is
+   held to WCAG 2.2 SC 1.4.11 at 3:1 rather than to the hairline used
+   for a card edge, which is 1.27:1 and right for a card. */
+[data-testid="stTextInputRootElement"],
+[data-testid="stTextAreaRootElement"],
+[data-testid="stSelectbox"] div[role="combobox"],
+[data-testid="stSelectbox"] [data-baseweb="select"] > div {
+  background: var(--shell-panel) !important;
+  border: 1px solid var(--shell-field-line) !important;
+  border-radius: var(--shell-r) !important;
+  box-shadow: none !important; }
+
+[data-testid="stTextInputRootElement"] input,
+[data-testid="stTextAreaRootElement"] textarea {
+  background: transparent; border: 0; color: var(--shell-ink); }
+
+/* The ring goes on the root, which is where the visible border is. */
+[data-testid="stTextInputRootElement"]:focus-within,
+[data-testid="stTextAreaRootElement"]:focus-within {
+  border-color: #4f46e5 !important;
+  outline: 2px solid #4f46e5; outline-offset: 1px; }
+
+/* The reveal toggle is a second tab stop inside the field's own box, so
+   the field's :focus-within ring sits in the same place and does not
+   move when focus does. It gets a ring of its own. */
+[data-testid="stTextInputRootElement"] button {
+  background: transparent; border: 0; color: var(--shell-mute); }
+[data-testid="stTextInputRootElement"] button:focus-visible {
+  outline: 2px solid #4f46e5; outline-offset: -2px; border-radius: 4px; }
 
 /* A pull quote in the written guide, set as print sets one. */
 .ar-prose blockquote { margin: var(--s4) 0; padding-left: var(--s4);
@@ -1092,11 +1134,31 @@ table.ar-list, table.ar-list th, table.ar-list td, .ar-gate, .ar-gate * {
 .ar-count, .ar-topbar .meta { font-family: var(--mono); }
 table.ar-list th.num { font-family: var(--sans); letter-spacing: .03em; }
 
-.ar-topbar .tabs { display: flex; gap: 4px; align-items: center; }
-.ar-topbar .tabs span {
-  font-size: 13px; color: var(--shell-mute); padding: 5px 10px;
-  border-radius: 6px; font-weight: 500; }
-.ar-topbar .tabs span.on { color: var(--shell-ink); background: #f1f2f4; }
+/* The current screen, named. Not a pill and not a tab: it is a label,
+   so it is shaped like one. */
+.ar-topbar .where {
+  font-size: 13px; color: var(--shell-soft); font-weight: 500;
+  padding-left: 14px; border-left: 1px solid var(--shell-line-2); }
+
+/* On a phone the bar's three parts do not fit. The source line wrapped
+   to three lines and overlapped the tabs, and the product name broke
+   across two. The meta is the first thing to go: it is provenance a
+   reader can find in the note itself, and a wrapped, overlapping bar is
+   the first thing seen on the screen. */
+@media (max-width: 700px) {
+  .ar-topbar { gap: 14px; height: auto; padding-block: 10px;
+    margin-bottom: 18px; }
+  .ar-topbar .brand { white-space: nowrap; }
+  .ar-topbar .meta { display: none; }
+  .ar-topbar .where { padding-left: 10px; }
+
+  /* Streamlit keeps its columns side by side at every width, so on a
+     phone the right rail was about 100px wide and Get started set one
+     word per line. The row stacks instead, in source order, which puts
+     the notes above the instructions and the primary action last. */
+  [data-testid="stHorizontalBlock"] { flex-direction: column; gap: 22px; }
+  [data-testid="stColumn"] { width: 100% !important; flex: 1 1 100%; }
+}
 
 /* The dialog that carries the form once a report is on screen. */
 [data-testid="stDialog"] div[role="dialog"] { border-radius: 0;
