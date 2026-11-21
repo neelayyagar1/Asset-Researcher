@@ -98,6 +98,25 @@ concentration.
 a section called *Reconciliation* expects an adjustments bridge. The
 section is therefore **Management vs. filed figures**.
 
+## "Report" in the app, "research note" in the document
+
+Deliberate, and worth having the answer ready because it is the kind
+of thing a reader notices.
+
+The interface says **report** everywhere a reader acts — Start a
+report, Generate report, Reports. It is the plain word for the thing
+the button produces, and the screen that asked someone to "build a
+note" was asking them to do something they had no name for.
+
+The artifact says **research note**, which is the industry term for a
+single-issuer piece of sell-side or buy-side writing, and it is what
+the downloaded file is called. Calling the document a report would
+make it sound like a filing or a compliance output, which is the
+opposite of what it is.
+
+So: the app produces reports; what you get is a research note. If
+someone asks, that is the answer.
+
 ## Renamed, and what each replaced
 
 | Now reads | Was | Why |
