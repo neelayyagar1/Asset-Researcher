@@ -737,6 +737,15 @@ button[data-testid="stExpandSidebarButton"]:hover,
      hairline measures 1.27:1 on white, which is right for a card and
      wrong for an input. This is 3.27:1. */
   --shell-field-line: #8b8e98;
+  /* A control's edge, held to SC 1.4.11's 3:1 like a field's. The
+     secondary buttons - Back, Start a report, Download this note -
+     were drawn with the panel hairline, which measured 1.47:1 against
+     the ground in dark and about 1.1:1 in light, so a button was
+     identifiable as a control almost entirely by its text. The
+     hairline is right for the edge of a card and wrong for the edge
+     of something you press; this is the same tone as the field
+     boundary, for the same reason. */
+  --shell-btn-line: #8b8e98;
   /* The one focus colour, declared once. 8.2:1 on the page and 4.4:1
      on the bypass link's near-black pill, so it is visible wherever a
      ring is drawn. */
@@ -799,6 +808,7 @@ button[data-testid="stExpandSidebarButton"]:hover,
     --shell-line: #242732;
     --shell-line-2: #2c3040;
     --shell-field-line: #767c8a;
+    --shell-btn-line: #6a6f7e;
     --shell-focus: #a5a0ff;
     --shell-sink: #121419;
     --shell-shadow: 0 1px 2px rgba(0, 0, 0, .4);
@@ -1096,7 +1106,7 @@ table.ar-list th.num, table.ar-list td.num {
   border-color: var(--shell-ink-hover); }
 .stDownloadButton > button, .stButton > button[kind="secondary"] {
   background: var(--shell-panel); color: var(--shell-ink);
-  border-color: var(--shell-line-2); box-shadow: var(--shell-shadow); }
+  border-color: var(--shell-btn-line); box-shadow: var(--shell-shadow); }
 .stDownloadButton > button:hover,
 .stButton > button[kind="secondary"]:hover {
   background: var(--shell-hover);

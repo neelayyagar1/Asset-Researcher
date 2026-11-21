@@ -261,3 +261,36 @@ def test_the_widget_labels_take_their_colour_from_a_token():
         f"widget labels are coloured outside the token system: "
         f"{rule.group(0)}"
     )
+
+
+def test_a_secondary_button_has_a_boundary_a_reader_can_see():
+    """Measured on the live page, in dark: the secondary button's
+    border came out at 1.47:1 against the ground and its fill at about
+    1.3:1, so Back, Start a report and Download this note were
+    identifiable as controls almost entirely by their text.
+
+    SC 1.4.11 asks 3:1 for the visual information that identifies a
+    control. This project already applied that to input boundaries,
+    with --shell-field-line at 3.27:1, and left buttons on the panel
+    hairline - which is the right weight for the edge of a card and
+    the wrong one for the edge of a control. The hairline stays where
+    it belongs; buttons get the boundary token.
+    """
+    for scheme in ("light", "dark"):
+        tokens = _tokens(scheme)
+        measured = contrast(tokens["btn-line"], tokens["bg"])
+        assert measured >= 3.0, (
+            f"{scheme}: a secondary button's boundary measures "
+            f"{measured:.2f}:1 against the page"
+        )
+
+
+def test_the_card_hairline_stays_a_hairline():
+    """The fix must not be applied by darkening the shared line token:
+    a card edge at 3:1 is a box drawn round everything, which is the
+    register this shell was rebuilt to get away from."""
+    for scheme in ("light", "dark"):
+        tokens = _tokens(scheme)
+        assert contrast(tokens["line-2"], tokens["bg"]) < 2.0, (
+            f"{scheme}: the panel hairline has become a border"
+        )
