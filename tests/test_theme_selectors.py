@@ -292,27 +292,30 @@ def test_no_rule_in_the_dark_block_is_overridden_later_in_the_sheet():
     )
 
 
-def test_the_gate_hides_its_label_without_removing_its_name():
-    """The first screen of the artifact is a password field.
+def test_the_gate_label_rule_does_not_pretend_to_do_something():
+    """An audit reported the gate's password field as having no
+    accessible name but its placeholder, because the label is hidden
+    with `display: none`.
 
-    It was hidden with `display: none`, which takes the label out of
-    the accessibility tree rather than off the page, leaving the
-    placeholder as the field's only name - and a placeholder vanishes
-    on the first keystroke and is not a label. The project already has
-    the right pattern, in `.ar-sr`.
+    Checked in the running app's accessibility tree instead: it reads
+    `textbox "Passphrase"`. Streamlit's `label_visibility="collapsed"`
+    sets `aria-label` on the input from the same text, so the name
+    never depended on the label element being exposed.
+
+    The visually-hidden replacement written for it was worse than
+    nothing - it set position and clip and never set `display`, so
+    Streamlit's rule still won and the sheet carried a block that did
+    nothing. This pins the honest version: one declaration, and no
+    second rule claiming to hide the same element another way.
     """
     css = _strip(theme.stylesheet())
-    rule = re.search(
-        r"\.block-container:has\(\.ar-gate\)[^{}]*\.stTextInput label[^{}]*"
-        r"\{([^}]*)\}",
+    rules = re.findall(
+        r"\.block-container:has\(\.ar-gate\)[^{}]*\.stTextInput label"
+        r"[^{}]*\{([^}]*)\}",
         css,
     )
-    assert rule, "the gate no longer styles its label"
-    body = rule.group(1)
-    assert "display: none" not in body, (
-        "the gate's label is removed from the accessibility tree, so "
-        "the password field has no accessible name"
-    )
-    assert "clip-path" in body or "clip:" in body, (
-        "the label is not hidden with the visually-hidden pattern"
+    assert len(rules) == 1, f"{len(rules)} rules hide the gate's label"
+    assert "clip-path" not in rules[0], (
+        "a visually-hidden pattern is declared without `display`, so it "
+        "cannot take effect and is dead CSS"
     )

@@ -412,6 +412,14 @@ part of the record:
   both describe the same run; taking it from the solved run would make
   two halves of one sentence describe two different runs. What was
   wrong is that it did not say which run it meant, and now it does.
+- **The gate's password field having no accessible name** was
+  reported because its label is hidden with `display: none`. The
+  running app's accessibility tree reads `textbox "Passphrase"`:
+  Streamlit's collapsed-label mode sets `aria-label` on the input from
+  the same text, so the name never depended on the label element. The
+  visually-hidden replacement written for it was worse than nothing —
+  it never set `display`, so it could not take effect and left a rule
+  in the sheet that did nothing. Reverted.
 - **Pointing the document's focus ring at the shell's focus token**
   was recommended for consistency. That rule travels with the exported
   file, which carries no shell tokens, and an undefined custom property

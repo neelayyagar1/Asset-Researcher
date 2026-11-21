@@ -1093,16 +1093,19 @@ table.ar-list th.num, table.ar-list td.num {
   font-size: 12.5px; color: var(--shell-mute); margin: 5px 0 0; }
 .block-container:has(.ar-gate) [data-testid="stForm"] {
   border: 0; padding: 0; }
-/* Hidden from the page, not from the accessibility tree.
-   `display: none` removed the label outright, leaving the placeholder
-   as the password field's only name - and a placeholder disappears on
-   the first keystroke and was never a label. This is the `.ar-sr`
-   pattern, which the rest of the sheet already uses for exactly this.
-   The screen looks identical. */
-.block-container:has(.ar-gate) .stTextInput label {
-  position: absolute; width: 1px; height: 1px; padding: 0;
-  margin: -1px; overflow: hidden; clip: rect(0 0 0 0);
-  clip-path: inset(50%); white-space: nowrap; border: 0; }
+/* Streamlit's own `label_visibility="collapsed"` hides this, and it
+   sets `aria-label` on the input from the same text - verified in the
+   accessibility tree of the running app, which reads
+   `textbox "Passphrase"`. So the field is named, and this rule only
+   has to not fight the hiding.
+
+   An audit reported the field as having no accessible name but the
+   placeholder, and a visually-hidden replacement was written for it.
+   That replacement was inert: it set position and clip and never set
+   `display`, so Streamlit's `display: none` still won, and it left a
+   rule in the sheet that did nothing. Checked rather than assumed,
+   and reverted. */
+.block-container:has(.ar-gate) .stTextInput label { display: none; }
 
 /* ------------------------------------------------------------- sidebar */
 
