@@ -650,6 +650,140 @@ report = st.session_state.get("report")
 presets = load_presets()
 
 
+
+def _nav_bridge() -> None:
+    """Put the note's section index where it can actually stick.
+
+    `position: sticky` resolves against the element's own scrollport.
+    `fitFrame` sizes the note's iframe to the full height of the
+    document inside it - 35,691px for ADP - precisely so the page
+    scrolls once instead of through a nested scrollbar. The cost,
+    unnoticed until it was measured, is that the note's document then
+    never scrolls, so nothing inside it can stick to anything: the
+    section index sat at viewport-top 773 at the top of the note and
+    at -19,227 twenty thousand pixels down. On the longest screen in
+    the product a reader had no navigation at all past the first
+    screen.
+
+    The scrollport is the shell's own `section.stMain`, so the index
+    has to live out here. This copies it out of the note, hides the
+    original, and scrolls the parent to the frame's offset plus the
+    section's offset inside it - the frame is same-origin, so that
+    offset is readable.
+
+    Same shape as `_back_bridge`: a zero-height component that reaches
+    its parent. The downloaded file is untouched and keeps its own
+    sticky index, because there the document is what scrolls.
+    """
+    components.html(
+        r"""<script>
+        (function () {
+          var doc;
+          try { doc = window.parent.document; } catch (e) { return; }
+          if (!doc) return;
+          var win = doc.defaultView;
+
+          // The scrolling function is INSTALLED INTO THE PARENT, as a
+          // script element whose text the parent evaluates, and the
+          // links call it through inline onclick attributes.
+          //
+          // The first version added listeners with addEventListener
+          // from in here. Those closures belong to this component
+          // iframe's realm, and Streamlit discards that iframe on the
+          // next rerun - so the nav rendered, looked right, and did
+          // nothing when clicked, which is the worst of the three
+          // possible outcomes. Parent-realm code outlives this frame.
+          if (!win.__arNavGo) {
+            var install = doc.createElement('script');
+            install.textContent =
+              'window.__arNavGo = function (id) {' +
+              '  var frames = document.querySelectorAll("iframe");' +
+              '  var frame = null;' +
+              '  for (var i = 0; i < frames.length; i++) {' +
+              '    if (frames[i].getBoundingClientRect().height > 1200) {' +
+              '      frame = frames[i];' +
+              '    }' +
+              '  }' +
+              '  if (!frame) return;' +
+              '  var inner = frame.contentDocument;' +
+              '  if (!inner) return;' +
+              '  var target = inner.getElementById(id);' +
+              '  if (!target) return;' +
+              '  var scroller = document.querySelector("section.stMain")' +
+              '    || document.scrollingElement;' +
+              '  var top = frame.getBoundingClientRect().top' +
+              '    + scroller.scrollTop' +
+              '    - scroller.getBoundingClientRect().top' +
+              '    + target.offsetTop;' +
+              '  /* Not behaviour:"smooth". Measured on this container:' +
+              '     a smooth scrollTo is a silent no-op - scrollTop stays' +
+              '     where it was - while the same call without it lands' +
+              '     exactly. Something in the host cancels it, and a' +
+              '     navigation that does not navigate is worse than one' +
+              '     that does not animate. */' +
+              '  scroller.scrollTop = top - 12;' +
+              '};';
+            doc.head.appendChild(install);
+          }
+
+          function build() {
+            var frames = doc.querySelectorAll('iframe');
+            var frame = null;
+            for (var i = 0; i < frames.length; i++) {
+              if (frames[i].getBoundingClientRect().height > 1200) {
+                frame = frames[i];
+              }
+            }
+            if (!frame) return false;
+            var inner;
+            try { inner = frame.contentDocument; } catch (e) { return false; }
+            if (!inner) return false;
+            var source = inner.querySelector('.ar-nav');
+            if (!source) return false;
+
+            var host = frame.closest('[data-testid="stElementContainer"]')
+              || frame.parentElement;
+            if (!host || !host.parentNode) return false;
+
+            var existing = doc.getElementById('ar-shell-nav');
+            if (existing) existing.remove();
+
+            var nav = doc.createElement('nav');
+            nav.id = 'ar-shell-nav';
+            nav.className = 'ar-shell-nav';
+            nav.setAttribute('aria-label', 'Sections');
+
+            var links = source.querySelectorAll('a');
+            for (var j = 0; j < links.length; j++) {
+              var id = (links[j].getAttribute('href') || '').replace('#', '');
+              if (!/^[A-Za-z0-9_-]+$/.test(id)) continue;
+              var a = doc.createElement('a');
+              a.textContent = links[j].textContent;
+              a.href = '#' + id;
+              a.setAttribute(
+                'onclick', "window.__arNavGo('" + id + "');return false;"
+              );
+              nav.appendChild(a);
+            }
+            if (!nav.children.length) return false;
+
+            host.parentNode.insertBefore(nav, host);
+            // The original would otherwise print twice, once dead.
+            source.style.display = 'none';
+            return true;
+          }
+
+          var tries = 0;
+          var timer = setInterval(function () {
+            tries += 1;
+            if (build() || tries > 40) clearInterval(timer);
+          }, 250);
+        })();
+        </script>""",
+        height=0,
+    )
+
+
 def _controls(key: str) -> tuple[str, str, str, bool]:
     """The report form. Rendered inline on the empty workspace and inside
     a dialog once there is a report to replace."""
@@ -1177,6 +1311,7 @@ if st.session_state["view"] == "samples":
     # that the honest fix was a page of its own. The second half is
     # still true - a note deserves its own route - but "cannot" was
     # wrong, and it had stopped anyone looking.
+    _nav_bridge()
     components.html(framed(note.html), height=2000, scrolling=True)
     st.stop()
 

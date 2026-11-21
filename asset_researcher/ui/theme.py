@@ -1459,6 +1459,25 @@ table.ar-list th.num { font-family: var(--sans); letter-spacing: .03em; }
   a.ar-row-link { padding: 9px 10px; }
 }
 
+/* The note's section index, lifted into the shell so it has a
+   scrollport to stick to. Styled to match the one inside the note
+   rather than the shell's own chrome, because it is the document's
+   navigation and the reader should not notice it moved. */
+.ar-shell-nav {
+  position: sticky; top: 0; z-index: 5;
+  display: flex; flex-wrap: wrap; gap: 0 18px;
+  padding: 10px 0; margin-bottom: 4px;
+  background: var(--shell-bg);
+  border-bottom: 1px solid var(--shell-line); }
+.ar-shell-nav a {
+  font-size: 11px; letter-spacing: .04em; text-transform: uppercase;
+  color: var(--shell-mute); text-decoration: none;
+  padding: 3px 0; min-height: 24px; display: inline-flex;
+  align-items: center; }
+.ar-shell-nav a:hover { color: var(--shell-ink); }
+.ar-shell-nav a:focus-visible {
+  outline: 2px solid var(--shell-focus); outline-offset: 2px; }
+
 /* The dialog that carries the form once a report is on screen. */
 /* One rule, both schemes. The dark block used to set this selector
    too, and the same selector at the same specificity appeared again

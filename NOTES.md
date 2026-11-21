@@ -213,7 +213,7 @@ ask.
 
 ## The suite
 
-741 tests, no network, about forty-five seconds. Every fix below was
+746 tests, no network, about forty-five seconds. Every fix below was
 written as a failing test first, and the failure was watched before the
 fix was written.
 
