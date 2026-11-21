@@ -37,6 +37,23 @@ NM = "NM"
 # a genuinely expensive large-cap trades at 60-80x, not 200x.
 _EXTREME_PE = 200.0
 _EXTREME_EV_EBITDA = 100.0
+# The screen covered P/E and EV/EBITDA while the table prints four more
+# ratios, and the caption beneath it claimed all of them. Realty Income
+# shipped with Kimco at a net margin of 3,473.2% and an EV/Revenue of
+# 1,432.7x - a revenue denominator filed two orders of magnitude out -
+# and the printed peer MEAN margin read 462.8%, in a row captioned as
+# excluding exactly that.
+#
+# A net margin over 100% says net income exceeded revenue, which is the
+# denominator being wrong rather than the business being extraordinary:
+# a REIT booking disposal gains reaches the eighties, which is why the
+# line is drawn above that and not at it. A loss is not an outlier - it
+# is information, and screening it out would flatter the peer group -
+# so this is one-sided.
+_EXTREME_NET_MARGIN = 1.0
+# A genuinely expensive business trades in the tens of times revenue,
+# never the hundreds.
+_EXTREME_EV_REVENUE = 50.0
 
 
 @dataclass(frozen=True)
@@ -209,6 +226,13 @@ class CompRow:
             flagged.append("pe")
         if self.ev_to_ebitda is not None and self.ev_to_ebitda > _EXTREME_EV_EBITDA:
             flagged.append("ev_to_ebitda")
+        if self.net_margin is not None and self.net_margin > _EXTREME_NET_MARGIN:
+            flagged.append("net_margin")
+        if (
+            self.ev_to_revenue is not None
+            and self.ev_to_revenue > _EXTREME_EV_REVENUE
+        ):
+            flagged.append("ev_to_revenue")
         return flagged
 
 

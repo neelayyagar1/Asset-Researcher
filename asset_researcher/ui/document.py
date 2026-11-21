@@ -192,7 +192,13 @@ def sections(report: Report) -> list[Section]:
 
     # ------------------------------------------------------- market pricing
 
-    if context and context.summary():
+    # The modelled rate, handed to the sentence that compares the price
+    # against the filed record. Without it that sentence asserted one
+    # conclusion for every filer and was backwards on half of them.
+    implied_growth = (
+        bundle.implied.implied_growth if bundle.implied is not None else None
+    )
+    if context and context.summary(implied_growth):
         emit("Current valuation", "What the market is paying for this cash flow")
         add(
             ui.block(
@@ -215,7 +221,7 @@ def sections(report: Report) -> list[Section]:
                         ),
                     ]
                 ),
-                ui.caption(context.summary()),
+                ui.caption(context.summary(implied_growth)),
                 charts.figure(
                     charts.free_cash_flow_history(bundle.series, width=FULL)
                     if bundle.series is not None

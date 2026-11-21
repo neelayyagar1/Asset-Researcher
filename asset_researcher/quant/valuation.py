@@ -305,15 +305,44 @@ def free_cash_flow_history(series: MetricSeries) -> list[tuple[str, str, float]]
     a label is a presentation detail and two periods can legitimately share
     one before disambiguation.
     """
-    capex = {
-        p.end: abs(p.value)
-        for p in (series.series.get("capital_expenditures") or [])
-    }
-    return [
-        (p.end, p.frame_label, p.value - capex[p.end])
-        for p in (series.series.get("operating_cash_flow") or [])
-        if p.end in capex
-    ]
+    # Keyed on the FISCAL LABEL, which is how the statements table
+    # selects, and by the same rule: iterate in filed order and let the
+    # last point carrying a label win, so a restatement supersedes what
+    # it restates.
+    #
+    # This used to key on the period END DATE, and the two tables in
+    # one document disagreed because of it. On the shipped ADP note the
+    # Financials row read FY2026 5,245 while the chart above it read
+    # $5.4B, under one label and one stated definition, with every year
+    # out by four to six percent. Three separate causes, all of them
+    # ordinary filer behaviour: a 52/53-week year moves the end date by
+    # a day or two, so operating cash flow and its own capital
+    # expenditure landed in different buckets and the year was dropped;
+    # a restatement files a year again under a near-but-not-equal date,
+    # so the year appeared TWICE, which also moved the first and last
+    # points the growth rate is measured between; and where both
+    # happened the surviving pair could be one line from one filing and
+    # one from another.
+    #
+    # The statements table is the audit trail a reader checks a figure
+    # against, so it is the one that wins, and this now agrees with it
+    # by construction rather than by coincidence.
+    capex: dict[str, float] = {}
+    for point in series.series.get("capital_expenditures") or []:
+        capex[point.frame_label] = abs(point.value)
+
+    chosen: dict[str, tuple[str, str, float]] = {}
+    for point in series.series.get("operating_cash_flow") or []:
+        if point.frame_label not in capex:
+            # A year with no tagged capital expenditure is a year whose
+            # free cash flow is unknown, not a year of zero capex.
+            continue
+        chosen[point.frame_label] = (
+            point.end,
+            point.frame_label,
+            point.value - capex[point.frame_label],
+        )
+    return list(chosen.values())
 
 
 def normalised_base_fcf(series: MetricSeries, window: int = 3) -> float | None:
@@ -726,18 +755,62 @@ class CashFlowContext:
         multiple = self.multiple_of_fcf
         return 1 / multiple if multiple else None
 
-    def summary(self) -> str | None:
-        """One sentence a reader can act on."""
+    # Within a point of the filed rate, the price is extrapolating
+    # rather than departing. A tighter band would make a rounding
+    # difference read as a disagreement; a wider one would let a real
+    # gap pass as agreement.
+    _SAME = 0.01
+
+    def summary(self, implied_growth: float | None = None) -> str | None:
+        """One sentence a reader can act on.
+
+        The figures first, then the inference - and the inference only
+        when there is something to infer it FROM. This asserted one
+        unconditionally: "the price therefore rests on expectations not
+        present in the filed cash flow history", which follows only
+        when the price implies more growth than the record delivered.
+        On the shipped notes it was false on two of the four that print
+        it. ADP requires 6.8% against 12.5% of filed history and the
+        note told a reader to interrogate optimism in a price that
+        embeds caution.
+
+        `implied_growth` is the rate solved back from the traded price.
+        A filer whose discounted cash flow was declined has none, and
+        then this says what it measured and stops, rather than
+        reaching for a conclusion with nothing behind it.
+        """
         multiple = self.multiple_of_fcf
         if multiple is None or self.fcf_cagr is None:
             return None
-        return (
+        facts = (
             f"The market capitalises free cash flow at {multiple:,.0f} times, "
             f"on a filed record in which free cash flow compounded at "
-            f"{self.fcf_cagr * 100:,.1f}% over {self.years_observed} years. "
-            f"The price therefore rests on expectations not present in the "
-            f"filed cash flow history, and those expectations are what a "
-            f"reader should interrogate rather than the modelled target."
+            f"{self.fcf_cagr * 100:,.1f}% over {self.years_observed} years."
+        )
+        if implied_growth is None:
+            return (
+                f"{facts} No discounted cash flow was produced for this "
+                f"filer, so the multiple is reported against the record "
+                f"without a modelled rate to compare it to."
+            )
+        if implied_growth > self.fcf_cagr + self._SAME:
+            return (
+                f"{facts} The price therefore rests on expectations not "
+                f"present in the filed cash flow history, and those "
+                f"expectations are what a reader should interrogate "
+                f"rather than the modelled target."
+            )
+        if implied_growth < self.fcf_cagr - self._SAME:
+            return (
+                f"{facts} The price therefore requires less than the filed "
+                f"record delivered, so what a reader should interrogate is "
+                f"what the market expects not to repeat rather than the "
+                f"modelled target."
+            )
+        return (
+            f"{facts} The price is close to extrapolating that record, so "
+            f"the question it puts is whether the record itself is "
+            f"repeatable rather than what the market has added to it."
         )
 
 
