@@ -835,9 +835,15 @@ def _generate(ticker: str, mandate_text: str, urls: list[str], user_sources: lis
 
         def say(sentence: str) -> None:
             """Show a stage, and announce it once."""
+            # No `aria-busy`. It was set here on every render and
+            # never cleared, and aria-busy="true" instructs assistive
+            # technology to withhold changes until it is false - so a
+            # conforming screen reader announced none of the stages of
+            # a ninety-second run. There is nothing for it to mark
+            # anyway: the stage text IS the status, and the bar beside
+            # it is already aria-hidden.
             stage_slot.markdown(
-                '<div role="status" aria-live="polite" aria-atomic="true"'
-                ' aria-busy="true">'
+                '<div role="status" aria-live="polite" aria-atomic="true">'
                 f"<p class=\"ar-stage\">{escape(sentence)}</p>"
                 '<div class="ar-progress" aria-hidden="true"><i></i></div>'
                 "</div>",
@@ -1004,10 +1010,13 @@ def _run_pending() -> None:
 # ------------------------------------------------------------------- home
 
 if st.session_state["view"] == "home":
+    # The link first, its target where the CONTENT starts. The span
+    # used to sit above the topbar, so activating the link moved focus
+    # backwards past the very thing it offers to skip.
     _skip_link("ar-home", "Skip to start")
-    write('<span id="ar-home" tabindex="-1"></span>')
     write(ui.topbar("reports"))
     write(ui.home())
+    write('<span id="ar-home" tabindex="-1"></span>')
 
     notes = _documents()
     has_samples = bool(notes)
@@ -1067,11 +1076,11 @@ if st.session_state["view"] == "home":
 
 if st.session_state["view"] == "samples":
     _skip_link("ar-samples", "Skip to the samples")
-    write('<span id="ar-samples" tabindex="-1"></span>')
     # Not `samples`: that is the module, imported above, and rebinding it
     # here would break any later call to samples.load in this block.
     notes = _documents()
     write(ui.topbar("samples"))
+    write('<span id="ar-samples" tabindex="-1"></span>')
 
     # Before any control. This view is addressable by URL, so a bookmark,
     # a pasted link or the browser's Back reaches it whether or not the
@@ -1176,7 +1185,6 @@ if st.session_state["view"] != "report" or report is None:
     # written to the right half, so the screen where a reader decides
     # whether the tool is serious was 46% empty cream and looked like a
     # layout that had broken. The form sits at its own measure instead.
-    write('<span id="ar-form" tabindex="-1"></span>')
     write(ui.topbar("tool"))
     write(ui.workspace_intro())
     failure = st.session_state.get("failure")
@@ -1187,6 +1195,9 @@ if st.session_state["view"] != "report" or report is None:
             st.session_state["pending"] = previous
             st.session_state.pop("failure", None)
             st.rerun()
+    # Below the heading and below any failure message, so "Skip to the
+    # form" lands at the form rather than above the page.
+    write('<span id="ar-form" tabindex="-1"></span>')
     ticker, mandate_text, urls_text, run = _controls("inline")
     if run and ticker:
         st.session_state["pending"] = (ticker, mandate_text, urls_text)
@@ -1216,6 +1227,10 @@ context = bundle.cash_context
 # column the whole time.
 write('<span class="ar-report-view" hidden></span>')
 write(ui.topbar("report"))
+# Before the action row. This was emitted after New report, Home, HTML
+# and Markdown, so on the longest screen in the product the bypass was
+# the fifth tab stop rather than the first.
+_skip_link("ar-report", "Skip to report")
 
 # A new report is an occasional act once one is on screen, so the form is
 # behind a control rather than occupying the top of every page. Home is
@@ -1243,7 +1258,6 @@ actions[2].download_button(
     key="dl_md",
 )
 
-_skip_link("ar-report", "Skip to report")
 # The marker the Back guard looks for, carrying whether this report
 # was written to disk. It almost always was - `_run_pending` saves the
 # rendered document before this screen draws - and when it was, leaving

@@ -1063,7 +1063,16 @@ table.ar-list th.num, table.ar-list td.num {
   font-size: 12.5px; color: var(--shell-mute); margin: 5px 0 0; }
 .block-container:has(.ar-gate) [data-testid="stForm"] {
   border: 0; padding: 0; }
-.block-container:has(.ar-gate) .stTextInput label { display: none; }
+/* Hidden from the page, not from the accessibility tree.
+   `display: none` removed the label outright, leaving the placeholder
+   as the password field's only name - and a placeholder disappears on
+   the first keystroke and was never a label. This is the `.ar-sr`
+   pattern, which the rest of the sheet already uses for exactly this.
+   The screen looks identical. */
+.block-container:has(.ar-gate) .stTextInput label {
+  position: absolute; width: 1px; height: 1px; padding: 0;
+  margin: -1px; overflow: hidden; clip: rect(0 0 0 0);
+  clip-path: inset(50%); white-space: nowrap; border: 0; }
 
 /* ------------------------------------------------------------- sidebar */
 

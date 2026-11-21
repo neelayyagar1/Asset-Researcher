@@ -290,3 +290,29 @@ def test_no_rule_in_the_dark_block_is_overridden_later_in_the_sheet():
         f"later at the same specificity, so the later rule wins in "
         f"both schemes: {clashes}"
     )
+
+
+def test_the_gate_hides_its_label_without_removing_its_name():
+    """The first screen of the artifact is a password field.
+
+    It was hidden with `display: none`, which takes the label out of
+    the accessibility tree rather than off the page, leaving the
+    placeholder as the field's only name - and a placeholder vanishes
+    on the first keystroke and is not a label. The project already has
+    the right pattern, in `.ar-sr`.
+    """
+    css = _strip(theme.stylesheet())
+    rule = re.search(
+        r"\.block-container:has\(\.ar-gate\)[^{}]*\.stTextInput label[^{}]*"
+        r"\{([^}]*)\}",
+        css,
+    )
+    assert rule, "the gate no longer styles its label"
+    body = rule.group(1)
+    assert "display: none" not in body, (
+        "the gate's label is removed from the accessibility tree, so "
+        "the password field has no accessible name"
+    )
+    assert "clip-path" in body or "clip:" in body, (
+        "the label is not hidden with the visually-hidden pattern"
+    )
