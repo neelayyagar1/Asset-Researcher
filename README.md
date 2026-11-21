@@ -176,13 +176,14 @@ another.
 
 ## Reading further
 
+- **[NOTES.md](NOTES.md)** is the one written account: every choice and why,
+  the vocabulary and its sources, the evidence behind each claim, and what
+  the tool does not do. It replaced ten separate documents, because a
+  product needing that much explaining is telling you something about the
+  product.
 - **[docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)** is the technical reference:
   why the system is shaped this way, and the decisions that are not obvious
   from the code. The source comments point at its numbered sections.
-- **[docs/FOR-ANALYSTS.md](docs/FOR-ANALYSTS.md)** is for the person reading
-  the output rather than maintaining the code. No programming assumed.
-- **[docs/WALKTHROUGH.md](docs/WALKTHROUGH.md)** walks the product end to end
-  and gives the reasoning behind each design and engineering choice.
 - **[docs/DEPLOY.md](docs/DEPLOY.md)** covers hosting: a static sample note on
   Cloudflare Pages and the live tool on Streamlit Community Cloud, and why
   Cloudflare Workers cannot run the second one.
