@@ -126,3 +126,33 @@ def test_peers_excludes_self(client):
         return_value=_response(json_data=["AAPL", "DELL", "HPQ"]),
     ):
         assert client.get_peers("AAPL") == ["DELL", "HPQ"]
+
+
+def test_news_text_arrives_unescaped_so_the_renderer_escapes_it_once(client):
+    """Finnhub returns HTML-escaped text. Stored raw, it is escaped a
+    second time on the way to the page, and a reader sees the entity
+    itself.
+
+    Found in a built note: "Keefe, Bruyette &amp;amp; Woods" rendered as
+    "Keefe, Bruyette &amp; Woods" on screen. Every layer was behaving
+    correctly in isolation - the API escaped once, the renderer escaped
+    what it was given - and the defect lives in the seam, which is why
+    it survived both sides' tests.
+
+    Text enters this system decoded. Escaping is the renderer's job and
+    happens exactly once, at the edge.
+    """
+    entry = {
+        "headline": "Keefe, Bruyette &amp; Woods maintains Market Perform",
+        "summary": "Shares fell 3% as the firm&#39;s outlook &lt;softened&gt;",
+        "url": "https://example.invalid/story",
+        "source": "Benzinga",
+        "datetime": 1_760_000_000,
+    }
+    with patch("requests.get", return_value=_response(json_data=[entry])):
+        news = client.get_news("TFC")
+
+    assert news, "no news item returned"
+    item = news[0]
+    assert item.headline == "Keefe, Bruyette & Woods maintains Market Perform"
+    assert item.summary == "Shares fell 3% as the firm's outlook <softened>"

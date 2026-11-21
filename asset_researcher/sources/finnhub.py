@@ -13,6 +13,7 @@ built from the symbol and endpoint name, never from the request URL.
 
 from __future__ import annotations
 
+import html
 import json
 import threading
 import time
@@ -187,8 +188,15 @@ class FinnhubClient:
             ts = entry.get("datetime")
             items.append(
                 NewsItem(
-                    headline=entry.get("headline", ""),
-                    summary=entry.get("summary", ""),
+                    # Decoded on the way in. Finnhub returns HTML-escaped
+                    # text, and stored raw it is escaped a second time on
+                    # the way to the page: a built note rendered "Keefe,
+                    # Bruyette &amp;amp; Woods", which a reader sees as
+                    # the entity itself. Text lives in this system
+                    # decoded; escaping is the renderer's job and happens
+                    # once, at the edge.
+                    headline=html.unescape(entry.get("headline", "")),
+                    summary=html.unescape(entry.get("summary", "")),
                     url=entry.get("url", ""),
                     source=entry.get("source", ""),
                     published=date.fromtimestamp(ts).isoformat() if ts else "",
