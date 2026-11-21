@@ -16,8 +16,16 @@ Rules for this file:
 
 | When | Skill | Surface / target | Outcome |
 |---|---|---|---|
-| 2026-11-20 | `superpowers:brainstorming` | Tonight's three tracks | Ordering decided; three forks put to the owner; this spec |
+| 2026-11-20 | `superpowers:brainstorming` | Tonight's three tracks | Ordering decided; three forks put to the owner |
 | 2026-11-20 | `claude plugin marketplace add/install` | `intent`, `perception-first-design` | Installed, user scope |
+| 2026-11-20 | `perception-first-design:evaluate` | Home + form, measured in the live DOM | L1 41, L2 34. Four container widths, three centre axes, host columns escaping the content column. `docs/reviews/PFD-EVALUATION.md` |
+| 2026-11-20 | `impeccable:impeccable` (`context.mjs`) | `app.py` | Confirmed no surface brief existed, and that PRODUCT.md marks the old look as replaceable |
+| 2026-11-20 | `impeccable` `concept-seed.mjs` | Direction roll, mode persuade | Seven grounded worlds derived, five challengers dealt and weighed; owner overrode the roll and took the canon |
+| 2026-11-20 | Rendered comps | Four worlds, then three craft registers | Owner chose the canon at the Linear/Stripe bar; recorded in PRODUCT.md |
+| 2026-11-20 | `impeccable` `detect.mjs` | theme.py, components.py, app.py | 22 findings: 21 "outside DESIGN.md" (expected before the rewrite), 1 side-tab in the note, kept as a semantic deviation |
+| 2026-11-20 | `intent:vigil` (agent) | Shell audit | 16 findings. Three Critical verified independently; one (double-bordered fields) was right in conclusion and wrong in mechanism - see below |
+| 2026-11-20 | `superpowers:test-driven-development` | Stale-metric guard | Tests written first, confirmed failing, then the check and the model's refusal |
+| 2026-11-20 | `impeccable:impeccable-documenter` (agent) | DESIGN.md | Rewritten from the built world |
 
 ## Available and scheduled tonight
 
@@ -54,6 +62,25 @@ Commands the assistant cannot launch itself. Exact text to paste:
 
 - Streamlit Cloud secrets cannot be read or written from here. The gate
   passphrase and API keys are set only in the app's own Settings -> Secrets.
+
+## What the audit got right, and where it was wrong
+
+`intent:vigil` found the defect that would have ended a demo: the
+samples screen raised StopIteration into a red error panel whenever no
+archive was present, reachable by URL and by Back. Verified by driving
+the browser to `?view=samples`, which rendered the panel.
+
+It also reported that form fields were cream and double-bordered, from
+reading the stylesheet. Reading the live DOM instead showed the rules
+it was judging apply to nothing: this Streamlit build emits zero
+`data-baseweb` attributes. The real state was worse than reported -
+Streamlit's own default gives a field a 1px WHITE border on white, so
+there was no visible boundary at all, and the focus ring never applied.
+Right conclusion, wrong mechanism, and the fix would have been wrong if
+the finding had been taken at face value.
+
+Recorded because it is the general lesson: an agent's report is a lead,
+not a result.
 
 ## Verification standard
 

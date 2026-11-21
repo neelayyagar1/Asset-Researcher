@@ -138,6 +138,20 @@ Stated here rather than buried.
   Streamlit owns the dialog. Focus enters it, the trap holds, Escape
   closes it and the background is inert; on close focus lands on the body,
   which is not reachable without script.
+- **A generated report lives only in the session.** A reload, a closed
+  tab or a session timeout ends it, and rebuilding costs another run.
+  Download it if you want to keep it; the browser's Back asks before it
+  discards one.
+- **The sample notes carry the figures they were built with.** They are
+  artifacts, not live output: each is a real run against real filings on
+  the date it was built, and nothing re-runs when you open one. The date
+  is on the note.
+- **A metric the filer stopped tagging refuses the model rather than
+  feeding it.** A series can be fully populated and years out of date,
+  because the company abandoned the concept behind it. Where a
+  load-bearing line stops more than one filed period behind the newest,
+  validation raises it and the discounted cash flow declines instead of
+  printing a target built on a figure the company no longer reports.
 
 ## Links
 
