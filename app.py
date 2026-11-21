@@ -795,14 +795,21 @@ def _run_pending() -> None:
         logging.getLogger("asset_researcher").exception(
             "report generation failed for %s", ticker
         )
-        write(ui.status("error", "Failed", _failure_message(exc)))
-        if st.button("Try again", key="retry_failed"):
-            # urls_text, not urls: this slot is unpacked above as the raw
-            # textarea contents and split here. Storing the parsed list
-            # would hand a list to `.splitlines()` on the next run.
-            st.session_state["pending"] = (ticker, mandate_text, urls_text)
-            st.rerun()
+        # Held, not drawn here. `_run_pending` executes before any view
+        # writes its chrome, so rendering the failure at this point put
+        # the error and its Try again button above the topbar, with the
+        # form restated underneath - a message floating above the page
+        # it belongs to. The workspace draws it in place.
+        #
+        # urls_text, not urls: that slot is unpacked above as the raw
+        # textarea contents and split here, so storing the parsed list
+        # would hand a list to `.splitlines()` on the next run.
+        st.session_state["failure"] = (
+            _failure_message(exc),
+            (ticker, mandate_text, urls_text),
+        )
         return
+    st.session_state.pop("failure", None)
     if fresh is not None:
         st.session_state["report"] = fresh
         # A finished run is its own screen. Without this the report was
@@ -981,6 +988,14 @@ if st.session_state["view"] != "report" or report is None:
     write('<span id="ar-form" tabindex="-1"></span>')
     write(ui.topbar("reports"))
     write(ui.workspace_intro())
+    failure = st.session_state.get("failure")
+    if failure:
+        message, previous = failure
+        write(ui.status("error", "Failed", message))
+        if st.button("Try again", key="retry_failed"):
+            st.session_state["pending"] = previous
+            st.session_state.pop("failure", None)
+            st.rerun()
     ticker, mandate_text, urls_text, run = _controls("inline")
     if run and ticker:
         st.session_state["pending"] = (ticker, mandate_text, urls_text)
