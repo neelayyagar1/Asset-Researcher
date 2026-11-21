@@ -656,6 +656,20 @@ relax to let labels wrap, and sticky table headers go static.
 measure narrows or widens that one column with a `:has()` selector. No
 descendant declares a width, and no width is expressed in `ch`.
 
+One exception, and only one: a paragraph of running prose may carry a
+reading measure, because line length is a property of text rather than
+of layout. The home screen's opening sentence is capped at 560px for
+that reason. It does not reopen the defect the rule exists to close,
+because a measure does not create a competing axis: the paragraph keeps
+the column's own left edge, so every block on the screen still starts
+at the same x. What is forbidden is a BOX that sets its own width and
+then centres inside itself, which is what produced three centre lines.
+
+The measure is stated in pixels on the grid, not in `ch`. The rule was
+broken once that way after it was written - `62ch` resolved to
+531.067px - and tests/test_theme_selectors.py now fails on any `ch`
+width in the shell.
+
 **The Second Axis Rule (note).** Section labels live in the rail, never above
 their content. A single centred column with even vertical rhythm is the shape of
 a template.

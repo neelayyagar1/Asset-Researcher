@@ -25,7 +25,11 @@ Rules for this file:
 | 2026-11-20 | `impeccable` `detect.mjs` | theme.py, components.py, app.py | 22 findings: 21 "outside DESIGN.md" (expected before the rewrite), 1 side-tab in the note, kept as a semantic deviation |
 | 2026-11-20 | `intent:vigil` (agent) | Shell audit | 16 findings. Three Critical verified independently; one (double-bordered fields) was right in conclusion and wrong in mechanism - see below |
 | 2026-11-20 | `superpowers:test-driven-development` | Stale-metric guard | Tests written first, confirmed failing, then the check and the model's refusal |
-| 2026-11-20 | `impeccable:impeccable-documenter` (agent) | DESIGN.md | Rewritten from the built world |
+| 2026-11-20 | `impeccable:impeccable-documenter` (agent) | DESIGN.md | Rewritten from the built world; detector findings fell 22 to 2 |
+| 2026-11-20 | `superpowers:test-driven-development` | Skeleton, stale tags, entity decoding, Home | Each fix watched fail first |
+| 2026-11-20 | `code-review` (high) | The night's diff | Two real bugs, both in my own fixes |
+| 2026-11-20 | `security-review` | The night's diff | No HIGH or MEDIUM findings; the error-message change reduced exposure |
+| 2026-11-20 | `perception-first-design:evaluate` | Rebuilt screens | L1 41 to 74, L2 34 to 86, measured |
 
 ## Available and scheduled tonight
 

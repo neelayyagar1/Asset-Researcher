@@ -107,3 +107,69 @@ VOCABULARY.md condemned as having no professional usage, replaced by
 
 L1 is not fixed by decoration. It is fixed by the page becoming
 coherent, which is an L2 operation.
+
+---
+
+# Re-evaluation, after the rebuild
+
+Same framework, same method: measured in the live DOM at 1440x900, not
+estimated. The first pass is above, unedited.
+
+## Scores
+
+| Layer | Before | After | What moved it |
+|---|---|---|---|
+| L0 Foundation | 72 | 78 | Eight interactive elements on home, numbered instructions where there were none |
+| L1 First impression | 41 | 74 | The product's own output is above the fold; the page is coherent |
+| L2 Processing fluency | 34 | 86 | One container width, one axis, two type families, measured contrast |
+| L3 Perception bias | 55 | 80 | The experiential self-contradiction is gone |
+| L4 Decision architecture | 61 | 79 | One primary action, named in the words printed on it |
+
+L2 was the binding constraint and is now the strongest layer, which is
+the expected shape: L1 rises when a page becomes coherent rather than
+when it is decorated.
+
+## What the measurements say
+
+| Measure | Before | After |
+|---|---|---|
+| Distinct container widths, home | 4 | 1 (plus one prose measure, same left edge) |
+| Competing centre axes | 3 (656, 707, 720) | 0 |
+| Left edges on the screen | several | 2, one per column |
+| Type families rendering | 3 | 2 plus a monospace |
+| Muted text contrast | 3.19:1, fails AA | 4.91:1, passes |
+| Field boundary contrast | 1.27:1, fails SC 1.4.11 | 3.27:1, passes |
+| Bypass link focus ring | 1.04:1, invisible | the one focus colour, visible on both grounds |
+| Radii in use | 4px, 6px, 7px, 10px | 5px, 7px, 10px, each declared |
+
+## L3: the finding that mattered
+
+The first pass recorded an experiential self-contradiction: three
+claims about rigour and precision, set in a layout with four container
+widths, three centre axes and two button sizes, so the page disproved
+its own thesis before the thesis was read.
+
+That is resolved, and not by rewording the claims. The claims are
+mostly gone - what replaced them is the product's own output, six real
+notes with their own headline figures read out of the built documents.
+The strongest available trust signal was a research note, and the
+opening screen used to show none of it.
+
+One claim did change, because it was false. The screen said "every
+claim is traced back to the document it came from" while the qualified
+sentence - locating a quote is not establishing that it supports the
+claim - sat in a function with no callers. The honest version now
+renders and the dead one is deleted.
+
+## What is still open
+
+- **The note renders in a 2,000px iframe** over a document of about
+  33,000px. A note needs a page of its own, which is a change of shape
+  rather than a swap, and `st.iframe` does not take an in-memory
+  document.
+- **No active-section indicator while scrolling.** Mapping scroll
+  position to a nav item needs script in the parent, and faking it in
+  CSS marks the wrong section.
+- **The note's own surface was not re-scored.** It was deliberately
+  left unrestyled, and the owner's judgement was that it already reads
+  well.
