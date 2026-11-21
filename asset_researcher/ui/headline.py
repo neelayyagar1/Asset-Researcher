@@ -71,6 +71,24 @@ def _sector_stats(report: Report) -> list[Stat]:
     return [s for s in out if s is not None][:3]
 
 
+def _is_printable_value(value: float | None) -> bool:
+    """Is a modelled value per share a figure a reader can act on?
+
+    Equity is an option with a zero floor, so a negative value per
+    share is not a conservative output - it is a non-output. The model
+    discounts unlevered cash flow to an enterprise value and subtracts
+    a net debt stack; for a heavily levered filer the residual goes
+    negative on almost any assumption set, which describes the leverage
+    rather than a mispricing.
+
+    Lumen's note printed "Modelled value, illustrative ($4.52)" above a
+    paragraph explaining why the number meant nothing. Printing a
+    figure and disclaiming it underneath is the shape of defect this
+    product exists to avoid: the headline is what gets quoted.
+    """
+    return value is not None and value > 0
+
+
 def headline_stats(report: Report) -> list[Stat]:
     bundle = report.bundle
     price = bundle.quote.price if bundle.quote else None
@@ -173,7 +191,14 @@ def headline_stats(report: Report) -> list[Stat]:
         ),
         Stat(
             "Modelled value, illustrative",
-            fmt.usd(target),
-            f"{case_note}. See the divergence note below" if case_note else "",
+            fmt.usd(target) if _is_printable_value(target) else "NM",
+            (
+                f"{case_note}. See the divergence note below"
+                if case_note
+                else ""
+            )
+            if _is_printable_value(target)
+            else "The model returns no positive equity value for this "
+                 "capital structure",
         ),
     ]

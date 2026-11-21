@@ -920,11 +920,27 @@ table.ar-list th.num, table.ar-list td.num {
 
 /* ------------------------------------------------------------ controls */
 
-.stSelectbox [data-baseweb="select"] > div {
+/* Addressed by test id, because the `[data-baseweb="select"]` rule that
+   stood here styled nothing: this build emits no such attribute. It was
+   the only place the control's face and size were declared, so the
+   Strategy field was the one input on the form still set in Streamlit's
+   own type - on the screen where a reader decides whether this is
+   built. */
+[data-testid="stSelectbox"] div[role="combobox"] {
   font-family: var(--sans); font-size: 13px; background: var(--shell-panel);
   border: 1px solid var(--shell-field-line); border-radius: var(--shell-r);
   color: var(--shell-ink); box-shadow: none;
   transition: border-color 120ms var(--ease); }
+/* The select and the radio get the same ring as every other control.
+   Without a rule naming them, the ring falls through to the global
+   focus style, which Streamlit's own `outline: none` out-specifies for
+   widget internals - the mechanism this file documents twice already. */
+[data-testid="stSelectbox"] div[role="combobox"]:focus-visible,
+[data-testid="stSelectbox"] div[role="combobox"]:focus-within,
+[data-testid="stRadio"] input:focus-visible + div,
+[data-testid="stRadio"] label:focus-within {
+  outline: 2px solid var(--shell-focus) !important; outline-offset: 2px;
+  border-radius: var(--shell-r-sm); }
 .stTextInput input, .stTextArea textarea {
   font-family: var(--sans); font-size: 13px; color: var(--shell-ink);
   box-shadow: none; }
@@ -989,7 +1005,7 @@ table.ar-list th.num, table.ar-list td.num {
    focusable it has to show focus. */
 [data-testid="stVerticalBlock"]:focus-visible,
 section:focus-visible, div[class*="block-container"]:focus-visible {
-  outline: 2px solid var(--accent); outline-offset: 2px; }
+  outline: 2px solid var(--shell-focus); outline-offset: 2px; }
 
 /* Streamlit's own anchor rules out-specify `.ar-skip`, so in the app the
    bypass link rendered #0054a3 on its near-black pill, 2.43:1, with its

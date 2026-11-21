@@ -160,20 +160,30 @@ def _gate() -> bool:
     # gate could be ground down by a trivial script. This does not stop a
     # distributed attacker and is not meant to; it removes the easy path
     # and makes the attempt count visible to the person making them.
+    #
+    # The wait is refused at submission, not by removing the controls.
+    # This branch used to render the countdown and return before the
+    # form existed: no field, no button, nothing re-rendering when the
+    # delay elapsed, and the countdown frozen at whatever second the
+    # last attempt landed on. The only way forward was a page reload,
+    # which the screen did not mention. That is the first screen of the
+    # artifact, and a reviewer who mistypes four times met a dead end on
+    # its front door.
     attempts = st.session_state.get("gate_attempts", 0)
+    waiting = 0
     if attempts >= _GATE_FREE_ATTEMPTS:
         delay = min(2 ** (attempts - _GATE_FREE_ATTEMPTS), _GATE_MAX_DELAY)
         waited = time.monotonic() - st.session_state.get("gate_last", 0.0)
         if waited < delay:
-            write(ui.gate())
-            write(ui.status(
-                "warning", "Slow down",
-                f"Too many attempts. Try again in "
-                f"{max(1, int(delay - waited))} seconds.",
-            ))
-            return False
+            waiting = max(1, int(delay - waited))
 
     write(ui.gate())
+    if waiting:
+        write(ui.status(
+            "warning", "Slow down",
+            f"Too many attempts. Try again in {waiting} seconds; "
+            f"pressing Enter will tell you how long is left.",
+        ))
     # A form, so Return submits. A password box that ignores Return is
     # the most practised gesture in the world failing silently on the
     # first interaction, which reads as broken rather than as strict.
@@ -183,7 +193,15 @@ def _gate() -> bool:
             label_visibility="collapsed", placeholder="Passphrase",
         )
         submitted = st.form_submit_button("Enter", type="primary")
-    if submitted:
+    if submitted and waiting:
+        # Refused without touching the secret. The wait is enforced here
+        # so the screen stays operable while it runs, and pressing Enter
+        # reports the time left rather than appearing to do nothing.
+        write(ui.status(
+            "warning", "Slow down",
+            f"Still waiting. Try again in {waiting} seconds.",
+        ))
+    elif submitted:
         # Bytes, because compare_digest raises TypeError on a str holding
         # any non-ASCII character. A visitor typing an accented letter got
         # an uncaught exception instead of a refusal, and a passphrase
@@ -563,15 +581,27 @@ def _controls(key: str) -> tuple[str, str, str, bool]:
     # Back sits with the action it is an alternative to, at the foot of
     # the form, rather than above it where it read as a page control. The
     # primary keeps most of the width; leaving is the smaller gesture.
+    #
+    # The secondary action depends on where this form is. On the empty
+    # workspace it is a page control and goes home. Inside the New report
+    # dialog it is a dismissal, and labelling it "Back" while navigating
+    # the page behind the modal to home meant the dismissal-shaped
+    # control walked away from a report that cost a minute and about a
+    # dollar - the opposite of what a reader reaches for it to do.
+    in_dialog = key == "dialog"
     row = st.columns([3, 1])
     run = row[0].button(
         "Generate report", type="primary", use_container_width=True,
         key=f"{key}_run",
     )
     if row[1].button(
-        "Back", use_container_width=True, key=f"{key}_back"
+        "Cancel" if in_dialog else "Back",
+        use_container_width=True, key=f"{key}_back",
     ):
-        go("home")
+        if in_dialog:
+            st.rerun()  # closes the dialog, leaving the report on screen
+        else:
+            go("home")
     return ticker, mandate_text, urls_text, run
 
 

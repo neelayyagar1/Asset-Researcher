@@ -53,3 +53,36 @@ def test_no_passphrase_configured_leaves_the_app_open():
         __import__("pathlib").Path(__file__).resolve().parents[1] / "app.py"
     ).read_text()
     assert "if not secret:\n        return True" in source
+
+
+def test_the_backoff_screen_still_has_a_field_and_a_button(monkeypatch):
+    """A screen a reader cannot act on is a dead end.
+
+    The backoff branch rendered the gate markup and a countdown, then
+    returned before the form was built. The field and the submit button
+    were absent, nothing re-rendered when the delay elapsed, and the
+    countdown was a frozen number: the only way forward was a page
+    reload, which the screen did not say. That is the first screen of
+    the artifact.
+    """
+    import pathlib
+    from streamlit.testing.v1 import AppTest
+
+    app_path = str(pathlib.Path(__file__).resolve().parents[1] / "app.py")
+    monkeypatch.setenv("DEMO_PASSPHRASE", "the-real-phrase")
+    monkeypatch.delenv("SAMPLES_KEY", raising=False)
+
+    at = AppTest.from_file(app_path, default_timeout=60).run()
+    for _ in range(5):
+        at.text_input(key="gate_input").set_value("wrong").run()
+        at.button[0].click().run()
+
+    assert not at.exception
+    text = " ".join(m.value for m in at.markdown)
+    assert "Too many attempts" in text, "the backoff never engaged"
+
+    # The screen must remain operable.
+    assert at.text_input(key="gate_input") is not None, (
+        "the passphrase field is gone during backoff"
+    )
+    assert at.button, "no control on the backoff screen"

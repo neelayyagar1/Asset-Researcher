@@ -126,3 +126,31 @@ def test_parentheses_are_read_as_negative():
 
 def test_a_thousands_separator_does_not_defeat_parsing():
     assert _as_number("1,234.5%") == 1234.5
+
+
+# ------------------------------------------- a negative per-share value
+
+def test_a_negative_modelled_value_is_not_printed_as_a_figure():
+    """Equity is an option with a zero floor.
+
+    Lumen's note printed "Modelled value, illustrative ($4.52)". A
+    negative value per share is not a conservative output, it is a
+    non-output: the model discounts unlevered cash flow and subtracts a
+    net debt stack, and for a filer with that much debt the residual
+    goes negative for almost any assumption set. It describes the
+    leverage, not a mispricing - which the note's own prose says, in a
+    paragraph beneath the number.
+
+    The guard that already suppresses an implausible upside has to
+    cover this too: printing a figure and disclaiming it underneath is
+    the shape of defect this product exists to avoid.
+    """
+    from asset_researcher.ui import headline
+
+    assert hasattr(headline, "_is_printable_value"), (
+        "no guard exists for a non-printable modelled value"
+    )
+    assert headline._is_printable_value(42.0) is True
+    assert headline._is_printable_value(0.0) is False
+    assert headline._is_printable_value(-4.52) is False
+    assert headline._is_printable_value(None) is False

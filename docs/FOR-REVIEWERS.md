@@ -46,29 +46,41 @@ This one is in the samples, so the claim can be checked against the note
 rather than taken on trust.
 
 Realty Income is a net-lease REIT that has grown its asset base steadily
-and says so. The note agrees on the arithmetic and disagrees on who the
-growth went to. Five of eight management claims diverge from the filed
-figures, and the one that matters reads:
+and says so. The note agrees on the arithmetic and disagrees about who
+the growth went to:
 
-> The cost-of-capital claim is supported at the enterprise level and
-> contradicted at the per-share level for three consecutive years.
-> External growth was funded at a cost that did not leave a spread for
-> existing holders once dilution is counted.
+> The spread, as it shows up in the filed accounts, has narrowed to the
+> point where growth has been scale-additive rather than per-share
+> accretive.
 
-Per-share funds from operations, per-share operating cash flow and
-per-share net income all fell across FY2022 to FY2024 while the asset
-base compounded. Both statements are true at once, which is the whole
-point: a screen shows the enterprise growing, and the per-share series
-shows the existing holder standing still. Ninety of ninety citations
-resolve to the filings.
+The share count roughly doubled across the window while the investment
+spread compressed, and the long-term incentive metrics - leverage,
+dividend-per-share growth, relative total shareholder return - can all
+be satisfied by issuing equity and raising the dividend while per-share
+cash earnings go flat. A screen shows the enterprise growing; the
+per-share series shows the existing holder standing still. Both are
+true at once, which is the whole point.
 
-The same note also declines to produce a valuation. A discounted cash
-flow discounts unlevered cash flow to an enterprise value and bridges to
-equity across net debt, which does not describe a company valued on funds
-from operations against asset value. So the headline reads Price / FFO
-14.7x and the target cell reads **Declined**, with the reason in place
-rather than a blank. Truist is refused for the opposite reason: deposits
-are the funding of a bank, not a claim to subtract.
+An earlier version of this page made a stronger claim: that per-share
+funds from operations, operating cash flow and net income *all fell*
+across FY2022 to FY2024. That version was breakable. The window ended
+at the trough, FY2025 is higher, and the per-share decline rested on a
+proxy that excludes gains on disposition for a company the note itself
+calls an active disposer of assets. The note's own Limitations section
+said so; this page did not, and promoted the finding anyway. The
+argument above is the one the evidence actually supports, and it is
+close to as damning.
+
+That correction is left visible rather than quietly edited, because a
+document that argues for claiming less than you can prove should show
+its own instance of failing to.
+
+The same note declines to produce a valuation. A discounted cash flow
+discounts unlevered cash flow to an enterprise value and bridges to
+equity across net debt, which does not describe a company valued on
+funds from operations against asset value. So the headline reads
+Price / FFO and the target cell reads **Declined**, with the reason in
+place rather than a blank.
 
 Declining to answer is a feature here, not a gap. A tool that always
 produces a number produces one for the companies where it should not.
@@ -90,7 +102,7 @@ drift. The plain-text export is a third rendering and is kept in step by
 hand, which is a weaker guarantee and is stated as one rather than
 claimed as the same.
 
-567 tests, no network, about fifteen seconds.
+576 tests, no network, about fifteen seconds.
 
 ## What it does not do
 

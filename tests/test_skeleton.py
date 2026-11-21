@@ -339,3 +339,18 @@ def test_a_note_built_before_the_fix_still_sizes_its_frame(monkeypatch):
     assert "if \"fitFrame\" in note_html" in source, (
         "the wrapper is not idempotent, so a new note gets the script twice"
     )
+
+
+def test_the_dialog_dismisses_rather_than_navigating_away(monkeypatch):
+    """Inside a modal the expected secondary action is dismissal.
+
+    The dialog's secondary was labelled "Back" and called go("home"),
+    so the dismissal-shaped control navigated the page behind the modal
+    away from a report that cost a minute and about a dollar. The form
+    is shared between the dialog and the empty workspace, where "Back"
+    going home is correct, so the action depends on where it is.
+    """
+    source = pathlib.Path(APP).read_text(encoding="utf-8")
+    assert 'in_dialog = key == "dialog"' in source
+    assert '"Cancel" if in_dialog else "Back"' in source
+    assert "if in_dialog:\n            st.rerun()" in source

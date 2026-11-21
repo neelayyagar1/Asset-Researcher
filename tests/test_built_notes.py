@@ -188,3 +188,29 @@ def test_the_section_names_are_the_vocabulary_the_project_settled_on(note):
     assert not found, (
         f"{note.stem} section names still use retired vocabulary: {found}"
     )
+
+
+_IMPLEMENTATION_WORDS = (
+    "the renderer", "renderer will", "this prompt", "the schema",
+    "as instructed", "the model will", "placeholder", "TODO",
+    "the pipeline", "JSON", "the template",
+)
+
+
+@pytest.mark.parametrize("note", _notes(), ids=lambda p: p.stem)
+def test_no_implementation_vocabulary_reaches_the_reader(note):
+    """A research note is not allowed to mention how it was built.
+
+    ADP's note contained "all of which the renderer will populate",
+    inside a cited sentence, in the Business description. The prompts
+    explain the renderer to the model so it understands why it may not
+    write a figure, and the model repeated the word back into the
+    product. It is the one unambiguous crack in the fourth wall and it
+    sits in the surface a reader is judging.
+    """
+    doc = _parse(note)
+    text = doc.text.lower()
+    found = [w for w in _IMPLEMENTATION_WORDS if w.lower() in text]
+    assert not found, (
+        f"{note.stem} shows implementation vocabulary to a reader: {found}"
+    )
