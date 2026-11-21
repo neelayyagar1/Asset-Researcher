@@ -132,6 +132,25 @@ def load(slug: str, scope: str = "") -> Saved | None:
     return _read(directory(scope) / f"{slug}.json", slug)
 
 
+def has_any(scope: str = "") -> bool:
+    """Whether this scope holds anything, without opening it.
+
+    The app asks this several times per render, to decide whether the
+    scope belongs in the URL. `listing` would answer it by reading
+    every report's full HTML - a quarter of a megabyte each - which
+    would undo the cache that exists for exactly that reason.
+    """
+    if scope and not _valid(scope):
+        return False
+    try:
+        return any(
+            path.is_file() and _valid(path.stem)
+            for path in directory(scope).glob("*.json")
+        )
+    except OSError:
+        return False
+
+
 def listing(scope: str = "") -> list[Saved]:
     """Every saved report, newest first.
 

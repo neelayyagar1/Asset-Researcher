@@ -17,6 +17,8 @@ is matched against a pattern before it is ever joined to a path.
 
 from __future__ import annotations
 
+import pathlib
+
 import pytest
 
 from asset_researcher import reports_store as store
@@ -114,3 +116,29 @@ def test_an_unscoped_store_still_works(here):
     """Local runs and the tests above use it."""
     saved = store.save("ADP", "A (ADP)", "<html>x</html>")
     assert store.load(saved.slug) is not None
+
+
+def test_asking_whether_any_exist_does_not_read_them(here, monkeypatch):
+    """`listing` reads every report's full HTML - a quarter of a
+    megabyte each. The app asks "is there anything here?" several
+    times per render, to decide whether the scope belongs in the URL,
+    and answering that by reading every document would undo the cache
+    it was given for exactly this reason."""
+    store.save("ADP", "A (ADP)", "<html>" + "x" * 200_000 + "</html>",
+               scope="aaaaaaaaaaaaaaaa")
+
+    reads = []
+    original = pathlib.Path.read_text
+
+    def counting(self, *args, **kwargs):
+        reads.append(self.name)
+        return original(self, *args, **kwargs)
+
+    monkeypatch.setattr(pathlib.Path, "read_text", counting)
+    assert store.has_any(scope="aaaaaaaaaaaaaaaa") is True
+    assert reads == [], f"has_any read {reads}"
+
+
+def test_it_answers_falsely_for_an_empty_or_bad_scope(here):
+    assert store.has_any(scope="bbbbbbbbbbbbbbbb") is False
+    assert store.has_any(scope="../aaaaaaaaaaaaaaaa") is False

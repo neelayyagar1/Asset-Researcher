@@ -372,7 +372,7 @@ def _session_scope() -> str:
     # nothing should be able to copy the address bar without sending
     # someone a parameter that would later carry their research list.
     # A link copied from a fresh session stays a bare link.
-    if reports_store.listing(scope=scope):
+    if reports_store.has_any(scope=scope):
         if st.query_params.get("sid") != scope:
             st.query_params["sid"] = scope
     return scope
@@ -388,7 +388,7 @@ def _scope_for_links() -> str:
     research list.
     """
     scope = _session_scope()
-    return scope if _saved_documents(scope, _store_stamp()) else ""
+    return scope if reports_store.has_any(scope=scope) else ""
 
 
 def _store_stamp() -> float:
