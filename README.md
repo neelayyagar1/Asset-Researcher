@@ -111,7 +111,7 @@ part-way through a report:
 
 ### Front-end work without spending anything
 
-A live report costs an API call and about a minute, which is too slow a loop
+A live report costs an API call and about five minutes, which is too slow a loop
 to lay out a table against.
 
 ```bash

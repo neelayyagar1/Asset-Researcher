@@ -567,8 +567,8 @@ table.ar-table tbody tr.subject td.nm {
      arriving later. It never reaches the end, because it does not
      know where the end is. */
   .ar-progress i {
-    animation: ar-fill 75s cubic-bezier(.2,.7,.3,1) both,
-      ar-creep 240s linear 75s both; }
+    animation: ar-fill 300s cubic-bezier(.2,.7,.3,1) both,
+      ar-creep 300s linear 300s both; }
 
   /* A press with no acknowledgement, followed by a rerun most of a second
      later, reads as a button that did not work. These are the product's

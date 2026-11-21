@@ -98,6 +98,23 @@ concentration.
 a section called *Reconciliation* expects an adjustments bridge. The
 section is therefore **Management vs. filed figures**.
 
+## How long a report actually takes
+
+**About five minutes, not one.** Measured tonight against the real
+APIs: eighteen sample notes across three full rebuilds at five to
+seven minutes each, and two reports driven through the interface
+itself at about seven, timed from the click to the file landing on
+disk.
+
+The interface said "about a minute" until that was measured, and the
+progress bar filled in seventy-five seconds. A reader who presses the
+button on a one-minute promise and is still waiting six minutes later
+concludes it has hung — which is the exact impression the bar exists
+to prevent. Both now say five, and the bar creeps for a further five
+rather than freezing near-full.
+
+The cost is about $1.20 a report, which was roughly right already.
+
 ## "Report" in the app, "research note" in the document
 
 Deliberate, and worth having the answer ready because it is the kind
@@ -254,7 +271,7 @@ ask.
 
 ## The suite
 
-784 tests, no network, about forty-five seconds. Every fix below was
+789 tests, no network, about forty-five seconds. Every fix below was
 written as a failing test first, and the failure was watched before the
 fix was written.
 

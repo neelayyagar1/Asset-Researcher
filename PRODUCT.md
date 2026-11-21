@@ -69,7 +69,7 @@ a comparables table for a number by its position.
   text. Locating a quote is not establishing that it supports the claim, and
   the interface must not imply otherwise.
 - The counter-case is mandatory on every report.
-- A report takes about a minute and costs about $1.30, so the waiting state
+- A report takes about five minutes and costs about $1.20, so the waiting state
   is a real surface, not an edge case.
 - Sections disappear rather than render empty, and say why.
 - Streamlit owns the DOM. No client-side routing, no JS framework. Motion and

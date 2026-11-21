@@ -5,7 +5,7 @@ Two surfaces, because they have different jobs.
 **A static sample note.** Pre-rendered, loads instantly, costs nothing to
 serve, needs no API key. This is the link that goes in an email.
 
-**The live tool.** Takes a ticker and builds a note in about a minute, and
+**The live tool.** Takes a ticker and builds a note in about five minutes, and
 spends an API call doing it. This is the link for someone who wants to
 drive it.
 

@@ -1,6 +1,6 @@
 """Build a static, publishable sample note.
 
-The live application takes about a minute per report and costs an API
+The live application takes about five minutes per report and costs an API
 call, which is the wrong thing to put behind a link in a cold email: the
 reader waits, and every click spends money. A pre-rendered note loads
 instantly, costs nothing to serve, needs no API key, and is the actual

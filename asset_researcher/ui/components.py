@@ -1017,8 +1017,15 @@ STEPS = (
     f"Press <b>{START_LABEL}</b>, below.",
     "Enter a US-listed ticker, how you invest, and any public URLs "
     "you want read alongside the filings.",
+    # "About five minutes", not "about a minute". Measured tonight
+    # against the real APIs: eighteen sample notes across three
+    # rebuilds at five to seven minutes each, and two reports driven
+    # through this interface at about seven, timed from the click to
+    # the file landing on disk. A reader who presses the button on a
+    # one-minute promise and is still waiting six minutes later
+    # concludes it has hung.
     "Press <b>Generate report</b>. It reads the filings and writes "
-    "the report, which takes about a minute.",
+    "the report, which takes about five minutes.",
     "Read it. Every figure links back to the filing it came from "
     "&mdash; located in the source, which is not the same as "
     "supporting the claim.",

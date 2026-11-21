@@ -1187,7 +1187,18 @@ def _run_pending() -> None:
         # A finished run is its own screen. Without this the report was
         # not a view at all: it rendered whenever one existed, whatever
         # the view said, which is what made Home a dead button.
+        #
+        # The address bar has to follow, and did not. `_sync_view_from_url`
+        # runs at the top of every rerun and adopts whatever the URL
+        # says; the URL still read `view=tool`, put there by the form
+        # screen. So the report rendered once and the first rerun after
+        # it - any button, any widget - set the view back to `tool` and
+        # drew the empty form, discarding the screen the visitor had
+        # just waited ninety seconds for. Found by running a real
+        # report through the browser; no test clicks Generate, because
+        # that queues a paid run.
         st.session_state["view"] = "report"
+        st.query_params["view"] = "report"
 
 
 # ------------------------------------------------------------------- home
