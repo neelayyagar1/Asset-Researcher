@@ -667,9 +667,10 @@ class ImpliedExpectations:
         notes = []
         if self.terminal_share > 0.75:
             notes.append(
-                f"{self.terminal_share:.0%} of the modelled value sits in the "
-                f"terminal assumption, so the output is largely a statement "
-                f"about perpetuity growth rather than about the forecast."
+                f"{self.terminal_share:.0%} of the modelled value at the "
+                f"default assumptions sits in the terminal assumption, so "
+                f"that output is largely a statement about perpetuity "
+                f"growth rather than about the forecast."
             )
         divergence = self.model_vs_market
         if divergence is not None and abs(divergence) > 0.4:
@@ -728,6 +729,13 @@ def implied_expectations(inputs: DcfInputs, market_price: float) -> ImpliedExpec
         implied_discount_rate=rate,
         market_price=market_price,
         model_value_at_defaults=baseline.value_per_share,
+        # The BASELINE's share, deliberately, and matching
+        # `model_value_at_defaults` beside it: the caveat these feed
+        # describes the model at the convention assumptions, so taking
+        # the share from the solved run would make two halves of one
+        # sentence describe two different runs. A review called this a
+        # defect; it is the consistent choice, and the caveat now says
+        # which run it means.
         terminal_share=baseline.terminal_share_of_value,
     )
 

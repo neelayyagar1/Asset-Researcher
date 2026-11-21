@@ -25,6 +25,7 @@ from asset_researcher.documents.sections import (
 )
 from asset_researcher.documents.store import DocumentStore
 from asset_researcher.llm.provider import LLMProvider
+from asset_researcher.quant.market import cap_vs_shares_gap
 from asset_researcher.quant.comps import CompsTable, build_comp_row
 from asset_researcher.quant.derived import compute_derived
 from asset_researcher.quant.metrics_config import line_items_for_sector
@@ -128,6 +129,21 @@ def _add_valuation(bundle, series, profile=None) -> None:
     # per-share earnings, and are still used there.
     shares_outstanding = profile.shares_outstanding if profile else None
     shares_basis = "Current shares outstanding, from the market data provider"
+
+    # Market capitalisation and share count arrive from the provider
+    # independently, and nothing asked whether they agreed. Every
+    # multiple in the note is built on the first and every per-share
+    # figure on the second, so a disagreement is carried silently into
+    # the comparison between them - Lumen shipped with eight percent
+    # between them. Disclosed rather than reconciled: picking one would
+    # invent a figure the provider did not give.
+    disagreement = cap_vs_shares_gap(
+        bundle.market_cap,
+        bundle.quote.price if bundle.quote else None,
+        shares_outstanding,
+    )
+    if disagreement:
+        bundle.add_gap("market_data", disagreement)
 
     if not shares_outstanding and bundle.market_cap and bundle.quote:
         shares_outstanding = bundle.market_cap / bundle.quote.price
