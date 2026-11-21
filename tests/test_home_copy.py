@@ -174,3 +174,78 @@ def test_the_steps_are_a_list_in_the_markup_not_only_in_the_paint():
     assert html.count("<li") == 2
     # Safari strips the list role when list-style is none.
     assert 'role="list"' in html
+
+
+def test_the_steps_do_not_wear_the_hosts_list_item_box():
+    """Making the steps a real `ol` handed the host two selectors, not one.
+
+    The first pass fixed the container: Streamlit ships
+    `.st-emotion-cache-... > ol { display: block; width: fit-content }`
+    and `ol.ar-steps` had to take `!important` to keep four columns.
+
+    It styles the ITEMS too - `margin-left: 1.15rem`, `padding-left:
+    .3rem`, `margin-block: .2rem` - and out-specifies `.ar-step` at
+    (0,1,0). Measured in the running page after the container was fixed:
+    the `ol` box started at x 28 with the opening line, both section
+    heads and the index, and all four steps sat at 46.4 inside it, so
+    step one's prose began at 51.2 - 23px right of every other left edge
+    on the page. A single left edge for the column is the one thing this
+    direction rests on, and the Get started block was the only thing
+    breaking it. `.ar-step`'s own `padding: 2px 20px 2px 0` was
+    discarded with it: computed padding-top and padding-right were 0.
+
+    `ol.ar-steps > li.ar-step` is (0,2,2), which clears the host without
+    `!important` - verified by injecting exactly this rule into the
+    running page and re-measuring at x 28.
+    """
+    from asset_researcher.ui import theme
+
+    sheet = theme.stylesheet()
+    rule = re.search(
+        r"ol\.ar-steps > li\.ar-step \{([^}]*)\}", sheet
+    )
+    assert rule, "nothing takes the host's list-item box off the steps"
+    body = rule.group(1)
+    assert "margin: 0" in body, (
+        "the steps keep the host's margin-left, which indents the whole "
+        "column group off the page's left edge"
+    )
+    assert "padding: 2px 20px 2px 0" in body, (
+        "the step's own padding is not restored, so the column gutter "
+        "the design declares is not applied"
+    )
+
+
+def test_the_phone_step_rules_can_still_win():
+    """The fix above raised the base rule to (0,2,2), so the narrow
+    viewport block had to follow it up. A bare `.ar-step` there at
+    (0,1,0) now loses, and the four steps would stack while keeping
+    their desktop gutters - a regression introduced by a fix, which is
+    the pattern this file keeps catching."""
+    from asset_researcher.ui import theme
+
+    sheet = theme.stylesheet()
+    phone = sheet[sheet.index("grid-template-columns: minmax(0, 1fr)"):]
+    phone = phone[:1200]
+    assert "ol.ar-steps > li.ar-step { padding-right: 0" in phone, (
+        "the phone rule is written at a specificity the base rule beats"
+    )
+
+
+def test_each_step_is_a_list_item_to_a_screen_reader():
+    """`role="list"` on the container was half the fix.
+
+    WebKit drops the `listitem` role from an `li` whose `display` is not
+    `list-item`, and `.ar-step` is `display: grid` so the number and the
+    prose can stack. A role on the container with none on the items is a
+    list announced with no members - the original defect wearing an ARIA
+    attribute, and it reads as fixed, which is worse.
+    """
+    from asset_researcher.ui import components
+
+    markup = components.steps(["one", "two", "three", "four"])
+    assert markup.count('role="listitem"') == 4, (
+        "the steps are a list whose items carry no role, which WebKit "
+        "strips because they are display: grid"
+    )
+    assert 'role="list"' in markup

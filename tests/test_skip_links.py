@@ -88,3 +88,34 @@ def test_the_report_screen_offers_the_bypass_before_its_controls():
         "the bypass is offered after New report, Home, HTML and "
         "Markdown, on the longest screen in the product"
     )
+
+
+def test_a_bypass_target_is_a_named_group_and_not_an_empty_landmark():
+    """The targets carry a role and a name so that focus landing on them
+    is announced - an unnamed empty span moved focus and said nothing,
+    which left a screen-reader user with no way to tell whether the link
+    had worked.
+
+    The role is `group`, not `region`. A named region is a LANDMARK, and
+    these targets are empty spans whose content is their next SIBLING:
+    on the samples view the span named "The report" sits immediately
+    before the iframe holding it. As regions they added four entries to
+    the landmark list that promise content and hold none, so a reader
+    navigating by landmark arrives in one and has to leave it again to
+    reach the thing it is named after. `group` takes an accessible name
+    the same way and is not a landmark.
+    """
+    import pathlib
+
+    app = (pathlib.Path(__file__).resolve().parents[1] / "app.py").read_text()
+    targets = app.count('tabindex="-1" role="group" aria-label=')
+    assert targets == 4, (
+        f"expected four named bypass targets, found {targets}"
+    )
+    # Matched on the attribute pair rather than on the word, because
+    # the helper's own docstring explains the role it replaced - and the
+    # first version of this test matched that explanation. The suite has
+    # been caught this way twice now.
+    assert 'tabindex="-1" role="region"' not in app, (
+        "a bypass target is an empty landmark again"
+    )

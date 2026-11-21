@@ -1129,9 +1129,14 @@ button[data-testid="stExpandSidebarButton"]:hover,
    Taking the fill away also does something the box was hiding. On the
    marble ground the figures are the only white-adjacent thing left on
    the lower half of the screen, so the eye lands on the data rather
-   than on the container holding it. The column head keeps its own
-   faint fill because it is a different KIND of row, and that is the
-   one distinction worth paying a surface for.
+   than on the container holding it. The column head keeps a fill, but
+   it is not what distinguishes it: --shell-sink is #f7f9fb against a
+   #f4f6f9 ground, which is 1.026:1 and not a perceptible surface. What
+   actually marks that row as a different KIND of row is its 11px
+   tracked mute type and the rule under it. The fill is kept as the
+   faintest possible settling rather than as the distinction, and an
+   earlier version of this comment claimed otherwise - it is a
+   candidate for deletion on the owner's call, not on mine.
 
    The rows stay interactive - a row is still one link - so this does
    not cost the affordance. Hover and the focus ring both paint the
@@ -1240,6 +1245,23 @@ table.ar-list tr:has(a.ar-row-link:focus-visible) td:last-child {
               inset 0 -2px 0 0 var(--shell-focus),
               inset -2px 0 0 0 var(--shell-focus); }
 a.ar-row-link:focus-visible { outline: none; }
+/* Except under forced colours, where the row-wide ring does not exist.
+   Both channels carrying it are ones the user agent takes away: it
+   forces `box-shadow` to none and overrides `background-color`, while
+   `outline` survives. So switching the outline off above left a
+   keyboard user in Windows High Contrast Mode with no focus indicator
+   on the index at all - SC 2.4.7 and SC 1.4.11 failing outright, where
+   before this change a forced-colour outline was at least drawn around
+   the focused cell. The ring is one cell wide here rather than one row,
+   because `inset: 0` resolves against the anchor's own cell and inset
+   shadows are exactly what this mode removes; a visible indicator on
+   the right row beats a correct one that is not painted.
+   `Highlight` is the system colour, so it is whatever the reader's own
+   scheme uses for selection rather than anything of ours. */
+@media (forced-colors: active) {
+  a.ar-row-link:focus-visible {
+    outline: 3px solid Highlight; outline-offset: -3px; }
+}
 table.ar-list td.co { color: var(--shell-soft); }
 table.ar-list td.tk { font-weight: 600; letter-spacing: -.01em; }
 /* Filed and Cited are context rather than the figure a reader came
@@ -1311,6 +1333,23 @@ table.ar-list th.num, table.ar-list td.num {
 ol.ar-steps {
   display: grid !important; width: auto !important;
   list-style: none !important; }
+/* ...and the same fight one level down, which the first pass missed.
+   The host styles the ITEMS too - `margin-left: 1.15rem`,
+   `padding-left: .3rem`, `margin-block: .2rem` - and out-specifies
+   `.ar-step` at (0,1,0). Measured after the ol was fixed: the ol's box
+   started at x 28 with the lead, both section heads and the index, and
+   all four steps sat at 46.4 inside it, so the first step's prose began
+   at 51.2 - 23px right of every other left edge on the page, which is
+   the one commitment this direction rests on. `.ar-step`'s own
+   `padding: 2px 20px 2px 0` was discarded wholesale with it: computed
+   padding-top and padding-right were both 0.
+   No `!important` here. `ol.ar-steps > li.ar-step` is (0,2,2), which
+   clears the host on specificity alone - verified by injecting exactly
+   this rule into the running page and re-measuring, and it is the form
+   the phone rules below have to take for the same reason. */
+ol.ar-steps > li.ar-step {
+  margin: 0; padding: 2px 20px 2px 0; }
+ol.ar-steps > li.ar-step + li.ar-step { padding-left: 20px; }
 .ar-step {
   display: grid; grid-template-rows: auto 1fr; gap: 7px;
   align-content: start; padding: 2px 20px 2px 0; }
@@ -1564,8 +1603,17 @@ section:focus-visible, div[class*="block-container"]:focus-visible {
    The `:not()` chain matters: the severity classes set the border
    colour themselves, and a blanket override here would win on source
    order and erase the one thing the border is for. */
-[data-testid="stMarkdown"] .ar-status { color: var(--shell-soft); }
-[data-testid="stMarkdown"] .ar-status:not(.ok):not(.warn):not(.bad) {
+/* Keyed on `.ar-status-shell`, which only `ui.shell_status` emits.
+   It was `[data-testid="stMarkdown"] .ar-status`, and that was wrong:
+   the note rendered inline on the live report screen goes through the
+   same `st.markdown` call, so the rule repainted all five of the
+   DOCUMENT's own status blocks in shell tokens - measured rgb(80, 83,
+   92) inline against rgb(64, 60, 51) in the iframe and the export. The
+   same document, two renderings, which is what the host's table
+   borders were fixed for one commit earlier. No container distinguishes
+   the two, so the surface is named at the call site instead. */
+.ar-status-shell { color: var(--shell-soft); }
+.ar-status-shell:not(.ok):not(.warn):not(.bad) {
   border-left-color: var(--shell-line-2); }
 
 /* Shell tokens, not document ones. The contrast was never the problem
@@ -1811,9 +1859,14 @@ table.ar-list th.num { font-family: var(--sans); letter-spacing: .03em; }
 
   /* And the four steps go back to a stack: four columns of prose on a
      375px screen is one word per line. */
+  /* Written as `ol.ar-steps > li.ar-step` rather than `.ar-step`,
+     because the rule that takes the host's list box off the steps is
+     (0,2,2) and a bare `.ar-step` at (0,1,0) would now lose to it - so
+     the stack would keep the desktop gutters. The selector follows the
+     base rule up rather than reaching for `!important`. */
   .ar-steps { grid-template-columns: minmax(0, 1fr); }
-  .ar-step { padding-right: 0; }
-  .ar-step + .ar-step {
+  ol.ar-steps > li.ar-step { padding-right: 0; }
+  ol.ar-steps > li.ar-step + li.ar-step {
     border-left: 0; padding-left: 0;
     border-top: 1px solid var(--shell-line); padding-top: 13px;
     margin-top: 2px; }

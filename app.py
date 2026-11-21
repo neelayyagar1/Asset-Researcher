@@ -184,7 +184,7 @@ def _gate() -> bool:
 
     write(ui.gate())
     if waiting:
-        write(ui.status(
+        write(ui.shell_status(
             "warning", "Slow down",
             f"Too many attempts. Wait {waiting} seconds, then try again.",
         ))
@@ -218,7 +218,7 @@ def _gate() -> bool:
         # Refused without touching the secret. The wait is enforced here
         # so the screen stays operable while it runs, and pressing Enter
         # reports the time left rather than appearing to do nothing.
-        write(ui.status(
+        write(ui.shell_status(
             "warning", "Slow down",
             f"Still waiting. Try again in {waiting} seconds.",
         ))
@@ -246,7 +246,7 @@ def _gate() -> bool:
         else:
             st.session_state["gate_attempts"] = attempts + 1
             st.session_state["gate_last"] = time.monotonic()
-            write(ui.status("error", "Refused", "That passphrase is not right."))
+            write(ui.shell_status("error", "Refused", "That passphrase is not right."))
     return False
 
 
@@ -274,6 +274,18 @@ st.markdown(theme.stylesheet(), unsafe_allow_html=True)
 # we do write, gets a real `main` landmark.
 def _skip_link(target: str, label: str) -> None:
     """A bypass link, emitted only where its target exists.
+
+    The targets it points at carry `role="group"` and a name, not
+    `role="region"`. A named region is a LANDMARK, and these targets are
+    empty spans: the content each one is named after is its next
+    SIBLING, not its child - on the samples view the span named "The
+    report" sits immediately before the iframe holding it. So the
+    landmark list grew four entries that promise content and hold none,
+    and a reader navigating by landmark arrives in one and has to leave
+    it again to reach the thing. `group` takes an accessible name the
+    same way, so focus landing here is still announced, and it is not a
+    landmark, so it does not join that list. The name is what the
+    original fix was for; the landmark was incidental to it.
 
     This was emitted unconditionally and pointed at `#ar-report`, which
     is written only on the report screen, so on home and on the workspace
@@ -1085,7 +1097,7 @@ def _new_report_dialog() -> None:
         st.rerun()
     if run and not ticker:
         # The inline form says this; the dialog used to do nothing at all.
-        write(ui.status("error", "Input", "Enter a ticker."))
+        write(ui.shell_status("error", "Input", "Enter a ticker."))
 
 
 def generate(ticker: str, mandate_text: str, urls: list[str]):
@@ -1097,7 +1109,7 @@ def generate(ticker: str, mandate_text: str, urls: list[str]):
             st.session_state["session_spend"], ESTIMATED_REPORT_COST_USD
         )
     except SpendLimitExceeded as exc:
-        write(ui.status("error", "Budget", str(exc)))
+        write(ui.shell_status("error", "Budget", str(exc)))
         return None
     st.session_state["session_spend"] += ESTIMATED_REPORT_COST_USD
 
@@ -1348,7 +1360,7 @@ if st.session_state["view"] == "home":
     _skip_link("ar-home", "Skip to start")
     write(ui.topbar("reports"))
     write(ui.home())
-    write('<span id="ar-home" tabindex="-1" role="region" aria-label="Start"></span>')
+    write('<span id="ar-home" tabindex="-1" role="group" aria-label="Start"></span>')
 
     notes = _documents()
     has_samples = bool(notes)
@@ -1420,7 +1432,7 @@ if st.session_state["view"] == "home":
     # the rows do the grouping, and a box around them groups it twice.
     write(ui.report_rows(rows, token=_unlock_token(), scope=_scope_for_links()))
     if st.session_state.get("samples_problem"):
-        write(ui.status("warning", "Samples",
+        write(ui.shell_status("warning", "Samples",
                         st.session_state["samples_problem"]))
     st.stop()
 
@@ -1448,10 +1460,10 @@ if st.session_state["view"] == "samples":
         # was never written - caught by the suite, which checks the
         # target exists on the screen rather than that the markup
         # contains the word.
-        write('<span id="ar-samples" tabindex="-1" role="region" aria-label="The report"></span>')
+        write('<span id="ar-samples" tabindex="-1" role="group" aria-label="The report"></span>')
         write(ui.samples_empty())
         if st.session_state.get("samples_problem"):
-            write(ui.status("warning", "Samples",
+            write(ui.shell_status("warning", "Samples",
                             st.session_state["samples_problem"]))
         gone = st.columns([1.4, 1.4, 4])
         if gone[0].button("Back", key="samples_back_empty"):
@@ -1519,7 +1531,7 @@ if st.session_state["view"] == "samples":
     #
     # Home and the workspace already place their targets after the
     # content being skipped. This view was the one that was not updated.
-    write('<span id="ar-samples" tabindex="-1" role="region" aria-label="The report"></span>')
+    write('<span id="ar-samples" tabindex="-1" role="group" aria-label="The report"></span>')
     components.html(framed(note.html), height=2000, scrolling=True)
     st.stop()
 
@@ -1546,20 +1558,20 @@ if st.session_state["view"] != "report" or report is None:
     failure = st.session_state.get("failure")
     if failure:
         message, previous = failure
-        write(ui.status("error", "Failed", message))
+        write(ui.shell_status("error", "Failed", message))
         if st.button("Try again", key="retry_failed"):
             st.session_state["pending"] = previous
             st.session_state.pop("failure", None)
             st.rerun()
     # Below the heading and below any failure message, so "Skip to the
     # form" lands at the form rather than above the page.
-    write('<span id="ar-form" tabindex="-1" role="region" aria-label="Report form"></span>')
+    write('<span id="ar-form" tabindex="-1" role="group" aria-label="Report form"></span>')
     ticker, mandate_text, urls_text, run = _controls("inline")
     if run and ticker:
         st.session_state["pending"] = (ticker, mandate_text, urls_text)
         st.rerun()
     if run and not ticker:
-        write(ui.status("error", "Input", "Enter a ticker."))
+        write(ui.shell_status("error", "Input", "Enter a ticker."))
     st.stop()
 
 

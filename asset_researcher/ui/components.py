@@ -350,6 +350,38 @@ def status(level: str, tag: str, message: str) -> str:
     )
 
 
+def shell_status(level: str, tag: str, message: str) -> str:
+    """The same status line, declared as the SHELL's rather than the note's.
+
+    `.ar-status` is a document component: it carries the note's own
+    warnings, and it is declared in the document rules in document
+    tokens. The shell renders it too - the gate's "Refused", the
+    workspace's failure panel, the samples warning - where the note's
+    warm cream-world neutrals sit wrong on the cold marble ground.
+
+    That remap was first written as `[data-testid="stMarkdown"]
+    .ar-status`, on the reasoning that the shell writes its statuses
+    through `st.markdown`. So does the note: a freshly generated report
+    is written INLINE into the page, block by block, through the same
+    call. So the rule reached all five of the document's own status
+    blocks - Against this thesis, Model divergence, Source currency,
+    Filing age, No finding - and repainted them in shell tokens on the
+    live report screen only, while the samples iframe, the downloaded
+    HTML and the PDF kept the document's. Measured: rgb(80, 83, 92)
+    inline against rgb(64, 60, 51) framed. The identical document, two
+    renderings, which is the exact defect the host's table borders were
+    fixed for one commit earlier.
+
+    A CSS container cannot tell the two apart, because there is nothing
+    structural between them - both are one `st.markdown` block. So the
+    surface is declared at the call site instead, which is the only
+    place that actually knows which one it is.
+    """
+    return status(level, tag, message).replace(
+        'class="ar-status ', 'class="ar-status ar-status-shell ', 1
+    )
+
+
 def note(text: str) -> str:
     """A search that ran and returned nothing. Always a sentence."""
     return status("info", "No finding", text)
@@ -1054,9 +1086,19 @@ def steps(items) -> str:
     `role="list"` is not redundant. Safari drops the list role from any
     `ol` whose `list-style` is `none`, which this one's is, and the
     visible numbers come from the counter rather than from the marker.
+
+    And `role="listitem"` on each step, for the same reason one step
+    further down. WebKit drops the `listitem` role from an `li` whose
+    `display` is not `list-item`, and `.ar-step` is `display: grid` so
+    that the step's number and its prose stack. A role on the container
+    with none on the items is a list announced with no members, which is
+    the original defect wearing an ARIA attribute: the first review of
+    this change caught it, because `role="list"` alone reads as fixed.
     """
-    rows = "".join(f'<li class="ar-step"><div class="t">{body}</div></li>'
-                   for body in items)
+    rows = "".join(
+        f'<li class="ar-step" role="listitem"><div class="t">{body}</div></li>'
+        for body in items
+    )
     return _one_line(f'<ol class="ar-steps" role="list">{rows}</ol>')
 
 

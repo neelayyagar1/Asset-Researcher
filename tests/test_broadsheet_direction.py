@@ -288,3 +288,44 @@ def test_the_focus_ring_clears_three_to_one_on_every_ground_it_lands_on():
     ):
         ratio = _ratio(focus, ground)
         assert ratio >= 3.0, f"focus ring is {ratio:.2f}:1 on {label}"
+
+
+def test_the_row_focus_ring_survives_forced_colours():
+    """The row-wide ring is drawn with inset `box-shadow` on the cells
+    and a `background` tint, and the anchor's own `outline` was switched
+    off to stop a box being drawn round one cell of seven.
+
+    Both of those channels are ones the user agent takes away. Forced
+    colours forces `box-shadow` to none and overrides `background-color`,
+    while `outline` survives - so switching the outline off left a
+    keyboard user in Windows High Contrast Mode with no focus indicator
+    on the index at all, where before the change a forced-colour outline
+    was at least drawn around the focused cell. SC 2.4.7 and SC 1.4.11
+    failing outright, for the one group of readers who cannot see the
+    tint either.
+
+    So the outline comes back inside the one media query where the row
+    ring does not exist. It is a cell rather than a row there, because
+    `inset: 0` resolves against the anchor's own cell and inset shadows
+    are exactly what the mode removes - a visible indicator on the right
+    row beats a correct one that is not painted. `Highlight` is the
+    system colour, so it is the reader's own selection colour.
+
+    Reasoned from the forced-colours spec, not emulated: the browser
+    pane is Chromium with no forced-colours mode to switch on. The rule
+    is asserted here rather than claimed as measured.
+    """
+    sheet = theme.stylesheet()
+    block = re.search(
+        r"@media \(forced-colors: active\) \{(.*?)\n\}", sheet, re.S
+    )
+    assert block, "nothing restores a focus indicator under forced colours"
+    body = block.group(1)
+    assert "a.ar-row-link:focus-visible" in body, (
+        "the index row is the control whose ring is box-shadow only, and "
+        "it is not addressed in the forced-colours block"
+    )
+    assert "outline" in body and "none" not in body.split("outline")[1][:40], (
+        "the forced-colours rule does not draw an outline, which is the "
+        "only one of the three channels this mode preserves"
+    )
