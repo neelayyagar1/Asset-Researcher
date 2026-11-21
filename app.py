@@ -20,6 +20,7 @@ the tables above them.
 from __future__ import annotations
 
 import hmac
+import secrets
 import logging
 import os
 import re
@@ -358,6 +359,63 @@ class _Doc:
         self.html = html
 
 
+def _session_scope() -> str:
+    """This visitor's own corner of the report store.
+
+    The store is one directory in one container, and every visitor to
+    the deployment shares that container. Unscoped, a reviewer who
+    generated a report on a name they were considering put that name
+    at the top of the index for every other reviewer holding the link.
+
+    The scope rides in the query string for the same reason the unlock
+    token does: a row on the index is a link, a link is a page load,
+    and a page load is a new Streamlit session. Without it in the URL
+    a reader would lose their own reports the first time they opened
+    one. It is a random value, not derived from anything about the
+    visitor, and it grants access to nothing but the reports made
+    under it.
+    """
+    scope = st.session_state.get("scope") or st.query_params.get("sid") or ""
+    if not _SCOPE_OK.match(scope or ""):
+        scope = secrets.token_hex(8)
+    if st.session_state.get("scope") != scope:
+        st.session_state["scope"] = scope
+    if st.query_params.get("sid") != scope:
+        st.query_params["sid"] = scope
+    return scope
+
+
+def _store_stamp() -> float:
+    """The report directory's modification time, as a cache key.
+
+    Streamlit reruns the whole script on every interaction, and the
+    home screen reads each saved report's full HTML - a quarter of a
+    megabyte each - and regexes it for the index figures. Unscoped by
+    a cache that is a few megabytes read and scanned before the page
+    can draw, on every click, growing with each report generated. The
+    sealed samples were already cached this way; these were not.
+
+    Keyed on mtime rather than a timer: the directory changes exactly
+    when a report is saved, which is the only moment the answer can
+    differ.
+    """
+    try:
+        return reports_store.directory(_session_scope()).stat().st_mtime
+    except OSError:
+        return 0.0
+
+
+@st.cache_resource(show_spinner=False)
+def _saved_documents(scope: str, stamp: float):
+    """This visitor's saved reports, re-read only when one is added.
+
+    Both arguments are cache keys and both have to be: scope so one
+    visitor's cache cannot answer another's call, stamp so a report
+    saved a second ago appears.
+    """
+    return reports_store.listing(scope=scope)
+
+
 def _documents() -> list:
     """What there is to read: this visitor's reports, then the samples.
 
@@ -365,7 +423,8 @@ def _documents() -> list:
     they came back for, and the samples do not move.
     """
     mine = [
-        _Doc(s.slug, s.title, s.html) for s in reports_store.listing()
+        _Doc(s.slug, s.title, s.html)
+        for s in _saved_documents(_session_scope(), _store_stamp())
     ]
     shipped = [_Doc(s.slug, s.title, s.html) for s in _samples()]
     # A generated report's slug carries a timestamp, so it cannot
@@ -453,6 +512,8 @@ st.session_state.setdefault("report", None)
 # form returns as a dialog once a report is on screen, because at that
 # point it is a thing you reach for occasionally rather than the first
 # thing you meet.
+_SCOPE_OK = re.compile(r"\A[a-f0-9]{16}\Z")
+
 _VIEWS = ("home", "tool", "samples", "report")
 
 
@@ -911,6 +972,11 @@ def _run_pending() -> None:
     st.session_state.pop("failure", None)
     if fresh is not None:
         st.session_state["report"] = fresh
+        # Cleared before the attempt. It was only ever set, never
+        # reset, so after one successful save the Back guard believed
+        # every later report was on disk - including one whose save
+        # raised, which is the single case the guard exists for.
+        st.session_state.pop("report_slug", None)
         # Written down before it is shown. The index on the first
         # screen is a table of links now, and a link is a page load:
         # without this, the first row a reader clicked would end the
@@ -922,6 +988,7 @@ def _run_pending() -> None:
                 fresh.ticker,
                 f"{fresh.bundle.company_name} ({fresh.ticker})",
                 report_to_html(fresh),
+                scope=_session_scope(),
             )
             st.session_state["report_slug"] = saved.slug
         except Exception:
@@ -972,7 +1039,7 @@ if st.session_state["view"] == "home":
     write(ui.head("Reports", "Built from live filings by the same pipeline "
                   "the tool runs. Open one to read it; reports you "
                   "generate join the list."))
-    write(ui.flush_card(ui.report_rows(rows, token=_unlock_token())))
+    write(ui.flush_card(ui.report_rows(rows, token=_unlock_token(), scope=_session_scope())))
     if st.session_state.get("samples_problem"):
         write(ui.status("warning", "Samples",
                         st.session_state["samples_problem"]))

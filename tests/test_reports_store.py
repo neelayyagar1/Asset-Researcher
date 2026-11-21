@@ -78,3 +78,39 @@ def test_a_traversal_cannot_reach_a_file_that_exists(here, tmp_path, monkeypatch
     assert store.load(planted.slug) is None, "reachable by its own name?"
     assert store.load(f"../elsewhere/{planted.slug}") is None
     assert store.load(f"..%2felsewhere%2f{planted.slug}") is None
+
+
+# ------------------------------------------------------------ one visitor
+
+def test_two_visitors_do_not_see_each_others_reports(here):
+    """The store is one directory in one container, and every visitor
+    to the deployment shares it. Without a scope, a reviewer who
+    generates a report on a name they are considering puts that name
+    at the top of the index for every other reviewer holding the
+    link - and on this deployment the ticker someone chose to research
+    is itself the sensitive thing."""
+    mine = store.save("ADP", "A (ADP)", "<html>mine</html>", scope="aaa")
+    theirs = store.save("COST", "C (COST)", "<html>theirs</html>", scope="bbb")
+
+    assert [s.slug for s in store.listing(scope="aaa")] == [mine.slug]
+    assert [s.slug for s in store.listing(scope="bbb")] == [theirs.slug]
+
+
+def test_one_visitor_cannot_open_anothers_report_by_its_slug(here):
+    theirs = store.save("COST", "C (COST)", "<html>theirs</html>", scope="bbb")
+    assert store.load(theirs.slug, scope="aaa") is None
+    assert store.load(theirs.slug, scope="bbb") is not None
+
+
+def test_a_scope_that_is_not_a_slug_is_refused(here):
+    """It is joined to a path, so it is checked the same way."""
+    store.save("ADP", "A (ADP)", "<html>x</html>", scope="aaa")
+    for bad in ("../aaa", "a/b", "..", "", "a.b"):
+        assert store.listing(scope=bad) == []
+        assert store.load("whatever", scope=bad) is None
+
+
+def test_an_unscoped_store_still_works(here):
+    """Local runs and the tests above use it."""
+    saved = store.save("ADP", "A (ADP)", "<html>x</html>")
+    assert store.load(saved.slug) is not None

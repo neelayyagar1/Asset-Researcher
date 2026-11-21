@@ -1027,7 +1027,7 @@ def steps(items) -> str:
     return _one_line(f'<div class="ar-steps">{rows}</div>')
 
 
-def report_rows(rows, token: str = "") -> str:
+def report_rows(rows, token: str = "", scope: str = "") -> str:
     """The notes that exist, as a table.
 
     This is the product's own output on the first screen. The previous
@@ -1095,6 +1095,12 @@ def report_rows(rows, token: str = "") -> str:
         # every link is noise in the address bar that means nothing.
         if token:
             query["k"] = token
+        # The visitor's own corner of the report store. A row is a
+        # link and a link is a page load, so without this in the URL a
+        # reader would land on the reading screen having lost every
+        # report they had generated.
+        if scope:
+            query["sid"] = scope
         href = _text("?" + urlencode(query))
         link = f'<a href="{href}" class="ar-row-link">'
         body.append(

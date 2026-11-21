@@ -17,10 +17,18 @@ being able to destroy it.
 This is deliberately a directory of files rather than a database. The
 deployment's filesystem is ephemeral, which is the right lifetime for
 this: a visitor's reports survive their reloads and do not outlive the
-container. Nothing here is shared between visitors by design, but
-nothing here is private either - anyone who can open the app can open
-the index - so nothing is written that the index does not already
-show.
+container.
+
+Each visitor gets a subdirectory of their own, named by a scope the
+caller supplies. Without one, the store was a single directory shared
+by every visitor to the deployment, and a reviewer who generated a
+report on a name they were considering put that name at the top of
+the index for everyone else holding the link. On a tool shown to
+portfolio managers the ticker someone chose to research is itself the
+sensitive thing, so the default had it exactly backwards.
+
+The scope is joined to a path, so it is validated the same way a slug
+is, and for the same reason.
 """
 
 from __future__ import annotations
@@ -52,9 +60,15 @@ class Saved:
     built: datetime
 
 
-def directory() -> Path:
-    """Where reports are kept. Overridable, so tests never touch it."""
-    return Path(os.environ.get("REPORTS_DIR") or ".reports")
+def directory(scope: str = "") -> Path:
+    """Where one visitor's reports are kept.
+
+    Overridable by REPORTS_DIR, so tests never touch a real one. An
+    empty scope is the shared root, which is right for a local run by
+    one person and wrong for a deployment; the app always passes one.
+    """
+    root = Path(os.environ.get("REPORTS_DIR") or ".reports")
+    return root / scope if scope else root
 
 
 def _valid(slug: str) -> bool:
@@ -66,7 +80,7 @@ def _slugify(ticker: str, when: datetime) -> str:
     return f"{stem}-{when.strftime('%Y%m%d-%H%M%S-%f')}"
 
 
-def save(ticker: str, title: str, html: str) -> Saved:
+def save(ticker: str, title: str, html: str, scope: str = "") -> Saved:
     """Write a rendered report down, and return how to find it again.
 
     The timestamp carries microseconds because two reports on one
@@ -74,9 +88,11 @@ def save(ticker: str, title: str, html: str) -> Saved:
     a reader presses the button twice, and a collision would have the
     second silently overwrite the first.
     """
+    if scope and not _valid(scope):
+        raise ValueError("a report scope must be a slug")
     when = datetime.now(timezone.utc)
     entry = Saved(_slugify(ticker, when), title, html, when)
-    home = directory()
+    home = directory(scope)
     home.mkdir(parents=True, exist_ok=True)
     (home / f"{entry.slug}.json").write_text(
         json.dumps(
@@ -105,14 +121,18 @@ def _read(path: Path, slug: str) -> Saved | None:
     return Saved(slug, str(raw.get("title") or slug), raw["html"], built)
 
 
-def load(slug: str) -> Saved | None:
-    """One saved report, or None for anything that is not one."""
-    if not _valid(slug):
+def load(slug: str, scope: str = "") -> Saved | None:
+    """One saved report, or None for anything that is not one.
+
+    Both the slug and the scope arrive from a query string, so both
+    are checked before either is joined to a path.
+    """
+    if not _valid(slug) or (scope and not _valid(scope)):
         return None
-    return _read(directory() / f"{slug}.json", slug)
+    return _read(directory(scope) / f"{slug}.json", slug)
 
 
-def listing() -> list[Saved]:
+def listing(scope: str = "") -> list[Saved]:
     """Every saved report, newest first.
 
     Ordered by the recorded build time rather than by filename or by
@@ -120,7 +140,9 @@ def listing() -> list[Saved]:
     stop doing so the moment the stem changes, and mtime is a property
     of the file rather than of the report.
     """
-    home = directory()
+    if scope and not _valid(scope):
+        return []
+    home = directory(scope)
     try:
         files = sorted(home.glob("*.json"))
     except OSError:
