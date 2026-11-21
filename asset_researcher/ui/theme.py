@@ -1177,7 +1177,15 @@ table.ar-list td {
    on an absolutely positioned child of a positioned cell needs no
    percentage height to resolve. */
 table.ar-list td { position: relative; padding: 11px 16px; }
-a.ar-row-link { position: absolute; inset: 0; }
+/* `color: inherit`, because this anchor never declared one and so wore
+   Streamlit's: #0054a3, on all forty-two of them. It does not show
+   today - the anchors are overlays with the row's text outside them, so
+   there is no glyph to paint - but an undeclared colour is a host
+   default we are shipping, and it becomes visible the moment one of
+   these carries text, or in a forced-colours mode that honours it. The
+   same host blue is already documented two hundred lines below as what
+   broke the bypass link's contrast. */
+a.ar-row-link { position: absolute; inset: 0; color: inherit; }
 table.ar-list tr:hover td { background: var(--shell-row-hover); }
 table.ar-list tr:has(a.ar-row-link:focus-visible) td {
   background: var(--shell-row-hover); }
@@ -1474,8 +1482,18 @@ section:focus-visible, div[class*="block-container"]:focus-visible {
    focus ring suppressed: the first control a keyboard user meets was
    invisible and close to unreadable. The export, whose shell we write, is
    unaffected. */
+/* Shell tokens, not document ones. The contrast was never the problem
+   here - cream on near-black is fine - but this is the shell, and it
+   was painting a control in --paper and --ink, which are the note's
+   warm cream and warm near-black. Found by listing every colour the
+   rendered shell actually paints: #faf8f3 came back as a TEXT colour,
+   and this link was the only thing using it. Same leak as the one that
+   had html and body wearing the document's ground, and the same fix.
+
+   A palette is only declared in one place if everything reads from it. */
 .ar-skip, .ar-skip:visited, .ar-skip:hover, .ar-skip:active {
-  color: var(--paper) !important; text-decoration: none !important; }
+  background: var(--shell-ink) !important;
+  color: var(--shell-on-ink) !important; text-decoration: none !important; }
 /* The ring draws OUTSIDE the link's dark pill, on the page, so the page
    is what it has to be seen against. It was `var(--paper)` - #faf8f3,
    the ground of the editorial world this shell replaced - which
