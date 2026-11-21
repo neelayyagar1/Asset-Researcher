@@ -364,6 +364,30 @@ table.ar-table thead th, .ar-status .tag, .ar-finding-grid .lbl,
 .ar-table-wrap { margin-bottom: var(--s2); }
 .ar-table-wrap:has(> .ar-table-scroll) { overflow-x: auto;
   scrollbar-width: thin; }
+/* ...and the header inside THAT wrapper cannot be sticky.
+
+   This is the Peers defect, reported three times and never reproduced.
+
+   The scoping above fixed seven tables and left the eighth. Overflow in
+   one axis forces the other to `auto`, so the wrapper that scrolls
+   horizontally is itself the nearest scrollport - and a wrapper sized to
+   its own table has no vertical travel at all. A sticky header in there
+   never unsticks and never scrolls. It simply parks at `top: var(--nav-h)`
+   measured from the top of the TABLE instead of from the note's section
+   bar, which is 41px down, permanently, on top of the first body row.
+
+   On the comparables table the first body row is `tr.subject`: the
+   company the whole note is about. Measured on the Realty Income note -
+   the header's own row box at viewport y 40, its cells painting at 81,
+   over the subject row at 70-101. All a reader ever saw of Realty
+   Income's own figures was the few pixels sticking out above its own
+   column header. That is the "Peer table is still fucked up".
+
+   The same declaration already existed for the narrow-viewport case,
+   where every wrapper becomes a scrollport for the same reason. It
+   belongs here too, and for exactly the same reason. */
+.ar-table-wrap:has(> .ar-table-scroll) table.ar-table thead th {
+  position: static; }
 table.ar-table { width: 100%; border-collapse: collapse;
   font-size: var(--t-data); line-height: var(--t-data-lh);
   background: var(--surface); }
