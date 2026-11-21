@@ -170,9 +170,12 @@ Cloud, and all three are deliberate:
   Without it, a reviewer who generated a report on a name they were
   considering would put that ticker at the top of the index for
   everyone else holding the link.
-- **That scope is in the URL, so the URL carries it.** Anyone you send
-  a link to, after you have generated reports in that session, sees
-  those reports. Send the bare link.
+- **The scope reaches the URL only once a report exists.** A visitor
+  who has generated nothing has a bare link in the address bar and bare
+  links in the table, so there is nothing to leak by copying either.
+  Once they have reports, the scope is in the URL - it has to be,
+  because a row is a link and a link is a page load - and from then on
+  a copied link carries those reports to whoever receives it.
 
 Nothing needs configuring for this. `REPORTS_DIR` overrides the
 location if you want it somewhere specific; unset, it is `.reports`

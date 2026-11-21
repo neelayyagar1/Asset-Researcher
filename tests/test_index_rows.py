@@ -371,3 +371,47 @@ def test_the_figures_are_still_readable_to_a_screen_reader():
 def test_the_overlay_links_carry_no_text_of_their_own():
     html = ui.report_rows(WIDE, token="t")
     assert "></a>" in html, "the row links still wrap their cell text"
+
+
+def test_a_fresh_visitors_url_stays_clean(monkeypatch, tmp_path):
+    """The scope only has to be in the URL once there is something
+    under it. A visitor who has generated nothing should be able to
+    copy the address bar and send it to someone without wondering what
+    `sid` is - and the link they send should not later turn out to
+    carry their research list."""
+    monkeypatch.setenv("DEMO_PASSPHRASE", PHRASE)
+    monkeypatch.delenv("SAMPLES_KEY", raising=False)
+    monkeypatch.setenv("REPORTS_DIR", str(tmp_path))
+    at = AppTest.from_file(APP, default_timeout=60)
+    at = _unlock(at)
+    assert not at.exception
+    assert "sid" not in at.query_params, (
+        f"a scope is in the URL before anything is scoped: "
+        f"{dict(at.query_params)}"
+    )
+
+
+def test_once_a_report_exists_the_scope_is_carried(monkeypatch, tmp_path):
+    """And once it matters, it has to be there - a row is a link, and
+    a link is a page load."""
+    at, first, second = _seeded(monkeypatch, tmp_path)
+    at = _unlock(at)
+    # AppTest hands query params back as lists.
+    got = at.query_params.get("sid")
+    got = got[0] if isinstance(got, list) else got
+    assert got == SCOPE
+    assert f"sid={SCOPE}" in rendered_markup(at)
+
+
+def test_the_row_links_are_bare_for_a_visitor_with_no_reports(
+    monkeypatch, tmp_path
+):
+    """Same rule as the address bar: a link copied out of the table by
+    someone who has generated nothing should not carry a parameter
+    that would later resolve to their research list."""
+    monkeypatch.setenv("DEMO_PASSPHRASE", PHRASE)
+    monkeypatch.delenv("SAMPLES_KEY", raising=False)
+    monkeypatch.setenv("REPORTS_DIR", str(tmp_path))
+    at = AppTest.from_file(APP, default_timeout=60)
+    at = _unlock(at)
+    assert "sid=" not in rendered_markup(at)
