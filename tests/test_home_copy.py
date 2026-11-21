@@ -113,3 +113,29 @@ def test_the_bar_does_not_claim_to_be_a_destination():
     "current page" on it invites the same reach the pills did."""
     assert "aria-current" not in ui.topbar("reports")
     assert "Home" in ui.topbar("reports")
+
+
+def test_the_strategy_box_is_driven_by_state_alone(monkeypatch):
+    """Streamlit warns, on every single render, when a keyed widget
+    carries a `value=` AND has that key written in session state - and
+    it is right to: the two are different sources of truth for one
+    field, and `value=` is the one it ignores after the first render.
+
+    Session state is the one that works here, because it is what lets
+    a changed selection replace the box while an edited description
+    survives a rerun. So `value=` goes, rather than being left as a
+    decoration that generates a warning and does nothing.
+    """
+    import pathlib
+    import re
+
+    source = pathlib.Path(
+        pathlib.Path(__file__).resolve().parents[1] / "app.py"
+    ).read_text(encoding="utf-8")
+    block = source[source.index("def _controls("):]
+    block = block[: block.index("\n@st.dialog")]
+    area = block[block.index('st.text_area(\n        "How you invest"'):][:300]
+    assert "value=" not in area, (
+        "the strategy box still passes a default alongside the state "
+        "that overrides it"
+    )

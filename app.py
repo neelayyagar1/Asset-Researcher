@@ -874,9 +874,12 @@ def _controls(key: str) -> tuple[str, str, str, bool]:
     # was cut through the middle of a line of type, so the first thing a
     # reader saw of the field they most need to read was the app failing
     # to hold its own text.
+    # No `value=`. Session state above is what drives this field, and
+    # Streamlit ignores `value` once a keyed widget exists - so the two
+    # together are two sources of truth for one box, one of which does
+    # nothing, and Streamlit logs a warning on every render saying so.
     mandate_text = st.text_area(
-        "How you invest", value=prefill, height=150,
-        key=f"{key}_mandate",
+        "How you invest", height=150, key=f"{key}_mandate",
     )
     # Plain words first, then the term of art, rather than the term alone.
     # A reviewer who does not work in finance read "Mandate" and could not
