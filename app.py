@@ -24,6 +24,7 @@ import logging
 import os
 import re
 import time
+from html import escape
 
 import streamlit as st
 import streamlit.components.v1 as components
@@ -659,25 +660,30 @@ def _generate(ticker: str, mandate_text: str, urls: list[str], user_sources: lis
         # progress, and stops short of full for that reason; it is honest
         # here only because this block mounts once per run and is replaced
         # when the run ends, so it cannot replay on an unrelated rerun.
-        # The comment that stood here claimed "plus a live region so the
-        # stage changes are announced". There was none: no aria-live and
-        # no role=status anywhere in the block, and the stage lines below
-        # are plain writes. A run of over a minute was silent to a screen
-        # reader, which is the exact condition the comment said had been
-        # fixed - a note describing an intention rather than the code.
+        # A placeholder that IS the live region, re-rendered per stage.
         #
-        # The wrapper below is the live region, so each stage line
-        # written into this block is announced once as it appears. The
-        # bar carries aria-busy and no value, which is what an
-        # indeterminate bar is, and is marked presentational so it is not
-        # announced as a progress bar whose value never changes.
-        st.markdown(
-            '<div role="status" aria-live="polite" aria-atomic="false">'
-            '<div class="ar-progress" role="presentation" aria-busy="true"'
-            ' aria-label="Building the report">'
-            "<i></i></div></div>",
-            unsafe_allow_html=True,
-        )
+        # The previous version wrote the region as one closed markdown
+        # element and then wrote the stage lines after it with st.write.
+        # st.markdown is not a container: its div closes, and every
+        # stage line landed as a sibling outside the region, so nothing
+        # was ever announced. The comment above it said the opposite -
+        # the second time in this file that a note described an
+        # intention rather than the code - which is why the stage text
+        # is now inside the markup the region owns, where it can be seen
+        # to be there.
+        stage_slot = st.empty()
+
+        def say(sentence: str) -> None:
+            """Show a stage, and announce it once."""
+            stage_slot.markdown(
+                '<div role="status" aria-live="polite" aria-atomic="true"'
+                ' aria-busy="true">'
+                f"<p class=\"ar-stage\">{escape(sentence)}</p>"
+                '<div class="ar-progress" aria-hidden="true"><i></i></div>'
+                "</div>",
+                unsafe_allow_html=True,
+            )
+
         for url in urls:
             try:
                 user_sources.append(fetch_user_source(url))
@@ -685,21 +691,21 @@ def _generate(ticker: str, mandate_text: str, urls: list[str], user_sources: lis
             except UrlRejected as exc:
                 st.write(f"Source rejected ({url}): {exc}")
 
-        st.write("Retrieving filings, market data and the peer set")
+        say("Retrieving filings, market data and the peer set")
         bundle = assemble_bundle(ticker, settings, edgar, finnhub, llm)
         st.write(
             f"{len(bundle.passages)} passages, "
             f"{bundle.total_passage_chars:,} characters"
         )
 
-        st.write("Parsing mandate")
+        say("Parsing mandate")
         mandate = (
             parse_mandate(mandate_text, llm)
             if mandate_text.strip()
             else default_profile()
         )
 
-        st.write("Drafting descriptive sections and verifying citations")
+        say("Drafting descriptive sections and verifying citations")
         narrative = generate_narrative(
             bundle,
             llm,
@@ -707,7 +713,7 @@ def _generate(ticker: str, mandate_text: str, urls: list[str], user_sources: lis
             user_sources=user_sources,
         )
 
-        st.write("Reconciling the narrative against filed figures")
+        say("Reconciling the narrative against filed figures")
         reconciliation = generate_reconciliation(
             bundle,
             narrative,

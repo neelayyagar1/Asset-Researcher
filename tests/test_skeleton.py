@@ -354,3 +354,38 @@ def test_the_dialog_dismisses_rather_than_navigating_away(monkeypatch):
     assert 'in_dialog = key == "dialog"' in source
     assert '"Cancel" if in_dialog else "Back"' in source
     assert "if in_dialog:\n            st.rerun()" in source
+
+
+def test_every_stage_sentence_is_inside_the_live_region(monkeypatch):
+    """A ninety-second run must announce its stages.
+
+    The first attempt wrote the region as one closed `st.markdown`
+    element and the stage lines after it with `st.write`. `st.markdown`
+    is not a container: its div closes, every stage landed as a sibling
+    outside the region, and nothing was announced - while the comment
+    above it said the defect was fixed. That is the second comment in
+    this file to describe an intention rather than the code, so the
+    check is on the code.
+
+    The region is now a placeholder re-rendered per stage, with the
+    sentence inside the markup the region owns.
+    """
+    source = pathlib.Path(APP).read_text(encoding="utf-8")
+
+    assert "stage_slot = st.empty()" in source, "no live-region placeholder"
+    assert 'role="status" aria-live="polite"' in source
+
+    # Every stage sentence goes through `say`, never a bare write.
+    stages = (
+        "Retrieving filings, market data and the peer set",
+        "Parsing mandate",
+        "Drafting descriptive sections and verifying citations",
+        "Reconciling the narrative against filed figures",
+    )
+    for sentence in stages:
+        assert f'say("{sentence}")' in source, (
+            f"stage {sentence!r} is not announced through the live region"
+        )
+        assert f'st.write("{sentence}")' not in source, (
+            f"stage {sentence!r} is still a bare write, outside the region"
+        )

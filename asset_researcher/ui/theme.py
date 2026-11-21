@@ -881,6 +881,10 @@ table.ar-list th.num, table.ar-list td.num {
   padding: 28px 16px; text-align: center; color: var(--shell-mute);
   font-size: 12.5px; line-height: 1.6; }
 
+/* The run's current stage, inside the live region that announces it. */
+.ar-stage {
+  font-size: 13px; color: var(--shell-ink); margin: 0 0 8px; }
+
 /* ------------------------------------------------------------- the gate
 
    One screen with one field. Everything on it - the mark, the title,
