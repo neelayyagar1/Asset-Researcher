@@ -376,9 +376,25 @@ them into one.
 The shell's restraint is load-bearing rather than decorative. A reader comes here
 to get a note, so the chrome's job is to be legible, say where they are, and get
 out of the way: a 52px topbar, one heading, panels with real content in them, and
-the primary action always the darkest thing on the screen. Contrast is measured,
-not eyeballed - `tests/test_contrast.py` reads the shipped stylesheet and fails
-the build if any shell text tone drops below 4.5:1 on any ground it renders on.
+the primary action always the highest-contrast thing on the screen - the darkest
+in the light scheme and the lightest in the dark one. Contrast is measured, not
+eyeballed: `tests/test_contrast.py` reads the shipped stylesheet and fails the
+build if any text tone drops below 4.5:1 on any ground it renders on, in EITHER
+scheme, and if a control boundary or the focus ring drops below 3:1.
+
+**Dark is the same design, not a second one.** It follows
+`prefers-color-scheme` and offers no switch: a toggle is a control, a preference
+to persist and a state to get wrong. Nothing moves and nothing changes shape -
+it is entirely a redefinition of the token block, which is the reason the
+palette is declared in one place. The suite fails if the light scheme declares a
+colour the dark one does not answer, because the failure mode of a half-written
+dark mode is not ugliness but a light token surviving on a dark ground.
+
+The dark scheme answers the DOCUMENT tokens as well as the shell ones, and does
+so in the shell stylesheet only. The report screen writes the note's markup
+straight into the page, so those tokens have to follow the shell there; the
+exported file and the iframe'd note carry `document_stylesheet()`, which does
+not include that block, so a downloaded note stays on paper in both schemes.
 
 **Key Characteristics:**
 - Two documented surfaces: the note (warm, serif, square, ruled) and the shell
