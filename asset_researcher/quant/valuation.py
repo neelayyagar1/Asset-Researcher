@@ -195,6 +195,20 @@ def run_dcf(inputs: DcfInputs) -> DcfResult:
     )
 
 
+def _per_share_cell(value: float) -> str:
+    """One cell of the sensitivity grid, in the report's convention.
+
+    The grid is a cell per discount rate per terminal growth, so on a
+    filer whose model goes negative it is the single largest source of
+    mis-set figures in the note: Lumen shipped with dozens reading
+    "$-5.09" beside statement rows setting the same kind of figure as
+    "(5.09)".
+    """
+    if value < 0:
+        return f"(${abs(value):,.2f})"
+    return f"${value:,.2f}"
+
+
 def sensitivity_grid(
     inputs: DcfInputs,
     discount_rates: list[float],
@@ -216,7 +230,7 @@ def sensitivity_grid(
                 continue
             variant = DcfInputs(**{**inputs.__dict__, "discount_rate": rate,
                                    "terminal_growth": growth})
-            row[label] = f"${run_dcf(variant).value_per_share:,.2f}"
+            row[label] = _per_share_cell(run_dcf(variant).value_per_share)
         rows.append(row)
     return rows
 

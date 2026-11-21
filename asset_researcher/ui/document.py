@@ -22,6 +22,7 @@ from asset_researcher.quant.comps import format_comp_table
 from asset_researcher.quant.valuation import sensitivity_grid
 from asset_researcher.ui import charts, markdown
 from asset_researcher.ui import components as ui
+from asset_researcher.ui import format as fmt
 from asset_researcher.ui.components import Col, Stat
 from asset_researcher.ui.summary import summary_block
 
@@ -55,7 +56,15 @@ def signed_pct(value: float | None) -> str:
 
 
 def usd(value: float | None) -> str:
-    return f"${value:,.2f}" if value is not None else "NM"
+    """The shared formatter, not a second one.
+
+    This was four lines of its own and printed "$-9.56" where the rest
+    of the report prints "($9.56)" - and because it lived in the
+    document module, its name shadowed the correct one at every call
+    site in the note. The Lumen note shipped with 113 figures in the
+    wrong convention beside statement rows using the right one.
+    """
+    return fmt.usd(value)
 
 
 def _gap_reason(bundle, source: str) -> str:

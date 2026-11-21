@@ -541,7 +541,12 @@ def _percent(value: float | None) -> str:
 
 
 def _price(value: float | None) -> str:
-    return f"${value:,.2f}" if value is not None else NM
+    """Parentheses for a negative, as everywhere else in the report."""
+    if value is None:
+        return NM
+    if value < 0:
+        return f"(${abs(value):,.2f})"
+    return f"${value:,.2f}"
 
 
 _MONTHS = (

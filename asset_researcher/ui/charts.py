@@ -182,15 +182,30 @@ def _floor_log10(value: float) -> int:
     return exponent
 
 
+def _case_label(value: float) -> str:
+    """A case tick on the valuation range, negatives in parentheses."""
+    rendered = f"${abs(value):,.0f}"
+    return f"({rendered})" if value < 0 else rendered
+
+
 def _money(value: float) -> str:
+    """Scaled dollars, negatives in parentheses.
+
+    It took the magnitude to choose the scale and then formatted the
+    SIGNED value, so the sign survived as a leading minus inside the
+    dollar - "$-10" on the valuation-range axis of a note whose
+    statement rows beneath set the same kind of figure as "(10)".
+    """
     magnitude = abs(value)
     if magnitude >= 1e9:
-        return f"${value / 1e9:,.0f}B"
-    if magnitude >= 1e6:
-        return f"${value / 1e6:,.0f}M"
-    if magnitude >= 1e3:
-        return f"${value / 1e3:,.0f}K"
-    return f"${value:,.0f}"
+        rendered = f"${magnitude / 1e9:,.0f}B"
+    elif magnitude >= 1e6:
+        rendered = f"${magnitude / 1e6:,.0f}M"
+    elif magnitude >= 1e3:
+        rendered = f"${magnitude / 1e3:,.0f}K"
+    else:
+        rendered = f"${magnitude:,.0f}"
+    return f"({rendered})" if value < 0 else rendered
 
 
 def _money_precise(value: float) -> str:
@@ -612,7 +627,7 @@ def valuation_range(
             _text(
                 x,
                 axis_y - 13,
-                f"${case.value_per_share:,.0f}",
+                _case_label(case.value_per_share),
                 _LABEL,
                 theme.INK,
                 "middle",
