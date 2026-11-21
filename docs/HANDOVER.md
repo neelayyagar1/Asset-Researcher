@@ -109,6 +109,19 @@ shipped.
 
 ---
 
+## One decision made on your behalf
+
+Refreshing all six samples with the consensus block costs about $6.50,
+which would have put the Anthropic account near its $60 cap with
+nothing left for the demo itself. ADP was rebuilt, because it is the
+one note whose headline order actually changed; the other five already
+led with the implied growth requirement or declined a model outright.
+
+So **ADP carries the published consensus distribution and the other
+five do not**. Every note generated from now on carries it. If the cap
+is higher than $60, say so and the remaining five take about ten
+minutes and $5.50 to refresh.
+
 ## What is still open, stated rather than buried
 
 - **The samples carry the figures they were built with.** They are
@@ -125,6 +138,19 @@ shipped.
 - **Cintas has a pending UniFirst merger**, so its standalone valuation
   reads as overvalued and the note explains why. That is correct
   behaviour, and worth knowing before someone asks.
+- **One discount rate, 8.5%, for every filer.** A company with no net
+  debt and one with negative book equity get the same number. It is
+  labelled a convention, which is honest and is not the same as having
+  a view. This is why the note leads with the implied growth
+  requirement, which is solved back from the traded price and does not
+  depend on the rate, rather than with the modelled target, which does.
+  A reviewer named this as the thing that would get the tool dismissed
+  in one sentence, and he was right.
+- **Consensus is a recommendation count, not an estimate.** It says how
+  many analysts rate the name a buy, a hold or a sell. It does not say
+  what they expect it to earn; that data is behind a paid tier. The
+  prevailing views the note argues against are still read from the
+  filings, and are labelled that way.
 
 ---
 

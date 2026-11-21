@@ -113,9 +113,24 @@ Stated here rather than buried.
 - **Multiples are trailing, on the last reported fiscal year**, not twelve
   months. The most recent results announcement is read, so the narrative is
   current; the comparables table is not.
-- **The discount rate is a convention**, not derived from the filer's
-  capital structure. Every assumption carries its basis, and the ones that
-  are conventions say so.
+- **One discount rate, for every filer.** 8.5% is used for a company
+  with no net debt and for one with negative book equity that recently
+  came out of distress. Labelling it a convention is honest and is not
+  the same as having a view: everything downstream inherits it, the
+  implied discount rate included, so a figure presented as a finding
+  about the market is partly an artifact of the input. This is the
+  single weakest thing in the valuation layer and it is why the note
+  leads with the implied growth requirement, which is solved back from
+  the traded price and does not depend on the rate, rather than with
+  the modelled target, which does.
+- **Consensus is a recommendation count, not an estimate.** The note
+  publishes the published distribution - how many analysts rate the
+  name a buy, a hold or a sell - because the alternative was inferring
+  the prevailing view from the company's own disclosure, which is
+  circular. It still is not what the street expects the company to
+  earn: estimate and price-target data sit behind a paid tier and are
+  not used. The prevailing views the note argues against are read from
+  the filings, and are labelled that way.
 - **The peer set is a vendor list**, pinnable by hand. It is a starting
   point and the note labels it as one.
 - **Semantic citation support is unchecked.** Provenance is verified;
