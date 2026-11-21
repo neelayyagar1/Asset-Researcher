@@ -187,6 +187,22 @@ _DOCUMENT_CSS = """
 /* The parts nobody draws still carry the design, and they ship with
    defaults belonging to no design system. */
 ::selection { background: var(--accent); color: #fff; }
+/* This product has one palette and it is a light one. Say so to the
+   browser, not just to the reader.
+
+   Without this the user agent paints its own default ground from the
+   operating system's preference before any stylesheet arrives, so a
+   reader whose laptop is set to dark - which on a trading desk is most
+   of them - met a near-black screen that flashed to marble as the app
+   mounted. Reproduced in the browser pane with prefers-color-scheme
+   dark: the page painted rgb(14, 17, 23) and then settled.
+
+   It also fixes the parts no stylesheet reaches: the form controls,
+   the scrollbar gutter and the overscroll band are drawn by the user
+   agent, and on a dark preference it drew all three dark inside a
+   document that is paper. Declared here rather than in the shell
+   because the exported note is read on the same laptops. */
+html { color-scheme: light; }
 html { caret-color: var(--accent); scrollbar-color: var(--rule) transparent;
   scrollbar-width: thin; -webkit-text-size-adjust: 100%; }
 ::-webkit-scrollbar { width: 11px; height: 11px; }
@@ -681,8 +697,22 @@ table.ar-table tbody tr.subject td.nm {
 # no Streamlit in it, so shipping these put dead selectors into the file a
 # reader actually forwards.
 _APP_CSS = """
+/* The shell's page is the shell's colour.
+
+   This painted `html` and `body` with --paper and --ink, which are the
+   DOCUMENT's tokens: the note's warm cream and its warm near-black. A
+   later rule repainted `.stApp` with the shell ground, so the mismatch
+   only showed where .stApp does not reach - the overscroll band at the
+   top and bottom of a rubber-band scroll, and any gap around the app
+   container. With the old near-white shell the two were a point apart
+   and nobody could see it. Against the marble ground it is the note's
+   paper appearing in the chrome, which is the one thing the two-surface
+   split exists to prevent.
+
+   Measured: body was rgb(250, 248, 243) while .stApp was
+   rgb(244, 246, 249), on the same screen. */
 html, body, .stApp, [data-testid="stAppViewContainer"] {
-  background: var(--paper); color: var(--ink); }
+  background: var(--shell-bg); color: var(--shell-ink); }
 /* The document stylesheet states the heading face as `h1, h2, h3, h4`,
    which is specificity (0,0,1). Streamlit's own emotion rules reach the
    same elements as class-plus-element, (0,1,1), and win: in the running
@@ -908,8 +938,13 @@ button[data-testid="stExpandSidebarButton"]:hover,
 .ar-head { margin: 40px 0 2px; }
 /* The screen's opening statement is the first thing on the page and has
    nothing above it to be separated from. */
-.ar-head.ar-open { margin-top: 0; margin-bottom: 8px; text-align: center; }
-.ar-head.ar-open p.lead { margin-inline: auto; }
+/* Left, not centred. The line here was the only centred thing on a
+   screen where everything else - the steps, the button, the index -
+   starts at the column's left edge, which is the two-centre-axes fault
+   by another route: a reader's eye is given one start point for one
+   sentence and a different one for the rest of the page. It now shares
+   the column's edge with everything under it. */
+.ar-head.ar-open { margin-top: 0; margin-bottom: 8px; }
 /* The single-report screen's title line: the document's name, and the
    marker that says whether it shipped with the tool. Baseline-aligned
    rather than stacked, because they are one statement. */
@@ -976,6 +1011,39 @@ button[data-testid="stExpandSidebarButton"]:hover,
   font-size: 14px; color: var(--shell-soft); max-width: 560px;
   margin-top: 0; }
 
+/* THE ONE DISPLAY MOMENT.
+
+   The screen's opening statement. It was a 14px caption floating in the
+   middle of an otherwise empty band, so the first thing a reader met
+   was a line of helper text - and the product's display rank existed in
+   the stylesheet with nothing in the markup using it, because home's
+   only h1 is screen-reader-only by design (the topbar already carries
+   the name, and drawing it twice is what made the old screen look
+   unedited).
+
+   So the lead itself takes the display rank. It is not a slogan and
+   must never become one: it is the plain instruction for what this
+   screen is for, set at the size of a statement instead of the size of
+   an apology. That is the whole move - the same honest words, given the
+   typographic weight the page was refusing them. */
+.ar-head.ar-open p.lead {
+  font-family: var(--shell-display);
+  font-weight: 300;
+  font-size: clamp(30px, 3.9vw, 42px);
+  line-height: 1.1;
+  letter-spacing: -.02em;
+  color: var(--shell-ink);
+  /* Wide enough that the sentence does not break, narrow enough that a
+     longer one would wrap before the column edge rather than running
+     the full 1120px, which no display line should. */
+  max-width: 720px;
+  margin: 2px 0 0;
+  font-optical-sizing: auto;
+  font-synthesis-weight: none;
+  /* A display line that drops one word onto its own row looks like an
+     accident at exactly the moment the page is making its case. */
+  text-wrap: balance; }
+
 .ar-card {
   background: var(--shell-panel); border: 1px solid var(--shell-line-2);
   border-radius: var(--shell-r-lg); box-shadow: var(--shell-shadow);
@@ -989,7 +1057,58 @@ button[data-testid="stExpandSidebarButton"]:hover,
 
 /* The reports table. Figures are monospace and right-aligned so a
    column of them reads as a column. */
-table.ar-list { width: 100%; border-collapse: collapse; }
+/* The index is an index, not a panel.
+
+   This sat inside a card - hairline border, white fill, radius - which
+   is the shape a generated interface reaches for by default. Every
+   research index worth copying (OpenAI, Anthropic, Runway, Cartesia)
+   does the same thing instead: rows on the page itself, separated by
+   one hairline, with the metadata muted beside the name. The rules
+   between the rows already group them; a box around the group is a
+   second grouping of the same thing.
+
+   Taking the fill away also does something the box was hiding. On the
+   marble ground the figures are the only white-adjacent thing left on
+   the lower half of the screen, so the eye lands on the data rather
+   than on the container holding it. The column head keeps its own
+   faint fill because it is a different KIND of row, and that is the
+   one distinction worth paying a surface for.
+
+   The rows stay interactive - a row is still one link - so this does
+   not cost the affordance. Hover and the focus ring both paint the
+   whole row, and both are tested. */
+table.ar-list { width: 100%; border-collapse: collapse;
+  border-top: 1px solid var(--shell-line-2); }
+/* Horizontal rules only, which is the convention every published
+   research table follows and the one the note's own tables already use.
+
+   These were not ours. Streamlit paints a 1px border on every side of
+   every cell in a markdown table - rgba(21, 22, 26, .1), a colour that
+   appears nowhere in this palette - and the sheet had only ever set
+   `border-bottom`, so the vertical rules survived untouched. The index
+   read as a spreadsheet grid, and the lines doing it belonged to the
+   host framework rather than to the design. Declared explicitly in both
+   directions, because a default you did not write is still a default
+   you are shipping. */
+table.ar-list th, table.ar-list td {
+  border-left: 0; border-right: 0; }
+
+/* The same leak, on a screen where it matters more.
+
+   A sample note renders inside its own iframe, which Streamlit's CSS
+   cannot reach. A note you have just generated is written INLINE into
+   the page instead - so on that screen, and only on that screen, every
+   cell of all twelve of the document's tables picked up the host's side
+   borders. The identical document rendered two different ways depending
+   on which door the reader came through, and the one that looked wrong
+   was the one they had just paid five minutes and a dollar for.
+
+   The override lives here rather than in the document rules on purpose:
+   the exported file carries no Streamlit, so a document-side rule would
+   be dead weight travelling with every download. */
+[data-testid="stMarkdown"] table.ar-table th,
+[data-testid="stMarkdown"] table.ar-table td {
+  border-left: 0; border-right: 0; }
 table.ar-list th {
   text-align: left; font-size: 11px; font-weight: 500;
   color: var(--shell-mute); letter-spacing: .03em;
@@ -998,7 +1117,6 @@ table.ar-list th {
 table.ar-list td {
   padding: 11px 16px; border-bottom: 1px solid var(--shell-line);
   font-size: 13px; color: var(--shell-ink); }
-table.ar-list tr:last-child td { border-bottom: 0; }
 
 /* A row is a link made of four cell-filling links. Each anchor fills
    its own cell's padding box, so the whole row is a hit target with no
@@ -1067,9 +1185,23 @@ table.ar-list th.num, table.ar-list td.num {
    column of text under a wide one. Across, each step is a short
    paragraph in its own band and the whole thing is four lines deep
    instead of sixteen. */
+/* No card around this. It had one - a hairline border, a white fill and
+   a radius - and the card failed its own test: take the border, fill
+   and radius away and nothing about the four steps becomes harder to
+   read or to act on, because the rules BETWEEN the columns already do
+   the grouping. A container that groups things the content already
+   groups is the most common decoration in generated interfaces, and on
+   this page it was also what made the steps read as a widget sitting on
+   the page rather than as part of it.
+
+   What replaces it is one hairline along the top, which is the
+   structural move the reference material uses for exactly this: a
+   column group announced by a rule, not boxed by a border. */
 .ar-steps {
   counter-reset: step; display: grid; gap: 0;
-  grid-template-columns: repeat(4, minmax(0, 1fr)); }
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  border-top: 1px solid var(--shell-line-2);
+  padding-top: 18px; margin-top: 14px; }
 .ar-step {
   display: grid; grid-template-rows: auto 1fr; gap: 7px;
   align-content: start; padding: 2px 20px 2px 0; }

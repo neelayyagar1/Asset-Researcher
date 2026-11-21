@@ -1377,7 +1377,11 @@ if st.session_state["view"] == "home":
     # in the time it takes to read them, and the archive below is then
     # evidence rather than an unexplained table.
     write(ui.head("Get started"))
-    write(ui.card(ui.steps(ui.STEPS)))
+    # No card. The four steps are already grouped by the rules between
+    # their columns, so a border, a fill and a radius around them added
+    # chrome that grouped nothing twice over - and made instructions
+    # read as a widget dropped onto the page instead of part of it.
+    write(ui.steps(ui.STEPS))
 
     # The action, then the way back to a held report. Sized rather than
     # stretched: a primary button spanning 1120px reads as a banner.
@@ -1395,7 +1399,10 @@ if st.session_state["view"] == "home":
 
     # The subtitle that stood here said what the table already shows.
     write(ui.head("Reports"))
-    write(ui.flush_card(ui.report_rows(rows, token=_unlock_token(), scope=_scope_for_links())))
+    # No card. An index is a list of rows on the page, the way every
+    # research index worth copying renders one - the hairlines between
+    # the rows do the grouping, and a box around them groups it twice.
+    write(ui.report_rows(rows, token=_unlock_token(), scope=_scope_for_links()))
     if st.session_state.get("samples_problem"):
         write(ui.status("warning", "Samples",
                         st.session_state["samples_problem"]))

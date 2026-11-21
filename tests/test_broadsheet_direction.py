@@ -141,6 +141,78 @@ def test_no_shell_colour_is_the_indigo_every_generator_reaches_for():
         )
 
 
+def test_the_product_tells_the_browser_it_has_one_light_palette():
+    """Without `color-scheme`, the user agent paints its own ground from
+    the operating system's preference before any stylesheet arrives. A
+    reader on a dark desktop met a near-black screen - measured
+    rgb(14, 17, 23) in the pane - that flashed to marble as the app
+    mounted, and got dark form controls and a dark scrollbar gutter
+    inside a document that is paper.
+
+    It is declared in the document rules because the exported note is
+    read on the same laptops as the app.
+    """
+    assert "color-scheme: light" in theme.document_stylesheet()
+    assert "color-scheme: light" in theme.stylesheet()
+
+
+def test_the_shells_page_is_painted_in_the_shells_own_colour():
+    """`html` and `body` were painted with --paper and --ink, which are
+    the document's warm tokens, while a later rule gave .stApp the shell
+    ground. Measured in the running app: body rgb(250,248,243) against
+    .stApp rgb(244,246,249). The note's paper was showing through the
+    chrome in the overscroll band - the exact bleed the two-surface
+    split exists to prevent.
+    """
+    sheet = theme.stylesheet()
+    rule = re.search(
+        r"html, body, \.stApp, \[data-testid=\"stAppViewContainer\"\] \{"
+        r"([^}]*)\}",
+        sheet,
+    )
+    assert rule, "nothing paints the shell's page"
+    body = rule.group(1)
+    assert "--shell-bg" in body, "the shell's page is not the shell's ground"
+    assert "var(--paper)" not in body, "the document's paper is in the shell"
+    assert "var(--ink)" not in body, "the document's ink is in the shell"
+
+
+def test_no_table_in_the_shell_inherits_the_hosts_vertical_rules():
+    """Streamlit paints a 1px border on every side of every cell in a
+    markdown table, in a colour that appears nowhere in this palette.
+    The sheet had only ever declared `border-bottom`, so the index read
+    as a spreadsheet grid drawn by the host framework.
+
+    Published research tables are horizontal-rule only, which is what
+    the note's own tables already do.
+    """
+    sheet = theme.stylesheet()
+    assert re.search(
+        r"table\.ar-list th, table\.ar-list td \{[^}]*border-left:\s*0", sheet
+    ), "the index's cells do not switch off the host's side borders"
+
+
+def test_the_note_renders_the_same_inline_as_it_does_framed():
+    """A sample note sits in an iframe the host's CSS cannot reach. A
+    freshly generated one is written inline into the page, so on that
+    screen alone the host's side borders landed on every cell of all
+    twelve of the document's tables - the same document, two renderings,
+    and the wrong one was the report the reader just paid for.
+    """
+    assert re.search(
+        r'\[data-testid="stMarkdown"\] table\.ar-table th,\s*'
+        r'\[data-testid="stMarkdown"\] table\.ar-table td \{[^}]*'
+        r"border-left:\s*0",
+        theme.stylesheet(),
+    ), "the inline note does not neutralise the host's cell borders"
+
+    # And the override must not travel with the export, which carries no
+    # Streamlit for it to override. Checked against this rule rather than
+    # the word "stMarkdown", which already appears in the document sheet
+    # in an unrelated `stMarkdownContainer` rule.
+    assert 'stMarkdown"] table.ar-table' not in theme.document_stylesheet()
+
+
 def test_the_focus_ring_clears_three_to_one_on_every_ground_it_lands_on():
     """WCAG 2.2 SC 1.4.11. The ring this replaced measured 2.88:1 on the
     near-black bypass pill and failed, while the comment beside it
