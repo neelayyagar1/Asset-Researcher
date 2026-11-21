@@ -940,7 +940,12 @@ button[data-testid="stExpandSidebarButton"]:hover,
 
 /* The reports table. Figures are monospace and right-aligned so a
    column of them reads as a column. */
-table.ar-list { width: 100%; border-collapse: collapse; }
+/* `height: 1px` is not the table's height - content wins - it is the
+   one portable way to give a cell a definite height for a percentage
+   child to resolve against. Without it `height: 100%` on the row link
+   computes to auto, which is what left a 21px dead band in every row
+   whose company name wrapped. */
+table.ar-list { width: 100%; border-collapse: collapse; height: 1px; }
 table.ar-list th {
   text-align: left; font-size: 11px; font-weight: 500;
   color: var(--shell-mute); letter-spacing: .03em;
@@ -960,11 +965,18 @@ table.ar-list tr:last-child td { border-bottom: 0; }
    that is the object the reader is pointing at - and the focus ring is
    drawn with an outline offset inward, since an outline on a table
    cell is otherwise clipped by the card's own edge. */
-table.ar-list td { padding: 0; }
+table.ar-list td { padding: 0; height: 100%; }
+/* The anchor fills its cell's full height, not just its own text's.
+   Measured at 768px, where a company name wraps to two lines: the row
+   stood 62px and the single-line anchors beside it 41px, so a third
+   of five of the six rows was dead to a click - in the one design
+   whose whole point is that the row is the target. A table stretches
+   its cells to the row; a block inside one only takes its content. */
 a.ar-row-link {
-  display: block; padding: 11px 16px; color: inherit;
+  display: flex; align-items: center; height: 100%;
+  padding: 11px 16px; color: inherit;
   text-decoration: none; font: inherit; letter-spacing: inherit; }
-table.ar-list td.num a.ar-row-link { text-align: right; }
+table.ar-list td.num a.ar-row-link { justify-content: flex-end; }
 table.ar-list tr:hover td { background: var(--shell-sink); }
 table.ar-list tr:has(a.ar-row-link:focus-visible) td {
   background: var(--shell-sink); }

@@ -267,3 +267,45 @@ def test_a_report_saved_now_appears_without_a_restart(monkeypatch, tmp_path):
     at2 = AppTest.from_file(APP, default_timeout=60)
     at2.query_params["sid"] = SCOPE
     assert "Gamma Ltd." in page_text(_unlock(at2))
+
+
+# ------------------------------------------------ what a screen reader hears
+
+def test_a_row_is_one_stop_in_the_tab_order_not_seven():
+    """Each cell carries its own anchor so the whole row is a hit
+    target. That is right for a pointer and wrong for everything else:
+    seven tab stops per row, forty-two for six reports, and a
+    links-list showing forty-two entries for six destinations."""
+    html = ui.report_rows(WIDE, token="t")
+    anchors = re.findall(r"<a [^>]*>", html)
+    assert len(anchors) == 7, "the row is no longer seven cells"
+    focusable = [a for a in anchors if 'tabindex="-1"' not in a]
+    assert len(focusable) == 1, (
+        f"{len(focusable)} of the row's anchors are in the tab order"
+    )
+
+
+def test_the_one_focusable_anchor_names_the_whole_row():
+    """The others announce only their own cell - "6.8%, link" - which
+    is SC 2.4.4 outright, not a matter of degree."""
+    html = ui.report_rows(WIDE, token="t")
+    first = re.search(r"<a [^>]*>", html).group(0)
+    assert "aria-label=" in first
+    assert "ADP" in first and "Automatic Data Processing" in first
+
+
+def test_the_silent_anchors_are_out_of_the_accessibility_tree():
+    html = ui.report_rows(WIDE, token="t")
+    anchors = re.findall(r"<a [^>]*>", html)
+    for anchor in anchors[1:]:
+        assert 'aria-hidden="true"' in anchor, anchor
+        assert 'tabindex="-1"' in anchor, anchor
+
+
+def test_no_link_is_named_only_by_an_em_dash():
+    """A note that declined a lead statistic renders "&mdash;" in that
+    cell, so the anchor's entire accessible name was an em dash."""
+    thin = dict(WIDE[0], price="", value="", filed="", cited="")
+    html = ui.report_rows([thin], token="t")
+    for anchor in re.findall(r'<a [^>]*>(?:&mdash;)</a>', html):
+        assert 'aria-hidden="true"' in anchor

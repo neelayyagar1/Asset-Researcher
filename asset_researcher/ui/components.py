@@ -1102,9 +1102,33 @@ def report_rows(rows, token: str = "", scope: str = "") -> str:
         if scope:
             query["sid"] = scope
         href = _text("?" + urlencode(query))
-        link = f'<a href="{href}" class="ar-row-link">'
+        # One anchor in the tab order, named for the whole row; the
+        # other six clickable and silent.
+        #
+        # Every cell carries an anchor so the row is a hit target with
+        # no dead strip - `<a>` cannot sit between `<tr>` and `<td>`,
+        # so a row-shaped target has to be built from cells. That is
+        # right for a pointer and was wrong for everything else: seven
+        # tab stops per row, forty-two for six reports, each
+        # announcing only its own cell ("6.8%, link"), and a cell with
+        # no figure giving an anchor whose entire accessible name was
+        # an em dash.
+        #
+        # The pointer behaviour is unchanged: `tabindex="-1"` and
+        # `aria-hidden` remove an element from the tab order and the
+        # accessibility tree, not from the mouse, and the row's
+        # focus-within rule still fires because the focusable anchor
+        # is inside the row.
+        named = _text(f'{r["ticker"]}, {r["company"]}, open report')
+        lead_link = (
+            f'<a href="{href}" class="ar-row-link" aria-label="{named}">'
+        )
+        link = (
+            f'<a href="{href}" class="ar-row-link" tabindex="-1" '
+            f'aria-hidden="true">'
+        )
         body.append(
-            f'<tr><td class="tk">{link}{_text(r["ticker"])}</a></td>'
+            f'<tr><td class="tk">{lead_link}{_text(r["ticker"])}</a></td>'
             f'<td class="co">{link}{_text(r["company"])}</a></td>'
             f'<td class="num">{link}{price}</a></td>'
             f'<td class="co">{link}{metric}</a></td>'
