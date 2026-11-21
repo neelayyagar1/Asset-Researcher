@@ -141,3 +141,59 @@ def test_a_tampered_unlock_token_never_raises_and_never_opens(
     assert not at.exception, f"?k={value!r} raised"
     text = page_text(at)
     assert "Get started" not in text, f"?k={value!r} opened the gate"
+
+
+# ------------------------------- the two parameters added for the index
+
+
+@pytest.mark.parametrize("value", [
+    "", "../../etc/passwd", "..", "a/b", "a\\b", "<script>", "\x00",
+    "A" * 400, "0123456789abcdef", "ADP", "adp-20261121-000000-000000",
+])
+def test_a_tampered_report_scope_never_raises(monkeypatch, value, tmp_path):
+    """`sid` names a directory under the report store, so it reaches a
+    path join. It is matched against sixteen hex characters before it
+    is used, and anything else is replaced with a fresh random one -
+    so a hand-edited value gets an empty index rather than someone
+    else's reports or a traceback."""
+    monkeypatch.setenv("REPORTS_DIR", str(tmp_path))
+    at = _app(monkeypatch)
+    at.query_params["sid"] = value
+    at = _unlock(at.run())
+    assert not at.exception, f"?sid={value!r} raised"
+
+
+@pytest.mark.parametrize("value", [
+    "", "../../etc/passwd", "..", "a/b", "<script>", "\x00",
+    "A" * 400, "adp", "nonexistent-slug",
+])
+def test_a_tampered_document_slug_never_raises(monkeypatch, value):
+    """`s` picks which report the reading screen opens. It is matched
+    against the documents that exist rather than used to find one."""
+    at = _app(monkeypatch)
+    at.query_params["view"] = "samples"
+    at.query_params["s"] = value
+    at = _unlock(at.run())
+    assert not at.exception, f"?s={value!r} raised"
+
+
+def test_a_hostile_scope_cannot_reach_another_scopes_reports(
+    monkeypatch, tmp_path
+):
+    """The one that matters: not that it fails gracefully, but that it
+    fails."""
+    from asset_researcher import reports_store
+
+    monkeypatch.setenv("REPORTS_DIR", str(tmp_path))
+    reports_store.save(
+        "SECRET", "Secret Holdings (SECRET)", "<html>x</html>",
+        scope="0123456789abcdef",
+    )
+    for hostile in ("../0123456789abcdef", "0123456789abcdef/../0123456789abcdef"):
+        at = _app(monkeypatch)
+        at.query_params["sid"] = hostile
+        at = _unlock(at.run())
+        assert not at.exception
+        assert "Secret Holdings" not in page_text(at), (
+            f"?sid={hostile!r} reached another scope's reports"
+        )
