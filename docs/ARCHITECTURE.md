@@ -533,6 +533,34 @@ subject separated from its peer set, and summary statistics ruled off
 beneath. These are conventions to be matched, not a design to be invented.
 An analyst reads dozens of these a week and finds a number by its position.
 
+### What lives beside the renderers
+
+Four modules in `ui/` are not renderers and are worth naming, because
+each exists to keep a calculation or a decision in one place:
+
+- `ui/note_index.py` reads the figures the first screen's index prints -
+  price, filing date, citation coverage, the lead statistic - **out of the
+  rendered note**, parsed by content rather than by position. Nothing on
+  that index is recomputed. The product's argument is that every figure
+  traces to a filing, and an index computing its own would be the one place
+  a number appeared that the document behind it does not contain.
+- `ui/frame.py` prepares a note for the iframe it renders in. Both pieces
+  run *inside* that frame, which is same-origin: the document sizes its own
+  frame to its content, and names its own frame, because `components.html`
+  passes neither.
+- `ui/format.py` holds the one `usd`. A second one lived in `ui/document.py`
+  for a while, four lines long, and because it sat in the document module its
+  name shadowed the correct one at every call site in the note - 113 figures
+  shipped with a leading minus where the convention is parentheses.
+- `quant/market.py` checks the market data against itself before anything is
+  built on it. The filings are validated line by line; the market
+  capitalisation and the share count arrive from the provider independently
+  and nothing asked whether they agreed.
+
+`reports_store.py` sits outside `ui/`. It writes the rendered document to
+disk the moment it exists, per visitor, so that a link on the index cannot
+destroy a report that cost a minute and a dollar.
+
 All model and filing text is escaped at this boundary. `ui/markdown.py`
 converts the finished note from the small Markdown subset Call A emits,
 rather than taking a general Markdown dependency, because the risk worth
