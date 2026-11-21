@@ -339,6 +339,13 @@ class _Doc:
         self.html = html
 
 
+# Sixteen hex characters, anchored at both ends. The scope arrives in
+# a query string and names a directory, so it is validated before it
+# is used - and declared here, above its only reader, rather than two
+# hundred lines below it where it happened to be written.
+_SCOPE_OK = re.compile(r"\A[a-f0-9]{16}\Z")
+
+
 def _session_scope() -> str:
     """This visitor's own corner of the report store.
 
@@ -524,8 +531,6 @@ st.session_state.setdefault("report", None)
 # form returns as a dialog once a report is on screen, because at that
 # point it is a thing you reach for occasionally rather than the first
 # thing you meet.
-_SCOPE_OK = re.compile(r"\A[a-f0-9]{16}\Z")
-
 _VIEWS = ("home", "tool", "samples", "report")
 
 
