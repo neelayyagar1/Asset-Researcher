@@ -1,3 +1,17 @@
+> **Superseded, 2026-11-20.** The six notes this audit examined were
+> built on 19-20 October and have been replaced. Ford and Truist were
+> dropped on the recommendations below; Cintas and Fastenal replace
+> them, chosen because every load-bearing line resolves current, which
+> was verified before paying to build them. Lumen's -91% target, the
+> single worst output described here, is gone: the discounted cash flow
+> now declines because the filer's capital-expenditure concept stops at
+> FY2013, which is the defect this audit inferred and the rebuild
+> confirmed.
+>
+> Kept because the reasoning is the record of how the set was chosen,
+> and because an audit that is quietly deleted once it is acted on
+> leaves no evidence that it was.
+
 # Sample set audit
 
 Notes generated 19–20 October 2026. Audited 20 November 2026 against events through that date.
