@@ -783,7 +783,7 @@ button[data-testid="stExpandSidebarButton"]:hover,
   color: var(--shell-mute); letter-spacing: .02em; }
 
 .ar-head { margin-bottom: 14px; }
-.ar-head h1 {
+.ar-head h1, .ar-head h2 {
   font-family: var(--sans) !important; font-size: 15px !important;
   font-weight: 600 !important; letter-spacing: -.015em !important;
   line-height: 1.3 !important; color: var(--shell-ink); margin: 0; }
@@ -1005,6 +1005,15 @@ section.stMain:focus-visible, [data-testid="stMain"]:focus-visible {
 .ar-progress { height: 2px; background: var(--rule); margin-top: var(--s2); }
 .ar-progress i { display: block; height: 100%; background: var(--accent);
   transform-origin: 0 50%; transform: scaleX(0); }
+
+/* The fill animates only under `prefers-reduced-motion: no-preference`,
+   so a reader who asks for reduced motion kept `scaleX(0)` for the whole
+   ninety-second run: the one surface saying the system is working was a
+   flat line. They get a static partial fill instead - no movement, but
+   the bar is visibly a bar in progress rather than an empty track. */
+@media (prefers-reduced-motion: reduce) {
+  .ar-progress i { transform: scaleX(0.35); }
+}
 
 /* `st.divider` renders a plain `hr`, which the element selector already
    reaches. The test-id companions that used to sit beside these two rules

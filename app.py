@@ -20,6 +20,7 @@ the tables above them.
 from __future__ import annotations
 
 import hmac
+import logging
 import os
 import re
 import time
@@ -607,14 +608,23 @@ def _generate(ticker: str, mandate_text: str, urls: list[str], user_sources: lis
         # progress, and stops short of full for that reason; it is honest
         # here only because this block mounts once per run and is replaced
         # when the run ends, so it cannot replay on an unrelated rerun.
-        # role=progressbar with no value, which is what an indeterminate
-        # bar is, plus a live region so the stage changes are announced.
-        # Nothing on this page was a live region at all, so a build that
-        # runs for over a minute was entirely silent to a screen reader.
+        # The comment that stood here claimed "plus a live region so the
+        # stage changes are announced". There was none: no aria-live and
+        # no role=status anywhere in the block, and the stage lines below
+        # are plain writes. A run of over a minute was silent to a screen
+        # reader, which is the exact condition the comment said had been
+        # fixed - a note describing an intention rather than the code.
+        #
+        # The wrapper below is the live region, so each stage line
+        # written into this block is announced once as it appears. The
+        # bar carries aria-busy and no value, which is what an
+        # indeterminate bar is, and is marked presentational so it is not
+        # announced as a progress bar whose value never changes.
         st.markdown(
-            '<div class="ar-progress" role="progressbar" aria-busy="true"'
+            '<div role="status" aria-live="polite" aria-atomic="false">'
+            '<div class="ar-progress" role="presentation" aria-busy="true"'
             ' aria-label="Building the report">'
-            "<i></i></div>",
+            "<i></i></div></div>",
             unsafe_allow_html=True,
         )
         for url in urls:
@@ -659,6 +669,56 @@ def _generate(ticker: str, mandate_text: str, urls: list[str], user_sources: lis
     return build_report(bundle, mandate, narrative, reconciliation)
 
 
+def _failure_message(exc: BaseException) -> str:
+    """What a reader is told when a run fails.
+
+    Never `str(exc)`. The deployment sets `showErrorDetails` to none so
+    a traceback cannot reach a visitor, and this line printed the
+    exception text straight into the page anyway - which is the same
+    disclosure by a different route, and can carry a URL, a provider's
+    error body or a key name.
+
+    Mapped to what the reader can act on instead. The exception is still
+    raised into the server log, where the owner can read it.
+    """
+    name = type(exc).__name__
+    text = str(exc).lower()
+
+    if "ticker" in text or "not found" in text or name == "KeyError":
+        return (
+            "That ticker was not found in the SEC's own ticker list. Check "
+            "the symbol and try again - the tool covers US-listed filers "
+            "only."
+        )
+    if "budget" in text or "cap" in text or "spend" in text:
+        return (
+            "The spending cap for this demo has been reached, so no new "
+            "report can be built. The sample notes are still available and "
+            "cost nothing."
+        )
+    if any(word in text for word in ("timeout", "timed out", "connection",
+                                     "network", "503", "502")):
+        return (
+            "A source did not answer in time. This is usually temporary; "
+            "trying again in a minute often works."
+        )
+    if "403" in text or "rate" in text:
+        return (
+            "SEC EDGAR refused the request, which it does when it is busy. "
+            "Waiting a minute and trying again usually clears it."
+        )
+    if "api" in text or "auth" in text or "401" in text:
+        return (
+            "The model provider rejected the request. This is a "
+            "configuration problem rather than something you can fix from "
+            "here; the owner has been given the detail in the logs."
+        )
+    return (
+        "The report could not be generated. The failure has been recorded "
+        "in the server log; nothing was charged for an incomplete run."
+    )
+
+
 def _run_pending() -> None:
     pending = st.session_state.pop("pending", None)
     if not pending:
@@ -673,11 +733,15 @@ def _run_pending() -> None:
     try:
         fresh = generate(ticker, mandate_text, urls)
     except Exception as exc:
-        write(
-            ui.status(
-                "error", "Failed", f"The report could not be generated: {exc}"
-            )
+        # Logged with its traceback for the owner; the reader is told
+        # what they can do about it.
+        logging.getLogger("asset_researcher").exception(
+            "report generation failed for %s", ticker
         )
+        write(ui.status("error", "Failed", _failure_message(exc)))
+        if st.button("Try again", key="retry_failed"):
+            st.session_state["pending"] = (ticker, mandate_text, urls)
+            st.rerun()
         return
     if fresh is not None:
         st.session_state["report"] = fresh
@@ -849,11 +913,22 @@ context = bundle.cash_context
 
 # ----------------------------------------------------------------- masthead
 
+# The bar the rest of the shell carries. This screen is the longest in
+# the product and had no persistent chrome at all, so a reader deep in a
+# 33,000px note had no indication of where they were and no way out
+# except the browser's Back - which discards the report they just paid
+# for.
+write(ui.topbar("report"))
+
 # A new report is an occasional act once one is on screen, so the form is
-# behind a control rather than occupying the top of every page.
-actions = st.columns([5, 1.1, 1.1, 1.3])
+# behind a control rather than occupying the top of every page. Home is
+# beside it, because leaving should be a control in the page rather than
+# a browser gesture that costs the artifact.
+actions = st.columns([4, 1.1, 1.1, 1.3, 1.1])
 if actions[3].button("New report", use_container_width=True, key="new"):
     _new_report_dialog()
+if actions[4].button("Home", use_container_width=True, key="to_home"):
+    go("home")
 actions[1].download_button(
     "HTML",
     data=report_to_html(report),

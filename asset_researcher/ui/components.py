@@ -935,7 +935,8 @@ def topbar(active: str = "reports") -> str:
     in the page, in real buttons.
     """
     name = {"reports": "Reports", "samples": "Samples",
-            "tool": "New report"}.get(active, active.title())
+            "tool": "New report", "report": "Report"}.get(
+                active, active.title())
     return _one_line(
         '<div class="ar-topbar"><span class="brand"><i></i>'
         "Asset Researcher</span>"
@@ -945,10 +946,17 @@ def topbar(active: str = "reports") -> str:
 
 
 def head(title: str, note: str = "") -> str:
-    """A section heading and its one line of context."""
+    """A section heading and its one line of context.
+
+    An `h2`. This emitted `h1`, and home calls it twice under the
+    screen's own title, so a screen-reader user was offered three equal
+    page titles and no structure. The shell styles `.ar-head h1` and
+    `.ar-head h2` identically, so the document outline is correct and
+    nothing moves on screen.
+    """
     sub = f"<p>{_text(note)}</p>" if note else ""
     return _one_line(
-        f'<div class="ar-head"><h1>{_text(title)}</h1>{sub}</div>'
+        f'<div class="ar-head"><h2>{_text(title)}</h2>{sub}</div>'
     )
 
 
