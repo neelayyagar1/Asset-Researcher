@@ -159,6 +159,28 @@ One exception, stated: a paragraph of running prose may carry a reading
 measure, because line length is a property of text rather than layout,
 and it keeps the column's left edge so it creates no competing axis.
 
+## Why dark mode follows the system and has no switch
+
+A toggle is a control, a preference to persist and a state to get
+wrong, and the reader this is built for has already told their laptop
+which they want. Nothing moves and nothing changes shape between the
+two: the register is restraint, and a dark mode that reorganises the
+page is a second design rather than the same one after dark. It is
+entirely a redefinition of the token block, which is the reason the
+palette was worth declaring in one place.
+
+Every tone is measured rather than eyeballed, at the same 4.5:1 floor
+the light scheme is held to, on every ground it lands on, with control
+boundaries and the focus ring at the 3:1 the WCAG 2.2 control rules
+ask for. The suite fails if the light scheme declares a colour the dark
+one does not answer — the real failure mode of a half-written dark mode
+is not ugliness but a light token surviving on a dark ground.
+
+A downloaded note stays on paper in both schemes. The dark document
+tokens live in the shell stylesheet, which the exported file does not
+carry, so the same markup follows the shell inside the app and stays a
+document when it leaves.
+
 ## Why the note keeps its own look
 
 The research note was left unrestyled: warm paper, a serif display
@@ -298,6 +320,104 @@ frozen countdown, no instruction to reload, on the first screen.
 2,000px frame. The frame is same-origin, so the note now sizes it to
 its own content and the page scrolls once.
 
+**One reviewer's reports were on every other reviewer's first
+screen.** Reports a visitor generates are written to disk, so that
+clicking a row on the index cannot destroy one. The store was a single
+directory in a single container, and every visitor to the deployment
+shares that container — so a reviewer who generated a report on a name
+they were considering put that ticker at the top of the index for
+everyone else holding the link, with the document one click away. On a
+tool shown to portfolio managers the ticker someone chose to research
+is itself the sensitive thing, and this demo goes to more than one
+person. Each visitor now has a scope of their own, carried in the URL
+beside the unlock token.
+
+*Found by* reading the diff. Nothing about the running app looks
+wrong, and the module's own docstring asserted the opposite.
+
+**Dark mode stopped at the shell, and the report screen is not the
+shell.** The dark scheme answered every shell token and no document
+token, on the stated assumption that a note renders in its own iframe
+and keeps its paper world. True of the reading screen; false of the
+report screen, which writes the document's markup straight into the
+page. So on the longest screen in the product the title was near-black
+on near-black at 1.06:1, the prose about 1.4:1, and only the tables
+survived because they paint their own white — a page of readable
+tables with invisible headings between them. The run-status panel and
+the progress bar went the same way.
+
+**A chart whose caption described a different series from its bars.**
+ADP's Financials row reads FY2026 5,245; the chart above it said
+$5.4B. The bars were right — the `describe=` beside them read raw
+operating cash flow, so the caption and the spoken description printed
+operating cash flow under a label saying capital expenditure had been
+taken off. $5,444m is exactly that note's operating cash flow,
+recovered from its own ratios. The chart was also computing its own
+free cash flow with an untagged year defaulting to zero capex, which
+is verbatim the defect the valuation module documents having fixed —
+surviving in a second copy because the fix was applied to one. There
+is one implementation now.
+
+**Summary statistics that contradicted their own caption.** "Excluding
+the subject and extreme multiples" sat under a table whose screen
+covered two of its six ratios. Realty Income shipped with a peer at a
+3,473% net margin — a revenue denominator filed two orders of
+magnitude out — and the printed peer mean margin read 462.8%. It now
+reads 32.8%. The outlier's own row still shows its real figures:
+suppressing them would be editing the data.
+
+**A sentence that drew a conclusion it had not checked.** "The price
+therefore rests on expectations not present in the filed cash flow
+history" printed on every note. It follows only when the price implies
+more growth than the record delivered, and on two of four it was
+backwards — telling a reader to interrogate optimism in a price that
+embeds caution. It compares now, and says so when there is no model to
+compare against.
+
+**The lead figure described a deduction it does not make.** Realty
+Income's masthead read "Price / FFO — funds from operations, before
+gains on disposal". Gains on disposal are in net income, which is the
+first term of the formula. The note's own body said so four sections
+down. It reads "Price / FFO proxy" now, and says it keeps those gains
+in.
+
+**A 35,000px document with no navigation past the first screen.** The
+note's frame is sized to its own content so the page scrolls once
+instead of through a nested scrollbar. The cost, unnoticed until it
+was measured, is that the note's document never scrolls — so its
+sticky section index sat at viewport-top 773 at the top and −19,227
+twenty thousand pixels down. The index now lives in the shell, which
+is the thing that scrolls.
+
+**Prose outside a comment, which CSS fails silently on.** An edit left
+two sentences and a dangling `*/` in the stylesheet. The browser
+discarded everything to the next closing brace, the phone table rule
+stopped applying, and the home table went back to overflowing a 375px
+screen — the exact defect that rule exists to prevent. The suite was
+green throughout, because every test about it asked whether the text
+was in the stylesheet, and it was, inside the wreckage.
+
+### Examined and deliberately not changed
+
+Three findings from reviews did not survive checking, and saying so is
+part of the record:
+
+- **Cintas reporting identical total debt in two years** was called a
+  stale tag. Short-term debt rises from nil over the same period with
+  total debt flat, which is what a maturing tranche reclassifying looks
+  like, and the note's question to management about the intended
+  permanent capital structure is the right question to ask about it.
+- **The terminal-share figure taken from the baseline run** was called
+  a defect. It sits beside the model value at default assumptions and
+  both describe the same run; taking it from the solved run would make
+  two halves of one sentence describe two different runs. What was
+  wrong is that it did not say which run it meant, and now it does.
+- **Pointing the document's focus ring at the shell's focus token**
+  was recommended for consistency. That rule travels with the exported
+  file, which carries no shell tokens, and an undefined custom property
+  invalidates the declaration — the change would have removed the focus
+  outline from every downloaded note, in the name of accessibility.
+
 ## What the review panels said
 
 A portfolio manager read four notes cold and said yes to a second
@@ -364,13 +484,25 @@ Stated here rather than discovered.
   the columns sit a year off their own 10-K cover.
 - **Non-USD filers get an incomplete note, deliberately.** Monetary
   facts in another currency are refused rather than converted.
-- **A report lives only in the session.** Download it to keep it; the
-  browser's Back asks before discarding one.
+- **A report you generate outlives your reloads and not the
+  container.** The rendered document is written to disk the moment it
+  exists, so it joins the index on the first screen and clicking a row
+  cannot destroy it. The deployment's filesystem is ephemeral, which is
+  the right lifetime for a demo and the wrong one for anything you want
+  to keep — download it. Each visitor sees only their own, through a
+  scope carried in the URL; anyone you send that URL to sees them too.
+  The browser's Back is silent unless the save actually failed, which
+  is the one case where leaving loses something.
 - **The samples carry the figures they were built with.** They are
   artifacts: real runs against real filings on the date shown on each
   note.
 - **No active-section indicator while scrolling.**
-- **A note still wants a route of its own** rather than a frame.
+- **A note still wants a route of its own** rather than a frame. The
+  frame is sized to the note's full height so the page scrolls once,
+  and the consequence is that nothing inside the note can be sticky —
+  its section index is rebuilt in the shell to work around exactly
+  that, and the table headers inside it cannot be recovered the same
+  way. A per-note route would end both.
 
 ---
 
