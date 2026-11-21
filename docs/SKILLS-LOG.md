@@ -30,6 +30,9 @@ Rules for this file:
 | 2026-11-20 | `code-review` (high) | The night's diff | Two real bugs, both in my own fixes |
 | 2026-11-20 | `security-review` | The night's diff | No HIGH or MEDIUM findings; the error-message change reduced exposure |
 | 2026-11-20 | `perception-first-design:evaluate` | Rebuilt screens | L1 41 to 74, L2 34 to 86, measured |
+| 2026-11-20 | PM panel (agent) | Four built notes, read as research | Second meeting, yes. Broke the flagship Realty Income claim |
+| 2026-11-20 | `intent:vigil` (agent), second pass | The fixed shell | Confirmed eleven fixes; found the live region, the gate backoff dead end and the dialog's Back |
+| 2026-11-20 | `superpowers:verification-before-completion` | The whole claim set | Evidence table; four claims withdrawn as unverified |
 
 ## Available and scheduled tonight
 
@@ -85,6 +88,29 @@ the finding had been taken at face value.
 
 Recorded because it is the general lesson: an agent's report is a lead,
 not a result.
+
+## What the second round of panels found
+
+The PM panel earned its cost by breaking the one claim the project
+leads with. `FOR-REVIEWERS.md` promoted a Realty Income finding that
+the note's own Limitations section contradicted, over a window ending
+at the trough. The fix was not to soften it but to ship the argument
+the evidence supports, which is nearly as damning and does not break.
+
+It also found implementation vocabulary inside two notes - "all of
+which the renderer will populate" - which our own prompts had taught
+the model by explaining the renderer to it.
+
+Two of its findings did NOT hold, and were checked before anything
+changed: a negative implied-upside figure it quoted is absent from the
+current notes, and the per-share series it cited belonged to a note
+that had already been rebuilt. Reading a stale artifact is the ordinary
+failure mode of a review that runs against a moving target.
+
+The second vigil pass confirmed eleven fixes in one line each and found
+three more: a live region containing the progress bar and none of the
+stage lines, a gate backoff screen with no control on it, and a dialog
+whose dismissal-shaped button navigated away from a paid-for report.
 
 ## Verification standard
 
