@@ -182,6 +182,28 @@ def test_the_first_screen_speaks_in_the_products_voice():
     assert weight and int(weight.group(1)) <= 300
 
 
+def test_the_stylesheet_is_a_style_element_and_nothing_else():
+    """Streamlit's markdown sanitiser rejects `<link>`, and when it does
+    it discards the whole block - taking the `<style>` with it.
+
+    Two preconnect links were added ahead of the sheet to cut a round
+    trip off the display font. Measured in the browser afterwards: every
+    style element on the page empty, 74KB of stylesheet gone, the app
+    rendering with no CSS at all. The suite stayed green the entire
+    time, because every test reads what `stylesheet()` RETURNS and that
+    string was correct; what broke was what the host did with it.
+
+    So this asserts the shape the host will actually accept.
+    """
+    for sheet in (theme.stylesheet(), theme.document_stylesheet()):
+        assert sheet.startswith("<style>"), (
+            "anything before the <style> element risks the sanitiser "
+            "discarding the stylesheet entirely"
+        )
+        assert sheet.endswith("</style>")
+        assert "<link" not in sheet
+
+
 def test_the_product_tells_the_browser_it_has_one_light_palette():
     """Without `color-scheme`, the user agent paints its own ground from
     the operating system's preference before any stylesheet arrives. A

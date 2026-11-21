@@ -1209,10 +1209,37 @@ table.ar-list td { position: relative; padding: 11px 16px; }
    broke the bypass link's contrast. */
 a.ar-row-link { position: absolute; inset: 0; color: inherit; }
 table.ar-list tr:hover td { background: var(--shell-row-hover); }
+/* The focus ring spans the ROW, which is what the row is.
+
+   It did not. Only the first anchor in each row is focusable - the
+   other six carry tabindex="-1" - and `inset: 0` resolves against that
+   anchor's own cell, so the ring was a box around the Ticker cell.
+   Measured in the running page: 81px of outline on a 968px row, eight
+   per cent of the thing it was meant to indicate. The comment here
+   claimed "hover and the focus ring both paint the whole row, and both
+   are tested"; the tint did, the ring never had.
+
+   On a row that is one link, a ring around one of its seven cells does
+   not say "this row is focused", it says "this cell is selected" -
+   which is a different and wrong statement about what Enter will do.
+
+   Drawn as inset shadows on the cells instead of an outline on the
+   anchor: top and bottom on every cell, and the two end caps on the
+   first and last, so the four edges close into one rectangle around the
+   whole row. */
 table.ar-list tr:has(a.ar-row-link:focus-visible) td {
-  background: var(--shell-row-hover); }
-a.ar-row-link:focus-visible {
-  outline: 2px solid var(--shell-focus); outline-offset: -2px; }
+  background: var(--shell-row-hover);
+  box-shadow: inset 0 2px 0 0 var(--shell-focus),
+              inset 0 -2px 0 0 var(--shell-focus); }
+table.ar-list tr:has(a.ar-row-link:focus-visible) td:first-child {
+  box-shadow: inset 0 2px 0 0 var(--shell-focus),
+              inset 0 -2px 0 0 var(--shell-focus),
+              inset 2px 0 0 0 var(--shell-focus); }
+table.ar-list tr:has(a.ar-row-link:focus-visible) td:last-child {
+  box-shadow: inset 0 2px 0 0 var(--shell-focus),
+              inset 0 -2px 0 0 var(--shell-focus),
+              inset -2px 0 0 0 var(--shell-focus); }
+a.ar-row-link:focus-visible { outline: none; }
 table.ar-list td.co { color: var(--shell-soft); }
 table.ar-list td.tk { font-weight: 600; letter-spacing: -.01em; }
 /* Filed and Cited are context rather than the figure a reader came
@@ -1874,6 +1901,27 @@ def stylesheet() -> str:
     precede every other statement in the sheet, which is why they are
     concatenated first rather than written beside the rules that use them.
     """
+    # NO <link> ELEMENTS HERE. This cost the whole stylesheet once.
+    #
+    # An audit noted, correctly, that the `@import` is a serial round
+    # trip and that until the font lands the opening line paints in
+    # Faustina - which this product loads at 400..600, so there is no
+    # 300 in it and `font-synthesis-weight: none` rightly refuses to
+    # fake one. The display line therefore first paints at weight 400
+    # and reflows to 300.
+    #
+    # The obvious mitigation is a pair of preconnects ahead of the
+    # sheet. It was tried, and Streamlit's markdown sanitiser rejects
+    # `<link>` - and takes the entire `<style>` with it. Measured in the
+    # browser: every style element on the page empty, 74KB of
+    # stylesheet gone, the app rendering unstyled. The suite stayed
+    # green throughout, because every test reads `stylesheet()` and the
+    # string it returns was perfectly correct; what broke was what the
+    # host did with it.
+    #
+    # So the swap stands, and is recorded rather than hidden. Removing
+    # it needs the font served from our own origin, or a Streamlit
+    # version that lets a `<link>` into the head.
     return (
         f"<style>{_FONT_IMPORT}{_SHELL_FONT_IMPORT}"
         f"{_root()}{_DOCUMENT_CSS}{_APP_CSS}</style>"

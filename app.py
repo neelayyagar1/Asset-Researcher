@@ -186,13 +186,29 @@ def _gate() -> bool:
     if waiting:
         write(ui.status(
             "warning", "Slow down",
-            f"Too many attempts. Try again in {waiting} seconds; "
-            f"pressing Enter will tell you how long is left.",
+            f"Too many attempts. Wait {waiting} seconds, then try again.",
         ))
     # A form, so Return submits. A password box that ignores Return is
     # the most practised gesture in the world failing silently on the
     # first interaction, which reads as broken rather than as strict.
-    with st.form("gate_form", clear_on_submit=True, border=False):
+    # `not waiting`, so a throttled submit does not eat what was typed.
+    #
+    # The throttle refuses before the secret is compared, which is
+    # correct and deliberate - see below. But the form cleared on every
+    # submit regardless, so a visitor who typed the RIGHT passphrase
+    # during the wait lost it and had to retype it after a delay that
+    # doubles to thirty seconds. The refusal is the security control;
+    # discarding their input was just a tax on top of it, and it fell
+    # hardest on the person who had done nothing wrong.
+    #
+    # An audit proposed instead comparing the secret before applying the
+    # throttle, on the reasoning that a correct guess is not a guess.
+    # Rejected: the throttle's whole function is to rate-limit online
+    # guessing, and comparing during the wait would let an attacker
+    # submit unlimited attempts through the window at no cost. The wait
+    # would become a message rather than a control. Refusing before the
+    # comparison is the part that must not change.
+    with st.form("gate_form", clear_on_submit=not waiting, border=False):
         entered = st.text_input(
             "Passphrase", type="password", key="gate_input",
             label_visibility="collapsed", placeholder="Passphrase",
