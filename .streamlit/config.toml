@@ -6,15 +6,19 @@
 # controls is the frame Streamlit paints before that stylesheet arrives,
 # and the chrome it owns outright.
 #
-# It used to hold a white page and a blue accent from before the redesign,
-# so a cold load flashed white and then settled onto cream. These values
-# are the real tokens: PAPER, INK and ACCENT as theme.py defines them.
+# It has been wrong twice, in the same way both times. First it held a
+# white page and a blue accent from before a redesign, so a cold load
+# flashed white and settled onto cream. Then the shell was rebuilt and
+# this file kept the cream, so a cold load flashed the palette of a
+# design that no longer ships. A test now reads these values back out
+# of the stylesheet's own tokens, because a frame painted in a
+# retired world is the first impression of the page.
 [theme]
 base = "light"
-primaryColor = "#1d5a86"
-backgroundColor = "#faf8f3"
+primaryColor = "#4f46e5"
+backgroundColor = "#fcfcfd"
 secondaryBackgroundColor = "#ffffff"
-textColor = "#17150f"
+textColor = "#15161a"
 
 [server]
 headless = true

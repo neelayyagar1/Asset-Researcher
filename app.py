@@ -236,11 +236,15 @@ st.set_page_config(
     initial_sidebar_state="collapsed",
 )
 st.markdown(theme.stylesheet(), unsafe_allow_html=True)
-# The direction this shell was built to, in the page a reader receives,
-# so the built surface can be checked against what it promised. Emitted
-# with st.markdown rather than `write`, which is defined further down
-# this module and does not exist yet at this point in the script.
-st.markdown(ui.direction_contract(), unsafe_allow_html=True)
+# Nothing decorative runs here.
+#
+# A design-direction contract used to be emitted at this point, as an
+# HTML comment, before `write` was even defined. When the deployed
+# process held a stale copy of the components module that one call
+# raised AttributeError and the whole site served a red traceback
+# instead of a gate - for a comment no reader ever sees. The design
+# record lives in DESIGN.md and NOTES.md, where it cannot take the
+# product down.
 
 # A bypass link. The report carries twenty section anchors ahead of its
 # content, so without this a keyboard user tabs through the whole index to
