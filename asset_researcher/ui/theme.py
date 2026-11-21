@@ -750,11 +750,81 @@ button[data-testid="stExpandSidebarButton"]:hover,
   --shell-r: 7px;
   --shell-r-lg: 10px;
   --shell-shadow: 0 1px 2px rgba(18, 20, 26, .04);
+  /* Four colours used to sit inline in the rules below, where a
+     change of scheme could not reach them - the primary button's
+     label was literally `#fff`, which on a dark scheme's light fill
+     is the one control a reader is meant to press, unreadable. */
+  --shell-on-ink: #ffffff;    /* the label on an ink-filled control */
+  --shell-ink-hover: #26272d;
+  --shell-chip: #f4f5f7;      /* the inline code chip */
+  --shell-hover: #f7f8f9;     /* a secondary control, pressed on */
+  --shell-hover-line: #d6d9df;
   --shell-col: 1120px;        /* the one column */
   --shell-gut: 28px;
 }
 
 .stApp, [data-testid="stAppViewContainer"] { background: var(--shell-bg); }
+
+/* ------------------------------------------------------------- dark
+
+   The same shell, on the other ground. Nothing moves and nothing
+   changes shape: the register is restraint, and a dark mode that
+   reorganises the page is a second design rather than the same one
+   after dark.
+
+   Every colour is a token redefinition, which is the whole reason the
+   palette is declared in one block. Four colours used to sit inline in
+   the rules - among them the primary button's label, hard-coded white,
+   which on this scheme's near-white fill would have made the one
+   control a reader is meant to press unreadable. The suite now fails
+   if the light scheme declares a colour this one does not answer.
+
+   Following the system rather than offering a switch. A toggle is a
+   control, a preference to persist and a state to get wrong, and the
+   reader this is built for has already told their laptop which they
+   want. The measured ratios are in the suite, not in a comment: every
+   tone is checked against every ground it lands on, at the same 4.5:1
+   floor the light scheme is held to, and the field boundary and focus
+   ring at the 3:1 the WCAG 2.2 control rules ask for. */
+@media (prefers-color-scheme: dark) {
+  :root {
+    --shell-bg: #0d0e12;
+    --shell-panel: #161820;
+    --shell-ink: #e8eaef;
+    --shell-soft: #b9bdc8;
+    --shell-mute: #9499a5;
+    /* Lines read louder on a dark ground than on a light one at the
+       same distance from it, so these sit closer to the panel than
+       their light counterparts do to white. */
+    --shell-line: #242732;
+    --shell-line-2: #2c3040;
+    --shell-field-line: #767c8a;
+    --shell-focus: #a5a0ff;
+    --shell-sink: #121419;
+    --shell-shadow: 0 1px 2px rgba(0, 0, 0, .4);
+    --shell-on-ink: #11131a;
+    --shell-ink-hover: #ffffff;
+    --shell-chip: #1d212b;
+    --shell-hover: #1d212b;
+    --shell-hover-line: #3a3f52;
+  }
+
+  /* Streamlit paints a few surfaces from its own static config, which
+     has one scheme and cannot follow the system. These are the ones a
+     reader meets. */
+  .stApp, [data-testid="stAppViewContainer"],
+  [data-testid="stHeader"] { background: var(--shell-bg); }
+  [data-testid="stDialog"] div[role="dialog"] {
+    background: var(--shell-panel); }
+
+  /* The note renders in its own document, which carries its own paper
+     world and is not restyled here - a research note is a document,
+     and a document on a dark screen is still on paper. The frame it
+     sits in gets an edge so the white does not run into the page. */
+  iframe { border-radius: var(--shell-r); }
+}
+
+
 
 .block-container {
   max-width: var(--shell-col);
@@ -912,7 +982,8 @@ table.ar-list th.num, table.ar-list td.num {
    after one reads as a typo - "AAPL , say". Keep punctuation off its
    right-hand side rather than fighting the box model. */
 .ar-step code {
-  font-family: var(--mono); font-size: 12px; background: #f4f5f7;
+  font-family: var(--mono); font-size: 12px;
+  background: var(--shell-chip);
   border-radius: var(--shell-r-sm); padding: 1px 5px;
   color: var(--shell-ink); }
 
@@ -1015,21 +1086,39 @@ table.ar-list th.num, table.ar-list td.num {
   font-family: var(--sans); font-size: 13px; letter-spacing: -.005em;
   text-transform: none; font-weight: 500; border-radius: var(--shell-r);
   border: 1px solid var(--shell-ink); background: var(--shell-ink);
-  color: #fff; width: 100%; min-height: 36px; padding: 0 16px;
+  color: var(--shell-on-ink); width: 100%; min-height: 36px;
+  padding: 0 16px;
   box-shadow: 0 1px 2px rgba(18, 20, 26, .16);
   transition: background-color 120ms var(--ease),
     border-color 120ms var(--ease), color 120ms var(--ease); }
 .stButton > button:hover, .stFormSubmitButton > button:hover {
-  background: #26272d; border-color: #26272d; }
+  background: var(--shell-ink-hover);
+  border-color: var(--shell-ink-hover); }
 .stDownloadButton > button, .stButton > button[kind="secondary"] {
   background: var(--shell-panel); color: var(--shell-ink);
   border-color: var(--shell-line-2); box-shadow: var(--shell-shadow); }
 .stDownloadButton > button:hover,
 .stButton > button[kind="secondary"]:hover {
-  background: #f7f8f9; border-color: #d6d9df; color: var(--shell-ink); }
+  background: var(--shell-hover);
+  border-color: var(--shell-hover-line);
+  color: var(--shell-ink); }
 .stButton > button:focus-visible, .stDownloadButton > button:focus-visible,
 .stFormSubmitButton > button:focus-visible {
   outline: 2px solid var(--shell-focus); outline-offset: 2px; }
+
+/* A field's label, in our colours rather than Streamlit's.
+
+   This was never claimed, so it was never wrong in the light scheme -
+   Streamlit's static theme paints a dark warm grey, which passes on
+   white. On a dark ground the same colour measured 1.76:1, which is
+   every field label on the form screen. A static config has one scheme
+   and cannot follow the system, so the label has to be ours. */
+[data-testid="stWidgetLabel"] p,
+[data-testid="stWidgetLabel"] label {
+  color: var(--shell-soft); font-size: 13px; font-weight: 500; }
+/* The options beside a radio, which are labels by another name. */
+.stRadio [data-testid="stWidgetLabel"] p,
+.stRadio label p { color: var(--shell-ink); }
 
 /* A row of buttons shares one row and splits it evenly. */
 [data-testid="stHorizontalBlock"] { gap: 10px; }
