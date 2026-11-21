@@ -546,22 +546,32 @@ def sections(report: Report) -> list[Section]:
         comp_rows = format_comp_table(table)
         comp_columns, comp_dropped = ui.drop_empty_columns(
             [
+                # Nine columns, not sixteen. Measured on the deployed
+                # site, the sixteen-column version rendered 1,714px wide
+                # inside an 832px frame: more than half of it sat
+                # off-screen, including most of the multiples the table
+                # exists to show, and the header read as broken because
+                # it was cut mid-table. A comparison a reader cannot see
+                # is worse than a narrower one.
+                #
+                # What went, and why. The absolute-dollar columns -
+                # equity value, net debt, enterprise value, EBITDA,
+                # share price - are scale, and every one of them is
+                # already expressed in the ratio beside it; revenue
+                # stays as the single size anchor. "Basis for inclusion"
+                # is a sentence, not a comparable, and it alone took
+                # 272px: it moves under the table, where prose belongs.
+                # FYE stays, because a peer carrying a three-year-old
+                # fiscal year is the defect a reader most needs to see.
                 Col("Company", "Company", emphasis=True),
                 Col("Ticker", "Ticker"),
                 Col("FYE", "FYE"),
-                Col("Share price", "Share price", num=True),
-                Col("Equity value", "Equity value", num=True),
-                Col("Net debt", "Net debt", num=True),
-                Col("Enterprise value", "Enterprise value", num=True),
                 Col("Revenue", "Revenue", num=True),
-                Col("EBITDA", "EBITDA", num=True),
-                Col("EBITDA margin", "EBITDA margin", num=True),
                 Col("Net margin", "Net margin", num=True),
                 Col("EV/Revenue", "EV/Revenue", num=True),
                 Col("EV/EBITDA", "EV/EBITDA", num=True),
                 Col("P/E", "P/E", num=True),
                 Col("P/B", "P/B", num=True),
-                Col("Basis for inclusion", "Basis for inclusion", wide=True),
             ],
             comp_rows,
         )
@@ -588,6 +598,22 @@ def sections(report: Report) -> list[Section]:
                     comp_rows,
                     classify=ui.comps_classify,
                     scrolls=True,
+                ),
+                # The basis for inclusion, moved out of the table and
+                # under it. It is a sentence per company and it alone
+                # took 272px of a frame that is 832px wide; prose in a
+                # column of figures is what made the table unreadable.
+                # It is not dropped, because a peer set that cannot say
+                # why each name is in it is a peer set a reader should
+                # not trust.
+                ui.footnote(
+                    "Why each company is here. "
+                    + " ".join(
+                        f"{row.get('Ticker') or row.get('Company')}: "
+                        f"{row['Basis for inclusion']}."
+                        for row in comp_rows
+                        if row.get("Basis for inclusion")
+                    )
                 ),
                 ui.footnote(
                     "Dollar figures in millions. EBITDA is operating income plus "

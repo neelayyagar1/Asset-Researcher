@@ -25,6 +25,7 @@ import pathlib
 import pytest
 from streamlit.testing.v1 import AppTest
 
+from asset_researcher.ui.components import START_LABEL
 from tests.apptest_helpers import page_text, rendered_markup
 
 APP = str(pathlib.Path(__file__).resolve().parents[1] / "app.py")
@@ -45,7 +46,7 @@ def _unlock(at):
 
 def _form(monkeypatch):
     at = _unlock(_app(monkeypatch).run())
-    next(b for b in at.button if b.label == "Generate a report").click().run()
+    next(b for b in at.button if b.label == START_LABEL).click().run()
     return at
 
 

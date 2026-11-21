@@ -580,6 +580,19 @@ def _controls(key: str) -> tuple[str, str, str, bool]:
         if choice == "Describe my own"
         else next(p.description for p in presets if p.name == choice)
     )
+    # Streamlit ignores `value=` once a keyed widget exists: on every
+    # rerun after the first, session state wins. So changing the
+    # selector recomputed the prefill and the field kept whatever was
+    # in it - choosing "Describe my own" left the previous preset's
+    # paragraph sitting in a box labelled as the reader's own words,
+    # which is the one field here that must not put words in their
+    # mouth. The seed is written into state when, and only when, the
+    # selection changes, so an edited description survives a rerun but
+    # a new selection replaces it.
+    seen = f"{key}_preset_seen"
+    if st.session_state.get(seen) != choice:
+        st.session_state[seen] = choice
+        st.session_state[f"{key}_mandate"] = prefill
     # Tall enough for the seeded description. At 110 the default content
     # was cut through the middle of a line of type, so the first thing a
     # reader saw of the field they most need to read was the app failing
@@ -895,24 +908,8 @@ if st.session_state["view"] == "home":
 
     with rail:
         write(ui.head("Get started"))
-        write(
-            ui.card(
-                ui.steps(
-                    (
-                        "Enter a US-listed ticker, for example <code>AAPL</code>",
-                        "Say how you invest. It sets which findings the "
-                        "note leads with, not which figures it reports.",
-                        "Press <b>Generate a report</b>. It reads the "
-                        "filings and writes the note, which takes about "
-                        "a minute.",
-                        "Read it. Every figure links back to the filing "
-                        "it came from &mdash; located in the source, "
-                        "which is not the same as supporting the claim.",
-                    )
-                )
-            )
-        )
-        if st.button("Generate a report", type="primary", key="enter"):
+        write(ui.card(ui.steps(ui.STEPS)))
+        if st.button(ui.START_LABEL, type="primary", key="enter"):
             go("tool")
         # A held report is reachable again. Leaving one is navigation,
         # not disposal: it cost a minute and about a dollar, so the only
@@ -953,7 +950,7 @@ if st.session_state["view"] == "samples":
         gone = st.columns([1, 1, 3])
         if gone[0].button("Back", key="samples_back_empty"):
             go("home")
-        if gone[1].button("Generate a report", key="samples_build_empty"):
+        if gone[1].button(ui.START_LABEL, key="samples_build_empty"):
             go("tool")
         st.stop()
 
@@ -962,7 +959,7 @@ if st.session_state["view"] == "samples":
     back = st.columns([1, 1, 3])
     if back[0].button("Back", key="samples_back"):
         go("home")
-    if back[1].button("Generate a report", key="samples_build"):
+    if back[1].button(ui.START_LABEL, key="samples_build"):
         go("tool")
 
     chosen = st.radio(
@@ -1026,7 +1023,7 @@ if st.session_state["view"] != "report" or report is None:
     # whether the tool is serious was 46% empty cream and looked like a
     # layout that had broken. The form sits at its own measure instead.
     write('<span id="ar-form" tabindex="-1"></span>')
-    write(ui.topbar("reports"))
+    write(ui.topbar("tool"))
     write(ui.workspace_intro())
     failure = st.session_state.get("failure")
     if failure:

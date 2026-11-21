@@ -14,6 +14,7 @@ the difference between a tag and a prefix of one.
 from __future__ import annotations
 
 import pathlib
+import re
 from html.parser import HTMLParser
 
 import pytest
@@ -213,4 +214,77 @@ def test_no_implementation_vocabulary_reaches_the_reader(note):
     found = [w for w in _IMPLEMENTATION_WORDS if w.lower() in text]
     assert not found, (
         f"{note.stem} shows implementation vocabulary to a reader: {found}"
+    )
+
+
+@pytest.mark.parametrize("note", _notes(), ids=lambda p: p.stem)
+def test_the_peer_table_fits_the_page_it_is_printed_on(note):
+    """Sixteen columns do not fit the column a note is read in.
+
+    Measured on the deployed site: the peer table rendered 1,714px wide
+    inside an 832px frame, so more than half of it - including most of
+    the multiples it exists to show - sat off-screen, and the header
+    row read as broken because it was cut mid-table.
+
+    A peer comparison a reader cannot see is worse than a narrower one.
+    Column count is the proxy a static check can enforce: nine fits,
+    sixteen does not.
+    """
+    raw = note.read_text(encoding="utf-8")
+    peer = None
+    for match in re.finditer(r"<table[^>]*>.*?</table>", raw, re.S):
+        if "EV/EBITDA" in match.group(0) or "EV/Revenue" in match.group(0):
+            peer = match.group(0)
+            break
+    if peer is None:
+        pytest.skip(f"{note.stem} has no peer table")
+
+    header = re.search(r"<tr[^>]*>(.*?)</tr>", peer, re.S)
+    columns = re.findall(r"<th[^>]*>(.*?)</th>", header.group(1), re.S)
+    assert len(columns) <= 9, (
+        f"{note.stem}: peer table has {len(columns)} columns "
+        f"({[re.sub(r'<[^>]+>', '', c).strip() for c in columns]}); it will "
+        f"not fit the frame a note is read in"
+    )
+
+
+@pytest.mark.parametrize("note", _notes(), ids=lambda p: p.stem)
+def test_a_note_does_not_discuss_findings_it_says_it_does_not_have(note):
+    """The defect that lost a review.
+
+    Two of six notes printed "No reconciliation was produced for this
+    filer" and then, screens later, discussed what that section had
+    found: ADP named "the two principal disagreements found here" and
+    Cintas opened its bear case with "The reconciliation in this note
+    corroborates management on most operating claims" and pointed at
+    "the two divergences".
+
+    A reader meets that contradiction in under two minutes, and after
+    it nothing else in the document is load-bearing. The reconciliation
+    is the section the whole tool exists to produce, so a note is not
+    allowed to disown it in one place and rely on it in another.
+    """
+    doc = _parse(note)
+    text = doc.text
+
+    says_none = (
+        "No reconciliation was produced for this filer" in text
+        or "No management narrative was reconciled" in text
+    )
+    if not says_none:
+        return
+
+    contradictions = [
+        phrase
+        for phrase in (
+            "the two divergences",
+            "two principal disagreements",
+            "The reconciliation in this note",
+            "the reconciliation corroborates",
+        )
+        if phrase.lower() in text.lower()
+    ]
+    assert not contradictions, (
+        f"{note.stem} says no reconciliation was produced and then relies "
+        f"on one: {contradictions}"
     )

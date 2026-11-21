@@ -213,7 +213,7 @@ ask.
 
 ## The suite
 
-585 tests, no network, about forty-five seconds. Every fix below was
+606 tests, no network, about forty-five seconds. Every fix below was
 written as a failing test first, and the failure was watched before the
 fix was written.
 
@@ -313,9 +313,16 @@ written guide said Realty Income's per-share FFO, operating cash flow
 and net income "all fell across FY2022 to FY2024". The window ended at
 the trough, FY2025 was higher in the same table, and the note's own
 Limitations section said the finding might be wrong. The claim is now
-the one the evidence supports: the spread narrowed until growth was
-scale-additive rather than per-share accretive, while the share count
-doubled.
+the one the note can carry: on a net-income-plus-depreciation proxy per
+diluted share, the metric fell from FY2022 to FY2024 and recovered only
+partially in FY2025, still short of FY2022, while the share count more
+than doubled and interest expense outgrew revenue.
+
+**Do not say "the spread narrowed" in a room.** A reviewer checked that
+sentence against the note and it does not hold: the note states the
+spread is not quantifiable from the disclosure, and revenue measured
+against the gross real estate balance improved in every year. The
+corrected claim above is what the filings support.
 
 Two of their findings did not hold — they were reading notes that had
 already been rebuilt. Both were checked before anything changed.
@@ -329,9 +336,17 @@ Stated here rather than discovered.
 - **One discount rate, 8.5%, for every filer.** A company with no net
   debt and one with negative book equity get the same number. Calling
   it a convention is honest and is not the same as having a view.
-  Everything downstream inherits it. This is why the note leads with
-  the implied growth requirement, which is solved from the price and
-  does not depend on the rate.
+  Everything downstream inherits it, the implied figures included.
+
+  **The implied growth is solved AT 8.5%.** The solver varies growth
+  while holding everything else fixed, so the headline figure moves
+  when the rate moves. An earlier draft of this page said the opposite,
+  and a reviewer checked it against the code. The note leads with the
+  implied requirement because it frames the price as a question rather
+  than asserting a value, not because it escapes the assumption. The
+  implied discount rate printed beside it is the same solve run the
+  other way: each is the other's complement, each holding the other at
+  a convention, and the page does not yet say so.
 - **Consensus is a recommendation count, not an estimate.** The note
   publishes how many analysts rate the name a buy, a hold or a sell. It
   does not say what they expect it to earn; that data is behind a paid

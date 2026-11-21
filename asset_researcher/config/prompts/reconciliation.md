@@ -25,6 +25,24 @@ Examples of the shape this takes:
 - The narrative emphasises deleveraging while net debt rose.
 - Earnings grew, and operating cash flow did not follow, accruals widened.
 
+**Anything you discuss anywhere must be listed here.** The
+reconciliation list is the section this whole tool exists to produce,
+and it is what the renderer draws. If you write in the bear case, the
+summary or anywhere else that this note "agrees with management on
+cash conversion", or refers to "the two divergences", or names a
+disclosure asymmetry you found, then each of those is a reconciliation
+item and belongs in the list as one.
+
+Two notes shipped with this list empty while their own prose named the
+findings it should have held: the page said "No reconciliation was
+produced for this filer" and then, screens later, discussed what it had
+found. A reader meets that contradiction in under two minutes and
+stops trusting the document. An empty list is a claim that you examined
+management's narrative against the filings and found nothing worth
+reporting in either direction - including nothing corroborated. Make
+that claim only when it is true, and never while writing about
+findings elsewhere.
+
 Work from the data you were given. Do not manufacture a divergence to have
 something to report: if narrative and numbers are consistent, say so, and say
 what that consistency supports.

@@ -794,9 +794,10 @@ def home() -> str:
     """
     return _one_line(
         '<div class="ar-head"><h1 class="ar-sr">Asset Researcher</h1>'
-        "<p class=\"lead\">Reads a company's filings to the SEC and "
-        "writes a research note from them: the filed numbers, what "
-        "management said about them, and where the two disagree.</p>"
+        "<p class=\"lead\">Provide a ticker and how you invest, and it "
+        "writes a report out of the company's own filings to the SEC: "
+        "the filed numbers, what management said about them, and where "
+        "the two disagree.</p>"
         "</div>"
     )
 
@@ -915,8 +916,7 @@ def workspace_intro() -> str:
     """The empty workspace, which is a form and should say what it wants."""
     return _one_line(
         '<div class="ar-head ar-form-head"><h1>Generate a report</h1>'
-        "<p>About a minute. Every figure is read from the filing; the "
-        "model may not write a number.</p></div>"
+        "</div>"
     )
 
 
@@ -984,6 +984,26 @@ def kv_rows(pairs) -> str:
         for k, v in pairs
     )
     return _one_line(rows)
+
+
+# The home screen's primary action, and the four steps that describe the
+# path it starts. They are one object because step one has to name that
+# button, and the two drifted apart once already: the button and the
+# form's own primary action both read "Generate a report", so the
+# instructions could not name either of them without ambiguity. The form
+# generates; this one opens the form, and says so.
+START_LABEL = "Start a report"
+
+STEPS = (
+    f"Press <b>{START_LABEL}</b>, below.",
+    "Enter a US-listed ticker, how you invest, and any public URLs "
+    "you want read alongside the filings.",
+    "Press <b>Generate report</b>. It reads the filings and writes "
+    "the report, which takes about a minute.",
+    "Read it. Every figure links back to the filing it came from "
+    "&mdash; located in the source, which is not the same as "
+    "supporting the claim.",
+)
 
 
 def steps(items) -> str:

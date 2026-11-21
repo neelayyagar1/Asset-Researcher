@@ -19,6 +19,7 @@ import pathlib
 import pytest
 from streamlit.testing.v1 import AppTest
 
+from asset_researcher.ui.components import START_LABEL
 from tests.apptest_helpers import page_text, rendered_markup
 
 APP = str(pathlib.Path(__file__).resolve().parents[1] / "app.py")
@@ -51,19 +52,19 @@ def test_the_gate_stops_an_unauthenticated_visitor(monkeypatch):
     text = page_text(at)
     assert "Asset Researcher" in text
     # Nothing that spends money is on the page.
-    assert not any("Generate a report" in lab for lab in _labels(at))
+    assert not any(START_LABEL in lab for lab in _labels(at))
 
 
 def test_the_right_passphrase_opens_it(monkeypatch):
     at = _unlock(_app(monkeypatch).run())
-    assert any("Generate a report" in lab for lab in _labels(at))
+    assert any(START_LABEL in lab for lab in _labels(at))
 
 
 def test_a_wrong_passphrase_does_not(monkeypatch):
     at = _app(monkeypatch).run()
     at.text_input(key="gate_input").set_value("not the phrase")
     at.button[0].click().run()
-    assert not any("Generate a report" in lab for lab in _labels(at))
+    assert not any(START_LABEL in lab for lab in _labels(at))
 
 
 def test_an_en_dash_is_forgiven(monkeypatch):
@@ -73,12 +74,12 @@ def test_an_en_dash_is_forgiven(monkeypatch):
     at = AppTest.from_file(APP, default_timeout=60).run()
     at.text_input(key="gate_input").set_value("ar–26")
     at.button[0].click().run()
-    assert any("Generate a report" in lab for lab in _labels(at))
+    assert any(START_LABEL in lab for lab in _labels(at))
 
 
 def test_no_passphrase_configured_leaves_it_open(monkeypatch):
     at = _app(monkeypatch, passphrase=None).run()
-    assert any("Generate a report" in lab for lab in _labels(at))
+    assert any(START_LABEL in lab for lab in _labels(at))
 
 
 def test_the_gate_raises_nothing_on_any_of_these(monkeypatch):
@@ -99,7 +100,7 @@ def test_the_home_button_reaches_the_form(monkeypatch):
     reader learns how to drive the tool without leaving the first
     screen."""
     at = _unlock(_app(monkeypatch).run())
-    next(b for b in at.button if b.label == "Generate a report").click().run()
+    next(b for b in at.button if b.label == START_LABEL).click().run()
     assert not at.exception
     assert "Generate a report" in page_text(at)
 
@@ -123,23 +124,23 @@ def test_the_form_screen_has_a_way_back(monkeypatch):
     minute and a dollar was stuck, and the browser's own Back left the
     site entirely."""
     at = _unlock(_app(monkeypatch).run())
-    next(b for b in at.button if b.label == "Generate a report").click().run()
+    next(b for b in at.button if b.label == START_LABEL).click().run()
     assert any(b.label == "Back" for b in at.button)
 
     next(b for b in at.button if b.label == "Back").click().run()
-    assert any("Generate a report" in lab for lab in _labels(at))
+    assert any(START_LABEL in lab for lab in _labels(at))
 
 
 def test_every_screen_can_be_reached_and_left(monkeypatch):
     """A round trip through each view, ending where it started."""
     at = _unlock(_app(monkeypatch).run())
-    for label in ("Generate a report",):
+    for label in (START_LABEL,):
         next(b for b in at.button if b.label == label).click().run()
         assert not at.exception, f"{label} raised"
         back = [b for b in at.button if b.label == "Back"]
         assert back, f"no way back from {label}"
         back[0].click().run()
-        assert any("Generate a report" in lab for lab in _labels(at)), (
+        assert any(START_LABEL in lab for lab in _labels(at)), (
             f"did not return home from {label}"
         )
 
@@ -147,7 +148,7 @@ def test_every_screen_can_be_reached_and_left(monkeypatch):
 def test_the_view_is_in_the_url(monkeypatch):
     """So the browser's Back has something to go back to."""
     at = _unlock(_app(monkeypatch).run())
-    next(b for b in at.button if b.label == "Generate a report").click().run()
+    next(b for b in at.button if b.label == START_LABEL).click().run()
     # AppTest hands back the raw multi-value form.
     got = at.query_params.get("view")
     assert (got[0] if isinstance(got, list) else got) == "tool"
@@ -158,7 +159,7 @@ def test_an_unknown_view_in_the_url_falls_back_to_home(monkeypatch):
     at.query_params["view"] = "nonsense"
     at.run()
     at = _unlock(at)
-    assert any("Generate a report" in lab for lab in _labels(at))
+    assert any(START_LABEL in lab for lab in _labels(at))
 
 
 # --------------------------------------------------------- the samples
@@ -202,7 +203,7 @@ def test_the_samples_view_survives_having_no_samples(monkeypatch):
     text = page_text(at)
     assert "No sample notes shipped" in text
     # And it offers a way on, rather than being a dead end.
-    assert any("Generate a report" in b.label for b in at.button)
+    assert any(START_LABEL in b.label for b in at.button)
 
 
 def test_every_known_view_renders_without_an_archive(monkeypatch):
@@ -219,4 +220,4 @@ def test_an_unknown_view_still_falls_back(monkeypatch):
     at.query_params["view"] = "../../etc/passwd"
     at = _unlock(at.run())
     assert not at.exception
-    assert any("Generate a report" in lab for lab in _labels(at))
+    assert any(START_LABEL in lab for lab in _labels(at))

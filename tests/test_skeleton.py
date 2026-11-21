@@ -20,6 +20,7 @@ import pathlib
 import pytest
 from streamlit.testing.v1 import AppTest
 
+from asset_researcher.ui.components import START_LABEL
 from tests.apptest_helpers import page_text, rendered_markup
 
 from asset_researcher.hosting import samples as samples_mod
@@ -109,7 +110,7 @@ def test_the_samples_screen_can_be_left_in_both_directions(
     at.query_params["view"] = "samples"
     at.run()
     assert any(b.label == "Back" for b in at.button)
-    assert any(b.label == "Generate a report" for b in at.button)
+    assert any(b.label == START_LABEL for b in at.button)
 
     next(b for b in at.button if b.label == "Back").click().run()
     assert not at.exception
@@ -135,7 +136,7 @@ def test_home_lists_the_notes_with_their_own_headline_figure(
 
 def test_the_form_refuses_an_empty_ticker_and_queues_nothing(monkeypatch):
     at = _unlock(_app(monkeypatch).run())
-    next(b for b in at.button if b.label == "Generate a report").click().run()
+    next(b for b in at.button if b.label == START_LABEL).click().run()
 
     at.text_input(key="inline_ticker").set_value("")
     next(b for b in at.button if b.label == "Generate report").click().run()
@@ -149,7 +150,7 @@ def test_the_form_queues_a_run_for_a_ticker(monkeypatch):
     """Queued, not executed: the run itself spends money, so the test
     stops at the boundary and checks what was handed across it."""
     at = _unlock(_app(monkeypatch).run())
-    next(b for b in at.button if b.label == "Generate a report").click().run()
+    next(b for b in at.button if b.label == START_LABEL).click().run()
 
     at.text_input(key="inline_ticker").set_value("AAPL")
     at.text_area(key="inline_mandate").set_value("long only, quality")
@@ -165,7 +166,7 @@ def test_the_form_queues_a_run_for_a_ticker(monkeypatch):
 
 def test_the_form_keeps_its_fields_on_the_screen(monkeypatch):
     at = _unlock(_app(monkeypatch).run())
-    next(b for b in at.button if b.label == "Generate a report").click().run()
+    next(b for b in at.button if b.label == START_LABEL).click().run()
     assert at.text_input(key="inline_ticker") is not None
     assert at.selectbox(key="inline_preset") is not None
     assert at.text_area(key="inline_mandate") is not None

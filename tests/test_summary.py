@@ -181,3 +181,36 @@ def test_the_implied_expectation_leads_not_the_modelled_target():
     assert "leading(implied_growth_stat)" in source, (
         "the implied growth requirement is not led anywhere"
     )
+
+
+def test_a_sector_strip_leads_with_exactly_one_figure():
+    """Realty Income printed two display-size tiles, and the second was
+    net margin - a figure the same note calls "the least informative
+    line for this filer" and argues against in two sections.
+
+    `_sector_stats` passed lead=True to every ratio it built, so the
+    REIT path always emitted more than one lead. The stylesheet's own
+    comment beside it says the intent was two ranks, not one.
+    """
+    import ast
+    import inspect
+    from asset_researcher.ui import headline
+
+    # Parsed, not grepped: an earlier version counted the phrase
+    # "lead=True" and matched the docstring explaining the rule.
+    tree = ast.parse(inspect.getsource(headline._sector_stats).lstrip())
+    leads = [
+        node
+        for node in ast.walk(tree)
+        if isinstance(node, ast.Call)
+        and any(
+            kw.arg == "lead"
+            and isinstance(kw.value, ast.Constant)
+            and kw.value.value is True
+            for kw in node.keywords
+        )
+    ]
+    assert len(leads) <= 1, (
+        f"{len(leads)} sector figures are marked as the lead; two leads "
+        f"is no lead"
+    )

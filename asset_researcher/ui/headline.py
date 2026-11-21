@@ -47,9 +47,17 @@ def _sector_stats(report: Report) -> list[Stat]:
     cap = report.bundle.market_cap
 
     def ratio(label: str, key: str, note: str) -> Stat | None:
+        """A supporting ratio. Never the lead.
+
+        This passed lead=True to every ratio it built, so a REIT page
+        carried two display-size tiles and the second was net margin -
+        a figure the same note calls the least informative line for
+        that filer and argues against in two separate sections. Two
+        leads is no lead.
+        """
         value = derived.get(key)
         return (
-            Stat(label, fmt.pct(value), note, lead=True)
+            Stat(label, fmt.pct(value), note)
             if value is not None
             else None
         )
