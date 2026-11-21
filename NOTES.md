@@ -134,6 +134,46 @@ opposite of what it is.
 So: the app produces reports; what you get is a research note. If
 someone asks, that is the answer.
 
+## The design words, and what they actually mean
+
+You are not a designer any more than you are a finance person, and
+these five come up every time the shell is discussed. Each one is a
+real decision in the current build, so each is defensible in a room.
+
+**Display rank.** The size a page reserves for its single most
+important line, far enough above body text that no one has to be told
+which it is. The old shell had none: every heading was 15px semibold
+sans, so a section head and a paragraph were the same voice at two
+sizes. Having a display rank is the difference between a page that is
+composed and one that is merely tidy.
+
+**Processing fluency.** The finding that information which is easier
+to process is judged more *true*, not just more pleasant, and that the
+effect works below conscious awareness. It is why a stray typeface or
+a colour that is nearly-but-not-quite a system colour costs more than
+it looks like it should: the reader cannot name what is off, and
+attributes the unease to the content. On a document arguing from
+filings, that is expensive.
+
+**Token role.** A colour is not just a value, it is a job. `#1b3a8f`
+is "the divergence count and links", not "blue". The moment the same
+blue also fills a button or tints a panel, it stops being a signal and
+becomes decoration, and the signal is gone. Most design systems rot
+this way rather than by picking bad colours.
+
+**Optical centre.** An object centred by arithmetic looks slightly low,
+because the eye reads the centre as higher than it is. The gate sits a
+little above true centre for this reason. It is the kind of thing
+nobody notices when it is right and everybody feels when it is wrong.
+
+**Safe centring.** A CSS detail worth knowing because it bit this
+build. Centring content vertically splits any overflow evenly above
+and below — and the half above the top of a scrolling box cannot be
+reached, because scroll position does not go negative. On a short
+window the gate's own product mark was cut off with no way to scroll
+to it. `safe` centring falls back to top-aligned at exactly the point
+where centring would start hiding something.
+
 ## Renamed, and what each replaced
 
 | Now reads | Was | Why |
@@ -170,19 +210,80 @@ someone asks, that is the answer.
 
 # 4. The choices, and why
 
-## Why the shell looks like this
+## Why the shell looks like this — The Broadsheet
 
-The application shell executes the category standard at a high craft
-bar — the restraint register of Linear and Stripe. Near-white ground,
-hairline borders, one spacing scale, monospace for every figure, and
-colour withheld from the whole surface except the divergence count and
-the focus ring.
+The shell before this one executed the category standard at a high
+craft bar: the restraint register of Linear and Stripe. You graded it
+**6/10** and named the fault exactly — "still feels lacking instead of
+tastefully minimal."
 
-This was chosen from four rendered comps: an accountant's worksheet, an
-engineering drawing, giant type, and the category standard. You picked
-the standard deliberately, for a specific professional audience, and
-asked for minimalism rather than invention. It is recorded in
-`PRODUCT.md` as a standing commitment so it is not relitigated.
+That was the right read, and the diagnosis is worth keeping because it
+is not obvious. The old shell was not badly made. It was *neutral*. It
+committed to no idea at all, and the mechanical proof of that is that
+every heading on every screen was set in the same sans at 15px weight
+600. There was no display rank anywhere in the product. A section head
+and a line of body copy were two sizes of one voice, so nothing on the
+page could be the most important thing on it.
+
+**The idea it commits to now.** Every competitor in this category
+shouts in bold sans. The shell whispers: a high-contrast serif held at
+weight **300** carries every display line, a functional sans carries
+every working surface, and colour is withheld from the entire page
+except the one figure that encodes a judgement. The register is a
+financial broadsheet, which is also the register of the thing the
+product makes.
+
+If someone asks why a serif: because the product is a *publication*.
+It produces a research note, which is a document in a publishing
+tradition, and a serif at display size is what that tradition looks
+like. If they ask why so light: because weight is volume, and the one
+thing a credibility artifact cannot afford is to sound like it is
+selling. Restraint is the argument.
+
+**Where it came from.** Nine Refero style references were read in
+full, and the two closest were Public (monochrome editorial, the serif
+held light, one accent reserved for links) and Wealthsimple (editorial
+display serif over a functional sans, hairline rules instead of card
+chrome). Neither palette nor typeface was reused. What was carried is
+the convention inversion and the hairline-over-chrome discipline. The
+result must not be mistakable for either site, and is not.
+
+**Why the shell is COLD and the note stays warm.** This is the one
+decision the whole thing hangs on. The ground is a cold marble
+`#f4f6f9`; the note keeps its warm paper `#faf8f3`. They are
+deliberately different surfaces, so the moment a note opens, a reader
+can feel they have moved from the chrome into the document. The shell
+is the frame; the note is the object. Two centred axes on one screen
+was the old fault, and two *surfaces* with one axis each is the fix.
+
+**One accent, `#1b3a8f`, and almost nowhere.** It is on the divergence
+count and on links, and on nothing else. An accent that appears twice
+is decoration; appearing once, it reads as switched on. On the home
+screen it does not appear at all — there is no divergence count there
+— so that screen is entirely monochrome, which is correct rather than
+a miss.
+
+**The thing that was in the code and should not have been.** The focus
+ring on every control in the product was `#4f46e5`. That is Tailwind
+indigo-600 to the digit, and indigo is the single most recognisable
+fingerprint of a machine-generated interface. It sat on a product
+whose whole argument is that a person built it carefully. It was also
+measurably broken: the comment beside it claimed 4.4:1 on the bypass
+link's near-black pill, and the real figure was **2.88:1**, which
+fails the 3:1 that WCAG 2.2 requires of a focus indicator. The number
+that justified the colour had never been true. It is `#2563eb` now, at
+4.77:1, 5.17:1 and 3.50:1 on the three grounds it lands on.
+
+**Cards came off two things.** The Get started steps and the Reports
+index were both boxed. Both failed the same test: take away the
+border, the fill and the radius, and nothing becomes harder to read or
+to act on, because the hairlines between the columns and between the
+rows already do the grouping. A container that groups what the content
+already groups is decoration. It also made instructions read as a
+widget dropped onto the page rather than part of it. Every research
+index worth copying — OpenAI, Anthropic, Runway, Cartesia — renders
+rows on the page with one hairline between them, and that is what this
+does now.
 
 **The rule everything rests on:** one column, declared once, inherited
 by everything. No descendant sets its own width, and no width is
