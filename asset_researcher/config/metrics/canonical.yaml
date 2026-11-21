@@ -233,7 +233,7 @@ derived:
 
   # REIT derived.
   ffo_before_disposals:
-    label: FFO before gains on disposal
+    label: Net income plus depreciation and amortisation
     sectors: [reit]
     # Without the gain-on-sale deduction the NAREIT definition carries:
     # gains on property sales are not a metric here, so for a REIT that sold

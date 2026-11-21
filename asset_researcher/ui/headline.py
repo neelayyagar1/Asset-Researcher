@@ -65,9 +65,19 @@ def _sector_stats(report: Report) -> list[Stat]:
     out: list[Stat] = []
     ffo = derived.get("ffo_before_disposals")
     if ffo and cap:
+        # Named for what it computes. It read "Funds from operations,
+        # before gains on disposal" - and gains on disposal are IN net
+        # income, which is the first term of the formula, so the lead
+        # figure on the masthead and on the index table described a
+        # deduction it does not make. The note's own body said so four
+        # sections down, which made the first figure a reader meets
+        # one the document then disowned.
+        #
+        # It runs high for a REIT that sold property during the year,
+        # which is the direction that flatters, so the caption says
+        # that where the figure is rather than only in the body.
         out.append(Stat(
-            "Price / FFO", f"{cap / ffo:,.1f}x",
-            "Funds from operations, before gains on disposal", lead=True,
+            FFO_PROXY_LABEL, f"{cap / ffo:,.1f}x", FFO_PROXY_NOTE, lead=True,
         ))
     out.append(ratio("Return on equity", "roe", "Filed, latest period"))
     out.append(ratio(
@@ -95,6 +105,27 @@ def _is_printable_value(value: float | None) -> bool:
     product exists to avoid: the headline is what gets quoted.
     """
     return value is not None and value > 0
+
+
+# The lead statistic for a REIT, named for what it computes.
+#
+# It read "Price / FFO" over "Funds from operations, before gains on
+# disposal". Gains on disposal are IN net income, which is the first
+# term of the formula, so the first figure a reader meets - on the
+# masthead and on the index table of the first screen - described a
+# deduction it does not make, and the note's own body said so four
+# sections down. The arithmetic is a defensible proxy and stays; the
+# description is now true of it.
+#
+# It runs high for a REIT that sold property during the year, which is
+# the direction that flatters, so that is said where the figure is
+# rather than only in the body.
+FFO_PROXY_LABEL = "Price / FFO proxy"
+FFO_PROXY_NOTE = (
+    "Net income plus depreciation and amortisation. A proxy: this filer "
+    "does not tag FFO, and unlike the NAREIT definition this keeps gains "
+    "on property sales in"
+)
 
 
 def headline_stats(report: Report) -> list[Stat]:
