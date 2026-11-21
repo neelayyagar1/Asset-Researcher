@@ -169,3 +169,36 @@ def test_the_bar_distinguishes_the_index_from_a_report(monkeypatch, tmp_path):
         return re.search(r'class="where"[^>]*>([^<]*)<', markup).group(1)
 
     assert where(home) != where(reading)
+
+
+# ------------------------------------------------------ the wider table
+
+WIDE = [
+    {
+        "ticker": "ADP", "company": "Automatic Data Processing",
+        "metric": "Price implies FCF growth", "value": "6.8%",
+        "price": "$301.71", "filed": "2026-08-05", "cited": "113/113",
+        "slug": "adp",
+    },
+]
+
+
+def test_the_index_carries_the_columns_the_notes_support():
+    html = ui.report_rows(WIDE, token="t")
+    for header in ("Ticker", "Company", "Price", "Headline metric",
+                   "Value", "Filed", "Cited"):
+        assert f">{header}<" in html, header
+
+
+def test_each_row_has_a_cell_for_every_header():
+    html = ui.report_rows(WIDE, token="t")
+    head, _, rest = html.partition("</tr>")
+    assert head.count("<th") == rest.count("<td")
+
+
+def test_a_figure_the_note_does_not_carry_is_left_blank():
+    """An em dash, not a zero and not a number borrowed from the row
+    above it."""
+    thin = dict(WIDE[0], price="", cited="", filed="")
+    html = ui.report_rows([thin], token="t")
+    assert html.count("&mdash;") == 3

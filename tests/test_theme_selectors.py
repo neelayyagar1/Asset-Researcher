@@ -134,21 +134,97 @@ def test_no_shell_width_is_expressed_in_ch():
     )
 
 
-def test_the_reports_table_sheds_a_column_on_a_phone():
-    """Four columns do not fit 375px, and it showed.
+def test_the_reports_table_sheds_the_right_columns_on_a_phone():
+    """Seven columns do not fit 375px, and four did not either.
 
-    On the deployed site at phone width the home table overflowed its
-    container: the header wrapped to "Headlin e metric", the Value
-    column was clipped and the right edge was cut off. A table a reader
-    cannot read is worse than one column fewer.
+    On the deployed site at phone width the four-column table already
+    overflowed: the header wrapped to "Headlin e metric", the Value
+    column was clipped and the right edge was cut off.
 
-    The metric LABEL is the column to drop. A reader on a phone wants
-    the ticker and the figure; the label explains the figure and can be
-    read on the note itself.
+    The columns are named here rather than numbered. The previous
+    version pinned `nth-child(3)`, which was the metric label when it
+    was written and became Price the day the table widened - so it
+    would have gone on passing while the phone hid the wrong column.
+    It now resolves the index against the header row the component
+    actually emits.
     """
+    from asset_researcher.ui import components as ui
+
+    html = ui.report_rows(
+        [{"ticker": "A", "company": "B", "metric": "C", "value": "D",
+          "price": "E", "filed": "F", "cited": "G", "slug": "a"}],
+        token="t",
+    )
+    headers = re.findall(r"<th[^>]*>(.*?)</th>", html)
+    assert headers, "no header row to check against"
+
     css = theme._APP_CSS
     phone = css[css.index("@media (max-width: 700px)"):]
-    assert "table.ar-list th:nth-child(3)" in phone, (
-        "the metric label column is not dropped at phone width"
+    hidden = {
+        headers[int(n) - 1]
+        for n in re.findall(r"table\.ar-list td:nth-child\((\d+)\)", phone)
+        if int(n) <= len(headers)
+    }
+
+    # What a reader on a phone came for.
+    assert "Ticker" not in hidden
+    assert "Company" not in hidden
+    assert "Value" not in hidden
+    # What explains a figure rather than being one, or is context the
+    # note itself carries.
+    for context in ("Price", "Headline metric", "Filed", "Cited"):
+        assert context in hidden, f"{context} still shown at 375px"
+
+
+def test_the_stylesheet_is_not_broken_by_its_own_comments():
+    """This caught a real one within an hour of being written.
+
+    An edit to the phone rules left two sentences of prose sitting
+    outside a comment with a dangling `*/` after them. CSS does not
+    fail loudly: the browser discarded everything from that point to
+    the next closing brace, so the whole phone table rule silently
+    stopped applying and the home table went back to overflowing a
+    375px screen. The suite was green throughout, because every test
+    about that rule asked whether the TEXT was present in the
+    stylesheet - and it was, inside the wreckage.
+
+    The stylesheet carries a great deal of explanatory comment by
+    design, which is exactly why it needs this.
+    """
+    css = theme.stylesheet()
+
+    # Scanned the way a browser scans it, rather than counted. CSS
+    # comments do not nest: a `/*` inside a comment body is ordinary
+    # prose, and one of these comments genuinely contains one while
+    # discussing dead rules. Counting markers called that a defect.
+    stripped = []
+    at = 0
+    while True:
+        opened = css.find("/*", at)
+        if opened < 0:
+            stripped.append(css[at:])
+            break
+        closed = css.find("*/", opened + 2)
+        assert closed >= 0, (
+            f"a comment opens at {opened} and never closes, so the rest "
+            "of the stylesheet is inside it"
+        )
+        stripped.append(css[at:opened])
+        at = closed + 2
+    body = "".join(stripped)
+
+    assert "*/" not in body, (
+        "a `*/` survives comment-stripping, so some prose is sitting in "
+        "the stylesheet as if it were CSS"
     )
-    assert "table.ar-list td:nth-child(3)" in phone
+
+    # Braces balance, and never go negative - which is what a stray
+    # `}` inside what was meant to be prose would do.
+    depth = 0
+    for char in body:
+        if char == "{":
+            depth += 1
+        elif char == "}":
+            depth -= 1
+            assert depth >= 0, "a closing brace with nothing open"
+    assert depth == 0, f"{depth} rule(s) left unclosed"

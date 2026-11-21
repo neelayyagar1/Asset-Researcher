@@ -855,6 +855,15 @@ a.ar-row-link:focus-visible {
   outline: 2px solid var(--shell-focus); outline-offset: -2px; }
 table.ar-list td.co { color: var(--shell-soft); }
 table.ar-list td.tk { font-weight: 600; letter-spacing: -.01em; }
+/* Filed and Cited are context rather than the figure a reader came
+   for, so they are set a step back. They are still figures, so they
+   keep the mono face and the right edge. */
+table.ar-list td.dim a.ar-row-link { color: var(--shell-mute); }
+/* A figure does not wrap. At tablet width the Filed column broke
+   "2026-08-05" across two lines, which makes a date look like two
+   numbers and adds a line's height to every row in the table. */
+table.ar-list th.num, table.ar-list td.num a.ar-row-link {
+  white-space: nowrap; }
 table.ar-list th.num, table.ar-list td.num {
   text-align: right; font-family: var(--mono); font-size: 12.5px;
   font-feature-settings: "tnum" 1, "lnum" 1; }
@@ -878,11 +887,21 @@ table.ar-list th.num, table.ar-list td.num {
 
 /* Numbered steps. Get Started is instructions, so it is a list of
    actions and not a row of marketing claims. */
-.ar-steps { counter-reset: step; }
+/* Four steps across, not four stacked. They lived in a rail beside
+   the table; the table now takes the full measure and the
+   instructions sit under it, where a stacked list would be a thin
+   column of text under a wide one. Across, each step is a short
+   paragraph in its own band and the whole thing is four lines deep
+   instead of sixteen. */
+.ar-steps {
+  counter-reset: step; display: grid; gap: 0;
+  grid-template-columns: repeat(4, minmax(0, 1fr)); }
 .ar-step {
-  display: grid; grid-template-columns: 26px 1fr; gap: 12px;
-  align-items: baseline; padding: 11px 0; }
-.ar-step + .ar-step { border-top: 1px solid var(--shell-line); }
+  display: grid; grid-template-rows: auto 1fr; gap: 7px;
+  align-content: start; padding: 2px 20px 2px 0; }
+.ar-step + .ar-step {
+  border-top: 0; border-left: 1px solid var(--shell-line);
+  padding-left: 20px; }
 .ar-step:before {
   counter-increment: step; content: counter(step, decimal-leading-zero);
   font-family: var(--mono); font-size: 11px; color: var(--shell-mute); }
@@ -1218,6 +1237,17 @@ table.ar-list th.num { font-family: var(--sans); letter-spacing: .03em; }
    across two. The meta is the first thing to go: it is provenance a
    reader can find in the note itself, and a wrapped, overlapping bar is
    the first thing seen on the screen. */
+/* Between a phone and a laptop, four columns of prose measure about
+   170px each and read as four narrow gutters. Two and two keeps the
+   same object and gives each step a line it can finish. */
+@media (max-width: 980px) and (min-width: 701px) {
+  .ar-steps { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .ar-step:nth-child(odd) { border-left: 0; padding-left: 0; }
+  .ar-step:nth-child(n + 3) {
+    border-top: 1px solid var(--shell-line); padding-top: 13px;
+    margin-top: 11px; }
+}
+
 @media (max-width: 700px) {
   .ar-topbar { gap: 14px; height: auto; padding-block: 10px;
     margin-bottom: 18px; }
@@ -1232,17 +1262,31 @@ table.ar-list th.num { font-family: var(--sans); letter-spacing: .03em; }
   [data-testid="stHorizontalBlock"] { flex-direction: column; gap: 22px; }
   [data-testid="stColumn"] { width: 100% !important; flex: 1 1 100%; }
 
-  /* Four columns do not fit 375px, and it showed on the deployed site:
-     the header wrapped to "Headlin e metric", the Value column was
-     clipped, and the right edge was cut off. A table a reader cannot
-     read is worse than one column fewer.
+  /* Seven columns do not fit 375px, and four did not either: on the
+     deployed site the header wrapped to "Headlin e metric", the Value
+     column was clipped and the right edge was cut off. A table a
+     reader cannot read is worse than four columns fewer.
 
-     The metric LABEL goes. On a phone a reader wants the ticker and
-     the figure; the label explains the figure and is on the note
-     itself. The figure stays, because it is the reason the row is
-     there. */
-  table.ar-list th:nth-child(3),
-  table.ar-list td:nth-child(3) { display: none; }
+     Ticker, Company and Value survive. Price, the metric LABEL, Filed
+     and Cited go: the label explains the figure while the figure is
+     the reason the row is there, and the rest is context the note
+     itself carries. Pinned by NAME in the suite rather than by index,
+     because the rule this replaces hid child 3 - the metric label
+     when it was written, and Price from the day the table widened. */
+  table.ar-list th:nth-child(3), table.ar-list td:nth-child(3),
+  table.ar-list th:nth-child(4), table.ar-list td:nth-child(4),
+  table.ar-list th:nth-child(6), table.ar-list td:nth-child(6),
+  table.ar-list th:nth-child(7), table.ar-list td:nth-child(7) {
+    display: none; }
+
+  /* And the four steps go back to a stack: four columns of prose on a
+     375px screen is one word per line. */
+  .ar-steps { grid-template-columns: minmax(0, 1fr); }
+  .ar-step { padding-right: 0; }
+  .ar-step + .ar-step {
+    border-left: 0; padding-left: 0;
+    border-top: 1px solid var(--shell-line); padding-top: 13px;
+    margin-top: 2px; }
   /* The padding moved onto the row link, so the phone rule has to
      follow it there or the rows keep their desktop height. */
   table.ar-list th { padding: 9px 10px; }

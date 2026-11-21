@@ -52,6 +52,7 @@ from asset_researcher.sources.web import UrlRejected, fetch_user_source
 from asset_researcher.ui import document, markdown, theme
 from asset_researcher import reports_store
 from asset_researcher.ui import components as ui
+from asset_researcher.ui import note_index
 from asset_researcher.ui.export import report_to_html, report_to_markdown
 from asset_researcher.ui.headline import headline_stats
 
@@ -937,52 +938,54 @@ if st.session_state["view"] == "home":
     notes = _documents()
     has_samples = bool(notes)
 
-    # A real two-column layout, which is what host columns are for. The
-    # layout bug this shell replaced was host columns used to *centre* a
-    # button: each one centred inside its own column, so two buttons sat
-    # 167px apart at two different widths.
-    listing, rail = st.columns([1.9, 1], gap="medium")
+    # One column, not two. The listing used to sit in 1.9 of a 2.9-part
+    # split with Get started in a rail beside it, which left a
+    # four-column table rattling around in two thirds of a wide screen
+    # and the lower half of the page empty - the owner's report was
+    # "so much goddamn whitespace all around the front page".
+    #
+    # The table now runs the full measure and carries seven columns
+    # instead of four, and the instructions sit beneath it as a row of
+    # four steps rather than a stacked card. That is the right order
+    # besides: a reader arriving at a tool they have been sent looks
+    # first at what it produced, and reads how to drive it second.
+    rows = []
+    for note in notes:
+        label = _sample_label(note.title)
+        name, _, ticker = label.rpartition("(")
+        figures = note_index.summarise(note.html)
+        rows.append(
+            {
+                "ticker": ticker.rstrip(")") or note.slug.upper(),
+                "company": name.strip() or label,
+                "slug": note.slug,
+                **figures,
+            }
+        )
+    write(ui.head("Reports", "Built from live filings by the same pipeline "
+                  "the tool runs. Open one to read it; reports you "
+                  "generate join the list."))
+    write(ui.flush_card(ui.report_rows(rows, token=_unlock_token())))
+    if st.session_state.get("samples_problem"):
+        write(ui.status("warning", "Samples",
+                        st.session_state["samples_problem"]))
 
-    with listing:
-        rows = []
-        for note in notes:
-            label = _sample_label(note.title)
-            name, _, ticker = label.rpartition("(")
-            metric, value = _headline_of(note.html)
-            rows.append(
-                {
-                    "ticker": ticker.rstrip(")") or note.slug.upper(),
-                    "company": name.strip() or label,
-                    "metric": metric,
-                    "value": value,
-                    "slug": note.slug,
-                }
-            )
-        write(ui.head("Reports", "Built from live filings. Open one to see "
-                      "what the tool produces; reports you generate join "
-                      "the list."))
-        write(ui.flush_card(ui.report_rows(rows, token=_unlock_token())))
+    write(ui.head("Get started"))
+    write(ui.card(ui.steps(ui.STEPS)))
 
-    with rail:
-        write(ui.head("Get started"))
-        write(ui.card(ui.steps(ui.STEPS)))
-        if st.button(ui.START_LABEL, type="primary", key="enter"):
-            go("tool")
-        # A held report is reachable again. Leaving one is navigation,
-        # not disposal: it cost a minute and about a dollar, so the only
-        # thing that throws it away is the browser's own Back, which
-        # asks first.
-        if st.session_state.get("report") is not None:
-            if st.button("Return to report", key="back_to_report"):
-                go("report")
-        # "Read a sample" is gone. Every row in the table beside this
-        # one is now a link to the report it names, so the button was a
-        # second, worse route to a place the reader can already see and
-        # point at - and one more control on a screen the owner said
-        # carried too many.
-        if st.session_state.get("samples_problem"):
-            write(ui.status("warning", "Samples",
-                            st.session_state["samples_problem"]))
+    # The action, then the way back to a held report. Sized rather than
+    # stretched: a primary button spanning 1120px reads as a banner.
+    acts = st.columns([1.4, 1.4, 4])
+    if acts[0].button(ui.START_LABEL, type="primary",
+                      use_container_width=True, key="enter"):
+        go("tool")
+    # A held report is reachable again. Leaving one is navigation, not
+    # disposal: it cost a minute and about a dollar, so the only thing
+    # that throws it away is the browser's own Back, which asks first.
+    if st.session_state.get("report") is not None:
+        if acts[1].button("Return to report", use_container_width=True,
+                          key="back_to_report"):
+            go("report")
     st.stop()
 
 

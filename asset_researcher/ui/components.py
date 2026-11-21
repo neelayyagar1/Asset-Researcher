@@ -1046,9 +1046,19 @@ def report_rows(rows, token: str = "") -> str:
             '<div class="ar-empty">No notes yet. Generate one and it '
             "appears here.</div>"
         )
+    # Seven columns, each read out of the built note. The index used to
+    # carry four and the screen around it was mostly empty - the
+    # owner's words were that the front page was all whitespace - while
+    # the documents behind it carried the price they were struck at,
+    # the filing they were built from and their own citation coverage.
+    # Citation coverage especially: it is this product's central claim,
+    # and showing it per row on the first screen is the claim made
+    # where a reader meets it rather than four clicks in.
     header = (
-        "<tr><th>Ticker</th><th>Company</th><th>Headline metric</th>"
-        '<th class="num">Value</th></tr>'
+        "<tr><th>Ticker</th><th>Company</th>"
+        '<th class="num">Price</th><th>Headline metric</th>'
+        '<th class="num">Value</th><th class="num">Filed</th>'
+        '<th class="num">Cited</th></tr>'
     )
     body = []
     for r in rows:
@@ -1056,8 +1066,18 @@ def report_rows(rows, token: str = "") -> str:
         # truthy, so an `or` after it never fell through and a note that
         # declined a lead statistic rendered a non-breaking space under a
         # column headed "Value".
-        metric = _text(r["metric"]) if r["metric"] else "&mdash;"
-        value = _text(r["value"]) if r["value"] else "&mdash;"
+        # `_text("")` returns "&nbsp;", which is truthy, so each of
+        # these is tested BEFORE escaping. That exact mistake once put
+        # a non-breaking space under a column headed "Value".
+        def cell(name: str) -> str:
+            raw = r.get(name) or ""
+            return _text(raw) if raw else "&mdash;"
+
+        metric = cell("metric")
+        value = cell("value")
+        price = cell("price")
+        filed = cell("filed")
+        cited = cell("cited")
         # The anchor is repeated into every cell rather than wrapping
         # the row. A link cannot wrap table cells - `<a>` is not valid
         # between `<tr>` and `<td>`, and a browser hoists it out of the
@@ -1080,8 +1100,11 @@ def report_rows(rows, token: str = "") -> str:
         body.append(
             f'<tr><td class="tk">{link}{_text(r["ticker"])}</a></td>'
             f'<td class="co">{link}{_text(r["company"])}</a></td>'
+            f'<td class="num">{link}{price}</a></td>'
             f'<td class="co">{link}{metric}</a></td>'
-            f'<td class="num">{link}{value}</a></td></tr>'
+            f'<td class="num">{link}{value}</a></td>'
+            f'<td class="num dim">{link}{filed}</a></td>'
+            f'<td class="num dim">{link}{cited}</a></td></tr>'
         )
     return _one_line(
         f'<table class="ar-list">{header}{"".join(body)}</table>'
