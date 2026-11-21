@@ -441,8 +441,14 @@ table.ar-table tbody tr.subject td.nm {
    colour of a 10px pill. */
 .ar-finding.diverge { border-left: 2px solid var(--negative);
   padding-left: var(--s3); }
-.ar-status.warn { border-left-width: 3px; }
-.ar-status.bad { border-left-color: var(--negative); border-left-width: 3px; }
+/* The 3px edge is the status LEVEL, carried without colour: a
+   warning and an error keep their meaning in greyscale and under
+   forced colours, where the tint does not. The design detector reads
+   a thick coloured side border as the standard AI-UI tell, which it
+   usually is; here it is the accessibility affordance, so it is
+   waived where it lives rather than globally. */
+.ar-status.warn { border-left-width: 3px; } /* impeccable-disable-line side-tab */
+.ar-status.bad { border-left-color: var(--negative); border-left-width: 3px; } /* impeccable-disable-line side-tab */
 .ar-status.bad .tag { color: var(--negative); }
 .ar-status.info .tag { color: var(--ink-muted); }
 
@@ -521,6 +527,7 @@ table.ar-table tbody tr.subject td.nm {
      navigation was invisible and unsignalled. */
   /* #000 here is an alpha stop, not a palette colour: a mask reads
      luminance, so black means opaque and transparent means cut. */
+  /* impeccable-disable-next-line design-system-color -- mask alpha stop, not a palette colour */
   mask-image: linear-gradient(90deg, #000 calc(100% - 44px), transparent);
   -webkit-mask-image: linear-gradient(90deg, #000 calc(100% - 44px), transparent); }
 .ar-nav::-webkit-scrollbar { display: none; }
