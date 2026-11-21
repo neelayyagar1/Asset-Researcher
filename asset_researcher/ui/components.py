@@ -244,6 +244,75 @@ def nav(labels: Sequence[str]) -> str:
     return _one_line(f'<nav class="ar-nav">{links}</nav>')
 
 
+def index_legend(rows) -> str:
+    """What the index's three unobvious columns mean, and what the
+    archive adds up to.
+
+    Three of the eight headers are terms rather than words - FCF yield,
+    FCF CAGR, Cited - and a reader meeting the table for the first time
+    is being asked to take all three on trust. A tooltip serves someone
+    who already suspects there is something to find; this is printed,
+    on the same principle as the note's own `legend`, which explains NM
+    and n.d. where they appear rather than on hover.
+
+    The total is the one claim this product exists to make, and it is
+    the only place on the home screen it is made as a number: across
+    every report listed, how many of the figures stated are traced to a
+    filing. It is COUNTED from the rows rather than written down, so it
+    cannot drift from the table above it, and it is stated as a
+    fraction rather than a percentage because 705/705 and "100%" are
+    not the same claim - the first says how much work it covers.
+
+    It also gives the provenance line a home. "SEC EDGAR - XBRL" used
+    to sit in the top bar on every screen, including the ones that have
+    read no filing. Here it is beside the count it belongs to.
+    """
+    traced = total = 0
+    for r in rows:
+        raw = (r.get("cited") or "").split("/")
+        if len(raw) == 2 and raw[0].isdigit() and raw[1].isdigit():
+            traced += int(raw[0])
+            total += int(raw[1])
+
+    terms = (
+        '<p class="ar-legend"><span><b>FCF yield</b> free cash flow for '
+        "the filed year, over market capitalisation - what the cash "
+        "costs at today's price.</span> <span><b>FCF CAGR</b> the "
+        "compound growth rate of free cash flow across the filed years, "
+        "which is what the cash has actually done.</span> "
+        "<span><b>Cited</b> figures in the report located in a filing, "
+        "out of figures stated.</span></p>"
+    )
+    if not total:
+        return _one_line(terms)
+    return _one_line(
+        terms
+        + '<p class="ar-legend total">'
+        + f"<b>{traced}/{total}</b> figures across "
+        + f"{len(rows)} report{'' if len(rows) == 1 else 's'} are "
+        + "traced to a filing, read from SEC EDGAR company facts. "
+        + "Located in the source, which is not the same as supporting "
+        + "the claim - that is what the report is for.</p>"
+    )
+
+
+def download_note() -> str:
+    """One line at the top of the download menu.
+
+    A reader who clicks Download and gets a list of four formats is
+    owed the two facts the list does not state: that the choice is a
+    choice between different acts rather than different qualities, and
+    that nothing here asks them where to put the file, because a web
+    page cannot - that is their browser's setting and their operating
+    system's dialog. Saying so is shorter than letting them wonder why
+    no save window appeared.
+    """
+    return _one_line(
+        '<p class="ar-dl-note">Each format is a different use. Your '
+        "browser decides where the file is saved.</p>"
+    )
+
+
 def caption(text: str) -> str:
     return _one_line(f'<p class="ar-caption">{_text(text)}</p>')
 
@@ -977,6 +1046,16 @@ def topbar(active: str = "reports") -> str:
     Now it names the current screen in words, once, with no pill, no
     radius and no inactive sibling to invite a click. Navigation lives
     in the page, in real buttons.
+
+    It also used to carry "SEC EDGAR - XBRL" in the far right, in the
+    monospace, on every screen. That is provenance, and provenance
+    belongs to a document rather than to a window: the note states its
+    own sources, in its chips and beside every cited figure, where a
+    reader is actually judging them. Standing in the chrome it made the
+    same claim about the gate, the form and the empty state, none of
+    which have read a filing, and it was the only thing in the bar a
+    reader could mistake for a control. The bar now holds the product
+    and the screen, which is all a bar is for.
     """
     # Four screens, four names. "reports" was the index and "samples"
     # the reading screen, and renaming the second to Reports - which is
@@ -995,8 +1074,7 @@ def topbar(active: str = "reports") -> str:
         # nothing in this bar is clickable, so announcing "current
         # page" on it invites the same reach they did. The words
         # already say where you are.
-        f'<span class="where">{_text(name)}</span>'
-        '<span class="meta">SEC EDGAR &middot; XBRL</span></div>'
+        f'<span class="where">{_text(name)}</span></div>'
     )
 
 
@@ -1144,14 +1222,16 @@ def report_rows(rows, token: str = "", scope: str = "") -> str:
     # The caption names the table. The heading above it is a sibling in
     # the document, not a name the table itself carries.
     header = (
-        '<caption class="ar-sr">Reports, seven columns: ticker, company, '
-        "price, headline metric, value, filing date and citation "
+        '<caption class="ar-sr">Reports, eight columns: ticker, company, '
+        "traded price, free cash flow yield, filed free cash flow growth "
+        "rate, the report's headline finding, filing date and citation "
         "coverage. Each row opens its report.</caption>"
         '<thead><tr><th scope="col">Ticker</th>'
         '<th scope="col">Company</th>'
         '<th scope="col" class="num">Price</th>'
-        '<th scope="col">Headline metric</th>'
-        '<th scope="col" class="num">Value</th>'
+        '<th scope="col" class="num">FCF yield</th>'
+        '<th scope="col" class="num">FCF CAGR</th>'
+        '<th scope="col">Headline finding</th>'
         '<th scope="col" class="num">Filed</th>'
         '<th scope="col" class="num">Cited</th></tr></thead>'
     )
@@ -1168,11 +1248,36 @@ def report_rows(rows, token: str = "", scope: str = "") -> str:
             raw = r.get(name) or ""
             return _text(raw) if raw else "&mdash;"
 
-        metric = cell("metric")
-        value = cell("value")
+        # The finding is ONE cell, not two.
+        #
+        # It was a label column and a number column, the second headed
+        # "Value" - a word that is true of any number anywhere and so
+        # says nothing, while the thing that gave it meaning sat in the
+        # cell to its left and changed from row to row. Read down that
+        # column alone and 6.8%, 18.7% and 15.3x are three figures in
+        # three different units with no shared question. Together in one
+        # cell they are a sentence: what this report found, and at what
+        # number. The figure leads, in the mono, because that is what is
+        # scanned; the question it answers sits under it.
+        metric_raw = r.get("metric") or ""
+        value_raw = r.get("value") or ""
+        if value_raw and metric_raw:
+            finding = (
+                f'<b>{_text(value_raw)}</b>'
+                f'<span>{_text(metric_raw)}</span>'
+            )
+        elif metric_raw:
+            finding = f"<span>{_text(metric_raw)}</span>"
+        else:
+            # A note that declined a lead statistic has none. Borrowing
+            # one from elsewhere in the document is the single thing
+            # this index must not do.
+            finding = "&mdash;"
         price = cell("price")
         filed = cell("filed")
         cited = cell("cited")
+        fcf_yield = cell("yield")
+        fcf_cagr = cell("cagr")
         # The anchor is repeated into every cell rather than wrapping
         # the row. A link cannot wrap table cells - `<a>` is not valid
         # between `<tr>` and `<td>`, and a browser hoists it out of the
@@ -1228,8 +1333,9 @@ def report_rows(rows, token: str = "", scope: str = "") -> str:
             f'<tr><td class="tk">{lead_link}{_text(r["ticker"])}</td>'
             f'<td class="co">{link}{_text(r["company"])}</td>'
             f'<td class="num">{link}{price}</td>'
-            f'<td class="co">{link}{metric}</td>'
-            f'<td class="num">{link}{value}</td>'
+            f'<td class="num">{link}{fcf_yield}</td>'
+            f'<td class="num">{link}{fcf_cagr}</td>'
+            f'<td class="co find">{link}{finding}</td>'
             f'<td class="num dim">{link}{filed}</td>'
             f'<td class="num dim">{link}{cited}</td></tr>'
         )

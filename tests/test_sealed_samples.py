@@ -114,3 +114,62 @@ def test_the_repair_script_ships_with_the_repository():
         "the script no longer refuses when a note's body would change, "
         "which is the check that makes it a re-render and not an edit"
     )
+
+
+def test_every_sealed_note_is_repaired_before_it_reaches_a_reader():
+    """The six carry a script the browser cannot parse.
+
+    `export.py` is fixed, which fixes notes built from now on and
+    reaches none of these: they were sealed months ago. `frame.framed`
+    replaces the broken statement on the way to the frame, so this
+    checks the thing that matters - that what a reader is handed
+    parses - rather than that a function was called.
+
+    When these six are next rebuilt the first assertion below starts
+    failing, and that is the signal that `frame.repair` has become dead
+    weight and can go.
+    """
+    import shutil
+    import subprocess
+    import tempfile
+
+    from asset_researcher.ui import frame
+
+    node = shutil.which("node")
+
+    for note in _sealed():
+        assert frame._BROKEN_ENTRY in note.html, (
+            f"{note.slug} no longer carries the broken script - if the "
+            "samples have been rebuilt, delete frame.repair and this test"
+        )
+        shown = frame.framed(note.html)
+        assert frame._BROKEN_ENTRY not in shown, (
+            f"{note.slug} reaches the reader unrepaired"
+        )
+        if not node:
+            continue
+        for i, block in enumerate(re.findall(r"<script>(.*?)</script>",
+                                             shown, re.S)):
+            with tempfile.NamedTemporaryFile(
+                "w", suffix=".js", delete=False
+            ) as fh:
+                fh.write(block)
+                path = fh.name
+            done = subprocess.run(
+                [node, "--check", path], capture_output=True, text=True
+            )
+            assert done.returncode == 0, (
+                f"{note.slug} script {i} does not parse:\n{done.stderr}"
+            )
+
+
+def test_a_downloaded_sample_is_repaired_too():
+    """A reader who saves the file should not be saving the broken one.
+
+    `fitFrame` has no frame to size outside the app, but `arTableStops`
+    still has tables to mark, and both died in the same SyntaxError.
+    """
+    from asset_researcher.ui import frame
+
+    for note in _sealed():
+        assert frame._BROKEN_ENTRY not in frame.repair(note.html)

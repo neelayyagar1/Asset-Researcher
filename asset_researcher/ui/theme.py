@@ -968,9 +968,13 @@ button[data-testid="stExpandSidebarButton"]:hover,
 .ar-topbar .brand i {
   width: 16px; height: 16px; border-radius: var(--shell-r-sm);
   background: var(--shell-ink); display: block; }
-.ar-topbar .meta {
-  margin-left: auto; font-family: var(--mono); font-size: 11px;
-  color: var(--shell-mute); letter-spacing: .02em; }
+
+
+/* The line at the head of the download menu. Inside a popover, which
+   is the shell, so it reads from the shell's tokens. */
+.ar-dl-note {
+  margin: 0 0 10px; font-family: var(--sans); font-size: 12px;
+  line-height: 1.45; color: var(--shell-mute); max-width: 232px; }
 
 /* Section rhythm, declared once.
    Streamlit puts every `write` in its own element container with its own
@@ -1262,6 +1266,35 @@ a.ar-row-link:focus-visible { outline: none; }
   a.ar-row-link:focus-visible {
     outline: 3px solid Highlight; outline-offset: -3px; }
 }
+/* The headline finding: a figure and the question it answers, in one
+   cell. The figure leads because it is what gets scanned; the label
+   under it is what makes the figure mean anything, and it is set small
+   and back so a column of them does not compete with the figures in
+   the mono columns beside it. */
+table.ar-list td.find b {
+  display: block; font-family: var(--mono); font-size: 13px;
+  font-weight: 500; font-feature-settings: "tnum" 1, "lnum" 1;
+  color: var(--shell-ink); letter-spacing: -.01em; }
+table.ar-list td.find span {
+  display: block; margin-top: 1px; font-size: 11.5px; line-height: 1.3;
+  color: var(--shell-mute); }
+
+/* The three terms the header row cannot define, and the count the
+   archive adds up to. Printed under the table, in the shell's text
+   face, at the size of a footnote - this is reference a reader
+   consults once, not a second heading. */
+.ar-legend {
+  margin: 14px 0 0; font-family: var(--sans); font-size: 11.5px;
+  line-height: 1.55; color: var(--shell-mute); max-width: 720px; }
+.ar-legend span { display: inline-block; margin-right: 18px; }
+.ar-legend b { font-weight: 600; color: var(--shell-soft); }
+.ar-legend.total {
+  margin-top: 10px; padding-top: 10px;
+  border-top: 1px solid var(--shell-line); }
+.ar-legend.total b {
+  font-family: var(--mono); font-feature-settings: "tnum" 1, "lnum" 1;
+  color: var(--shell-ink); }
+
 table.ar-list td.co { color: var(--shell-soft); }
 table.ar-list td.tk { font-weight: 600; letter-spacing: -.01em; }
 /* Filed and Cited are context rather than the figure a reader came
@@ -1800,8 +1833,7 @@ table.ar-list, table.ar-list th, table.ar-list td, .ar-gate, .ar-gate * {
   font-family: var(--sans); }
 /* Figures are monospace; the headings above them are not. A column
    header set in mono AND tracked reads as "V a l u e". */
-.ar-step code, .ar-kv b, table.ar-list td.num,
-.ar-topbar .meta { font-family: var(--mono); }
+.ar-step code, .ar-kv b, table.ar-list td.num { font-family: var(--mono); }
 table.ar-list th.num { font-family: var(--sans); letter-spacing: .03em; }
 
 /* The current screen, named. Not a pill and not a tab: it is a label,
@@ -1810,11 +1842,9 @@ table.ar-list th.num { font-family: var(--sans); letter-spacing: .03em; }
   font-size: 13px; color: var(--shell-soft); font-weight: 500;
   padding-left: 14px; border-left: 1px solid var(--shell-line-2); }
 
-/* On a phone the bar's three parts do not fit. The source line wrapped
-   to three lines and overlapped the tabs, and the product name broke
-   across two. The meta is the first thing to go: it is provenance a
-   reader can find in the note itself, and a wrapped, overlapping bar is
-   the first thing seen on the screen. */
+/* On a phone the bar still has to hold the product name and the screen
+   it is on without wrapping; the source line used to wrap to three and
+   overlap what was under it. */
 /* Between a phone and a laptop, four columns of prose measure about
    170px each and read as four narrow gutters. Two and two keeps the
    same object and gives each step a line it can finish. */
@@ -1830,7 +1860,6 @@ table.ar-list th.num { font-family: var(--sans); letter-spacing: .03em; }
   .ar-topbar { gap: 14px; height: auto; padding-block: 10px;
     margin-bottom: 18px; }
   .ar-topbar .brand { white-space: nowrap; }
-  .ar-topbar .meta { display: none; }
   .ar-topbar .where { padding-left: 10px; }
 
   /* Streamlit keeps its columns side by side at every width, so on a
@@ -1845,17 +1874,27 @@ table.ar-list th.num { font-family: var(--sans); letter-spacing: .03em; }
      column was clipped and the right edge was cut off. A table a
      reader cannot read is worse than four columns fewer.
 
-     Ticker, Company and Value survive. Price, the metric LABEL, Filed
-     and Cited go: the label explains the figure while the figure is
-     the reason the row is there, and the rest is context the note
-     itself carries. Pinned by NAME in the suite rather than by index,
-     because the rule this replaces hid child 3 - the metric label
-     when it was written, and Price from the day the table widened. */
+     Ticker, Company and the headline finding survive - and the
+     finding is now one cell carrying both its figure and its label,
+     so the phone keeps the whole statement rather than half of it.
+     Price, the two filed ratios, Filed and Cited go: they are context
+     the note itself carries, and five numeric columns on a 375px
+     screen is a horizontal scrollbar.
+
+     Pinned by NAME in the suite rather than by index. This rule has
+     been wrong twice from counting children - once when the metric
+     label moved, once when the table widened - and it is wrong
+     silently, on the one screen nobody opens while working. */
   table.ar-list th:nth-child(3), table.ar-list td:nth-child(3),
   table.ar-list th:nth-child(4), table.ar-list td:nth-child(4),
-  table.ar-list th:nth-child(6), table.ar-list td:nth-child(6),
-  table.ar-list th:nth-child(7), table.ar-list td:nth-child(7) {
+  table.ar-list th:nth-child(5), table.ar-list td:nth-child(5),
+  table.ar-list th:nth-child(7), table.ar-list td:nth-child(7),
+  table.ar-list th:nth-child(8), table.ar-list td:nth-child(8) {
     display: none; }
+  /* The legend's three terms stack rather than run on, because at
+     375px three inline blocks separated by 18px of margin read as one
+     unbroken paragraph of bold words. */
+  .ar-legend span { display: block; margin: 0 0 6px; }
 
   /* And the four steps go back to a stack: four columns of prose on a
      375px screen is one word per line. */

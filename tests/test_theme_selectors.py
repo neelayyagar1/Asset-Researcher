@@ -166,13 +166,18 @@ def test_the_reports_table_sheds_the_right_columns_on_a_phone():
         if int(n) <= len(headers)
     }
 
-    # What a reader on a phone came for.
+    # What a reader on a phone came for. "Headline finding" is one cell
+    # carrying both the figure and the question it answers. It used to
+    # be a "Headline metric" column and a "Value" column, and the phone
+    # kept the second and dropped the first - a column of bare numbers
+    # in three different units, with nothing left to say which was
+    # which.
     assert "Ticker" not in hidden
     assert "Company" not in hidden
-    assert "Value" not in hidden
-    # What explains a figure rather than being one, or is context the
-    # note itself carries.
-    for context in ("Price", "Headline metric", "Filed", "Cited"):
+    assert "Headline finding" not in hidden
+    # Context the note itself carries, and four numeric columns that
+    # would put a horizontal scrollbar on a 375px screen.
+    for context in ("Price", "FCF yield", "FCF CAGR", "Filed", "Cited"):
         assert context in hidden, f"{context} still shown at 375px"
 
 

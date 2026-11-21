@@ -148,7 +148,11 @@ def test_the_strategy_box_is_driven_by_state_alone(monkeypatch):
         pathlib.Path(__file__).resolve().parents[1] / "app.py"
     ).read_text(encoding="utf-8")
     block = source[source.index("def _controls("):]
-    block = block[: block.index("\n@st.dialog")]
+    # Up to the next top-level definition. This read "\n@st.dialog",
+    # the New report dialog that used to follow `_controls`; that dialog
+    # is gone, so the anchor failed and this test stopped being about
+    # the strategy box at all.
+    block = block[: block.index("\ndef ", 1)]
     area = block[block.index('st.text_area(\n        "How you invest"'):][:300]
     assert "value=" not in area, (
         "the strategy box still passes a default alongside the state "

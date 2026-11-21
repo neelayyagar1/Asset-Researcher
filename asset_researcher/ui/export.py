@@ -121,9 +121,26 @@ function fitFrame() {
       // behaviour rather than a broken one.
     }
   }
-  if (document.readyState === 'complete') fitFrame();arTableStops();
-  else window.addEventListener('load', fitFrame);
-  window.addEventListener('resize', fitFrame);
+  // Braced, and both functions on every entry point.
+  //
+  // This line read `if (...) fitFrame();arTableStops();` with no
+  // braces, which makes the `else` below belong to no `if` - a
+  // SyntaxError that cost the entire script, not the one statement.
+  // Neither function was ever defined in any note that shipped. The
+  // frame therefore stayed at the 2,000px the host gave it with a
+  // 38,959px document scrolling inside it, so every section link in
+  // the index scrolled the PAGE to a position far past its end and
+  // landed, clamped, at the same spot every time; and the table
+  // wrappers kept whatever tab-stop state the server guessed.
+  //
+  // Nothing in the suite could see it. Every test asserts on the
+  // string this module RETURNS, and that string always declared both
+  // functions exactly once, spelled correctly. A string is not a
+  // program, and nothing here was ever parsed.
+  function arFit() { fitFrame(); arTableStops(); }
+  if (document.readyState === 'complete') { arFit(); }
+  else { window.addEventListener('load', arFit); }
+  window.addEventListener('resize', arFit);
 })();
 </script>"""
 

@@ -195,6 +195,7 @@ WIDE = [
         "ticker": "ADP", "company": "Automatic Data Processing",
         "metric": "Price implies FCF growth", "value": "6.8%",
         "price": "$301.71", "filed": "2026-08-05", "cited": "113/113",
+        "yield": "4.4%", "cagr": "12.5%",
         "slug": "adp",
     },
 ]
@@ -202,9 +203,15 @@ WIDE = [
 
 def test_the_index_carries_the_columns_the_notes_support():
     html = ui.report_rows(WIDE, token="t")
-    for header in ("Ticker", "Company", "Price", "Headline metric",
-                   "Value", "Filed", "Cited"):
+    for header in ("Ticker", "Company", "Price", "FCF yield", "FCF CAGR",
+                   "Headline finding", "Filed", "Cited"):
         assert f">{header}<" in html, header
+    # "Value" was a header over a column whose unit changed per row -
+    # 6.8% is a growth rate and 15.3x a multiple - with the only thing
+    # that told them apart in the cell beside it. The figure and its
+    # question are one cell now, so the word should be gone.
+    assert ">Value<" not in html
+    assert ">Headline metric<" not in html
 
 
 def test_each_row_has_a_cell_for_every_header():
@@ -223,6 +230,11 @@ def test_a_figure_the_note_does_not_carry_is_left_blank():
     thin = dict(WIDE[0], price="", cited="", filed="")
     html = ui.report_rows([thin], token="t")
     assert html.count("&mdash;") == 3
+    # And a note that produced no lead statistic at all gets one dash
+    # for the whole finding, rather than a dash beside a label or a
+    # label beside a dash.
+    none = dict(thin, metric="", value="")
+    assert ui.report_rows([none], token="t").count("&mdash;") == 4
 
 
 def test_another_visitors_report_is_not_on_this_visitors_index(
@@ -285,11 +297,11 @@ def test_a_report_saved_now_appears_without_a_restart(monkeypatch, tmp_path):
 def test_a_row_is_one_stop_in_the_tab_order_not_seven():
     """Each cell carries its own anchor so the whole row is a hit
     target. That is right for a pointer and wrong for everything else:
-    seven tab stops per row, forty-two for six reports, and a
-    links-list showing forty-two entries for six destinations."""
+    one tab stop per CELL would be forty-eight for six reports, and a
+    links-list showing forty-eight entries for six destinations."""
     html = ui.report_rows(WIDE, token="t")
     anchors = re.findall(r"<a [^>]*>", html)
-    assert len(anchors) == 7, "the row is no longer seven cells"
+    assert len(anchors) == 8, "the row is no longer eight cells"
     focusable = [a for a in anchors if 'tabindex="-1"' not in a]
     assert len(focusable) == 1, (
         f"{len(focusable)} of the row's anchors are in the tab order"
@@ -472,7 +484,7 @@ def test_the_index_declares_its_header_row_as_a_header():
     ])
     assert "<thead>" in html and "</thead>" in html
     assert "<tbody>" in html and "</tbody>" in html
-    assert html.count('scope="col"') == 7, (
+    assert html.count('scope="col"') == 8, (
         "every column header should declare its scope"
     )
     # The header must be inside thead, not loose in the table.

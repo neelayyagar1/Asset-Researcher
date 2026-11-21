@@ -54,6 +54,7 @@ from asset_researcher.ui import document, markdown, theme
 from asset_researcher import reports_store
 from asset_researcher.ui import components as ui
 from asset_researcher.ui import convert, note_index
+from asset_researcher.ui import frame
 from asset_researcher.ui.frame import framed
 from asset_researcher.ui.export import report_to_html, report_to_markdown
 from asset_researcher.ui.headline import headline_stats
@@ -725,6 +726,27 @@ def _download_row(slug: str, html: str, key: str,
                   markdown_text: str = "") -> None:
     """The note, in the four shapes a reader circulates it in.
 
+    Behind ONE control, not spread across a row of four or five.
+
+    Spread, they were the loudest thing on the report screen: five
+    equal buttons, none of which is what a reader came to do. A reader
+    arrives to READ the note; circulating it is what happens once,
+    afterwards, and a format is a decision taken at that moment rather
+    than an option that needs to be standing by. One button named for
+    the act, opening on the formats, puts the choice exactly where the
+    choice is made and gives the screen back to the document.
+
+    The formats stay four (five with Markdown), because each is a
+    different act and no single file is all of them - see below. What
+    changed is when a reader is asked.
+
+    Where the file lands and what it is called is the browser's and the
+    operating system's to decide, not this app's: a page cannot open a
+    save dialog, and the one it can reach is the one the reader's own
+    browser opens when "Ask where to save each file" is on. The
+    filename is the part that IS ours, so each format carries the
+    ticker and the words research-note rather than a hash.
+
     HTML is the note itself - the file this product actually builds,
     with its live citations back to EDGAR.
 
@@ -752,30 +774,54 @@ def _download_row(slug: str, html: str, key: str,
     # file - the exact fault that put two free cash flow series in one
     # note. A screen without a report object offers four, not a fifth
     # built a different way.
-    cols = st.columns(5 if markdown_text else 4)
-    cols[0].download_button(
-        "HTML", data=html, file_name=f"{slug}-research-note.html",
-        mime="text/html", use_container_width=True, key=f"{key}_dl_html")
-    if cols[1].button("PDF", use_container_width=True, key=f"{key}_dl_pdf"):
-        st.session_state["print_note"] = True
-    cols[2].download_button(
-        "Word", data=convert.to_docx(html, _sample_label_plain(slug, html)),
-        file_name=f"{slug}-research-note.docx",
-        mime=("application/vnd.openxmlformats-officedocument"
-              ".wordprocessingml.document"),
-        use_container_width=True, key=f"{key}_dl_docx")
-    cols[3].download_button(
-        "PowerPoint",
-        data=convert.to_pptx(html, _sample_label_plain(slug, html)),
-        file_name=f"{slug}-research-note.pptx",
-        mime=("application/vnd.openxmlformats-officedocument"
-              ".presentationml.presentation"),
-        use_container_width=True, key=f"{key}_dl_pptx")
-    if markdown_text:
-        cols[4].download_button(
-            "Markdown", data=markdown_text,
-            file_name=f"{slug}-research-note.md", mime="text/markdown",
-            use_container_width=True, key=f"{key}_dl_md")
+    # The same repair the framed copy gets. A note is downloaded to be
+    # opened outside this app, where `fitFrame` has no frame to size -
+    # but `arTableStops` still has tables to mark, and both died in the
+    # same SyntaxError. A reader who saves the file should not be saving
+    # the broken one.
+    html = frame.repair(html)
+
+    # The payloads are built when the menu OPENS, not on every rerun of
+    # the screen. `to_docx` and `to_pptx` each walk the whole document,
+    # and a reader who never downloads anything - most of them - was
+    # paying for both on every single interaction with the page.
+    with st.popover("Download", use_container_width=True,
+                    icon=":material/download:"):
+        write(ui.download_note())
+        st.download_button(
+            "HTML", data=html, file_name=f"{slug}-research-note.html",
+            mime="text/html", use_container_width=True,
+            help="The note itself, with its citations live to EDGAR.",
+            key=f"{key}_dl_html")
+        if st.button("PDF", use_container_width=True,
+                     help="Opens your print dialog, where you choose the "
+                          "paper and save as PDF.",
+                     key=f"{key}_dl_pdf"):
+            st.session_state["print_note"] = True
+        st.download_button(
+            "Word", data=convert.to_docx(html, _sample_label_plain(slug, html)),
+            file_name=f"{slug}-research-note.docx",
+            mime=("application/vnd.openxmlformats-officedocument"
+                  ".wordprocessingml.document"),
+            use_container_width=True,
+            help="For marking up, or pasting a section into a memo.",
+            key=f"{key}_dl_docx")
+        st.download_button(
+            "PowerPoint",
+            data=convert.to_pptx(html, _sample_label_plain(slug, html)),
+            file_name=f"{slug}-research-note.pptx",
+            mime=("application/vnd.openxmlformats-officedocument"
+                  ".presentationml.presentation"),
+            use_container_width=True,
+            help="A summary deck. It is not the evidence, and says so.",
+            key=f"{key}_dl_pptx")
+        if markdown_text:
+            st.download_button(
+                "Markdown", data=markdown_text,
+                file_name=f"{slug}-research-note.md", mime="text/markdown",
+                use_container_width=True,
+                help="Plain text, for a repository or a notes app.",
+                key=f"{key}_dl_md")
     if st.session_state.pop("print_note", False):
         _print_bridge()
 
@@ -1066,38 +1112,22 @@ def _controls(key: str) -> tuple[str, str, str, bool]:
     # the form, rather than above it where it read as a page control. The
     # primary keeps most of the width; leaving is the smaller gesture.
     #
-    # The secondary action depends on where this form is. On the empty
-    # workspace it is a page control and goes home. Inside the New report
-    # dialog it is a dismissal, and labelling it "Back" while navigating
-    # the page behind the modal to home meant the dismissal-shaped
-    # control walked away from a report that cost a minute and about a
-    # dollar - the opposite of what a reader reaches for it to do.
-    in_dialog = key == "dialog"
+    # This form had a second home: a "New report" dialog opened from the
+    # report screen, where the same control had to read "Cancel" and
+    # dismiss rather than navigate, because labelling it "Back" there
+    # walked a reader away from a report that cost a minute and about a
+    # dollar. That dialog is gone - a reader looking at a finished report
+    # did not come to start another, and the home screen offers that act
+    # one click away - so the form has one home again and the control one
+    # meaning.
     row = st.columns([3, 1])
     run = row[0].button(
         "Generate report", type="primary", use_container_width=True,
         key=f"{key}_run",
     )
-    if row[1].button(
-        "Cancel" if in_dialog else "Back",
-        use_container_width=True, key=f"{key}_back",
-    ):
-        if in_dialog:
-            st.rerun()  # closes the dialog, leaving the report on screen
-        else:
-            go("home")
+    if row[1].button("Back", use_container_width=True, key=f"{key}_back"):
+        go("home")
     return ticker, mandate_text, urls_text, run
-
-
-@st.dialog("New report", width="large")
-def _new_report_dialog() -> None:
-    ticker, mandate_text, urls_text, run = _controls("dialog")
-    if run and ticker:
-        st.session_state["pending"] = (ticker, mandate_text, urls_text)
-        st.rerun()
-    if run and not ticker:
-        # The inline form says this; the dialog used to do nothing at all.
-        write(ui.shell_status("error", "Input", "Enter a ticker."))
 
 
 def generate(ticker: str, mandate_text: str, urls: list[str]):
@@ -1431,6 +1461,10 @@ if st.session_state["view"] == "home":
     # research index worth copying renders one - the hairlines between
     # the rows do the grouping, and a box around them groups it twice.
     write(ui.report_rows(rows, token=_unlock_token(), scope=_scope_for_links()))
+    # Under the table, not above it: the terms are met in the header
+    # row, and an explanation a reader passes before meeting the thing
+    # it explains is read twice or not at all.
+    write(ui.index_legend(rows))
     if st.session_state.get("samples_problem"):
         write(ui.shell_status("warning", "Samples",
                         st.session_state["samples_problem"]))
@@ -1494,17 +1528,20 @@ if st.session_state["view"] == "samples":
         is_sample=getattr(note, "shipped", False),
     ))
 
-    # Back, then the way on. Sized, and the primary action named for
-    # what it does from HERE - "Start a report" reads as though the
-    # report on screen had not started.
-    acts = st.columns([1.4, 1.9, 3.5])
-    if acts[0].button("Back", key="samples_back"):
+    # Two controls, one row, equal width: the way out of this report and
+    # the way to take it with you.
+    #
+    # "Generate a new report" used to sit between them, as the primary.
+    # A reader who has opened a report has not come here to start a
+    # different one, and the home screen - one Back away - offers that
+    # act where it belongs, named and alone. Standing here it was the
+    # blackest thing on a screen whose subject is a document, competing
+    # with the document for the eye and offering to leave it.
+    acts = st.columns([1.5, 1.5, 4])
+    if acts[0].button("Back", use_container_width=True, key="samples_back"):
         go("home")
-    if acts[1].button(ui.NEW_LABEL, type="primary",
-                      use_container_width=True, key="samples_build"):
-        go("tool")
-
-    _download_row(note.slug, note.html, key="sample")
+    with acts[1]:
+        _download_row(note.slug, note.html, key="sample")
 
     # NOTE: `components.v1.html` is deprecated and Streamlit's own warning
     # gives a removal date that has now passed, so this call is on
@@ -1600,22 +1637,25 @@ write(ui.topbar("report"))
 # the fifth tab stop rather than the first.
 _skip_link("ar-report", "Skip to report")
 
-# A new report is an occasional act once one is on screen, so the form is
-# behind a control rather than occupying the top of every page. Home is
-# beside it, because leaving should be a control in the page rather than
-# a browser gesture that costs the artifact.
-# Navigation first, then the ways out of this document. They used to
-# be one row of five unequal buttons with a stretched spacer, so the
-# order a reader scanned was neither the order of importance nor the
-# order of use.
-actions = st.columns([1.4, 1.9, 3.5])
-if actions[0].button("Home", key="to_home"):
+# Two controls, one row, equal width - the same pair as the sample
+# screen, because it is the same screen with a different source.
+#
+# It was seven: Home, "Generate a new report", and five export buttons
+# on a second, narrower row. The new-report dialog is gone from here for
+# the reason it is gone from the sample view - a reader looking at a
+# finished report did not come to start another, and Home offers it one
+# click away - and the exports are behind the one control named for what
+# they all are.
+#
+# Leaving is still a control in the page rather than a browser gesture,
+# because the browser's own Back ends the session holding the live
+# report.
+actions = st.columns([1.5, 1.5, 4])
+if actions[0].button("Home", use_container_width=True, key="to_home"):
     go("home")
-if actions[1].button(ui.NEW_LABEL, type="primary",
-                     use_container_width=True, key="new"):
-    _new_report_dialog()
-_download_row(report.ticker.lower(), report_to_html(report), key="live",
-              markdown_text=report_to_markdown(report))
+with actions[1]:
+    _download_row(report.ticker.lower(), report_to_html(report), key="live",
+                  markdown_text=report_to_markdown(report))
 
 # The marker the Back guard looks for, carrying whether this report
 # was written to disk. It almost always was - `_run_pending` saves the

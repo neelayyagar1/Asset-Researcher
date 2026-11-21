@@ -35,6 +35,47 @@ _NAME_FRAME = r"""<script>
 </script>"""
 
 
+# The exact broken statement, as every note built before the repair
+# carries it, and what it should have said.
+_BROKEN_ENTRY = (
+    "if (document.readyState === 'complete') fitFrame();arTableStops();\n"
+    "  else window.addEventListener('load', fitFrame);\n"
+    "  window.addEventListener('resize', fitFrame);"
+)
+_FIXED_ENTRY = (
+    "function arFit() { fitFrame(); arTableStops(); }\n"
+    "  if (document.readyState === 'complete') { arFit(); }\n"
+    "  else { window.addEventListener('load', arFit); }\n"
+    "  window.addEventListener('resize', arFit);"
+)
+
+
+def repair(note_html: str) -> str:
+    """Make an already-built note's script parse.
+
+    Notes are artifacts. The six that ship were sealed months ago and
+    carry whatever the renderer emitted that day - and what it emitted
+    was an unbraced `if` followed by a second statement and an `else`,
+    which is a SyntaxError. The browser threw the whole script away, so
+    no note that has ever shipped sized its own frame or marked its own
+    scrollable tables.
+
+    Fixing `export.py` fixes notes built from now on. It reaches none
+    of the six, and rebuilding those costs six API calls and moves
+    every as-of date in them for a reason that has nothing to do with
+    their figures. So the one broken statement is replaced here, on the
+    way to the reader, exactly as `framed` already appends the scripts
+    an old note is missing.
+
+    A note built after the repair does not contain the broken text and
+    comes back untouched, so this costs one failed substring search and
+    disappears on its own once the six are next rebuilt.
+    """
+    if _BROKEN_ENTRY not in note_html:
+        return note_html
+    return note_html.replace(_BROKEN_ENTRY, _FIXED_ENTRY)
+
+
 def framed(note_html: str) -> str:
     """A note about to be shown inside the app's frame.
 
@@ -48,6 +89,12 @@ def framed(note_html: str) -> str:
     `_JUMP_SCRIPT`; running it twice sets the same height twice.
     """
     from asset_researcher.ui.export import _JUMP_SCRIPT
+
+    # Before anything is appended: an old note's own script has to be
+    # made to parse, or the `fitFrame` it carries is a function that
+    # never comes into existence and the guard below reads its NAME in
+    # a script the browser discarded.
+    note_html = repair(note_html)
 
     # The naming script goes on whether or not the jump script is
     # already there. A note built before this carries `fitFrame`, so

@@ -70,7 +70,7 @@ def test_a_note_missing_a_field_leaves_it_empty():
     """Not a zero, not a dash, not a borrowed figure from elsewhere."""
     out = note_index.summarise("<html><body>nothing here</body></html>")
     assert out == {"price": "", "filed": "", "cited": "", "metric": "",
-                   "value": ""}
+                   "value": "", "yield": "", "cagr": ""}
 
 
 def test_markup_inside_a_value_does_not_reach_the_cell():

@@ -121,8 +121,11 @@ def test_the_samples_screen_can_be_left_in_both_directions(
     at.query_params["view"] = "samples"
     at.run()
     assert any(b.label == "Back" for b in at.button)
-    # Named for what it does from a screen that already holds a report.
-    assert any(b.label == NEW_LABEL for b in at.button), _labels(at)
+    # And NOT "Generate a new report". It stood here as the primary,
+    # the blackest thing on a screen whose subject is a document, and
+    # a reader who has opened a report did not come here to start a
+    # different one. Home is one Back away and offers it by name.
+    assert not any(b.label == NEW_LABEL for b in at.button), _labels(at)
 
     next(b for b in at.button if b.label == "Back").click().run()
     assert not at.exception
@@ -324,9 +327,16 @@ def test_the_exports_carry_the_company_and_the_sections(
     assert "Investment summary" in markdown
 
 
-def test_the_report_screen_offers_a_new_run(monkeypatch, built_report):
+def test_the_report_screen_does_not_offer_a_new_run(monkeypatch, built_report):
+    """The same removal as the sample screen, for the same reason, and
+    with one more behind it: on THIS screen the control opened a dialog
+    over a live report that cost a minute and about a dollar to make.
+
+    Home is the way to a new run. It is in the row, named, one click
+    away, and it does not put a modal over the artifact."""
     at = _with_report(monkeypatch, built_report)
-    assert any(b.label == NEW_LABEL for b in at.button), _labels(at)
+    assert not any(b.label == NEW_LABEL for b in at.button), _labels(at)
+    assert any(b.label == "Home" for b in at.button), _labels(at)
 
 
 def test_the_report_marks_itself_for_the_wider_column(
@@ -369,19 +379,22 @@ def test_a_note_built_before_the_fix_still_sizes_its_frame(monkeypatch):
     )
 
 
-def test_the_dialog_dismisses_rather_than_navigating_away(monkeypatch):
-    """Inside a modal the expected secondary action is dismissal.
+def test_the_new_report_dialog_is_gone_rather_than_unreachable(monkeypatch):
+    """This used to pin the dialog's dismissal behaviour: inside a modal
+    the secondary action has to dismiss, not navigate the page behind it
+    away from a report that cost a minute and about a dollar.
 
-    The dialog's secondary was labelled "Back" and called go("home"),
-    so the dismissal-shaped control navigated the page behind the modal
-    away from a report that cost a minute and about a dollar. The form
-    is shared between the dialog and the empty workspace, where "Back"
-    going home is correct, so the action depends on where it is.
+    The dialog itself is gone now - its one opener was "Generate a new
+    report" on the report screen, and that control was removed - so what
+    is worth pinning is that it did not survive as unreachable code with
+    a form branch nothing can take. Dead code with a dead branch is how
+    the next person comes to believe there are two ways into the form.
     """
     source = pathlib.Path(APP).read_text(encoding="utf-8")
-    assert 'in_dialog = key == "dialog"' in source
-    assert '"Cancel" if in_dialog else "Back"' in source
-    assert "if in_dialog:\n            st.rerun()" in source
+    assert "@st.dialog" not in source
+    assert "_new_report_dialog" not in source
+    assert 'key == "dialog"' not in source
+    assert "in_dialog" not in source
 
 
 def test_every_stage_sentence_is_inside_the_live_region(monkeypatch):

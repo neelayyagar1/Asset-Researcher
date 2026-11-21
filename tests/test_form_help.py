@@ -24,9 +24,19 @@ APP = pathlib.Path(__file__).resolve().parents[1] / "app.py"
 
 
 def _controls_source() -> str:
+    """The body of `_controls`, up to whatever is defined next.
+
+    This used to end the slice at "\n@st.dialog", the New report dialog
+    that followed. That dialog was the form's second home and is gone -
+    a reader looking at a finished report did not come to start another
+    - so the anchor stopped existing and every test in this file failed
+    on a ValueError rather than on anything about the form. The slice
+    ends at the next top-level definition, which is what it meant.
+    """
     source = APP.read_text(encoding="utf-8")
     start = source.index("def _controls(")
-    return source[start : source.index("\n@st.dialog", start)]
+    rest = source.index("\ndef ", start + 1)
+    return source[start:rest]
 
 
 def test_the_ticker_field_states_its_own_length_limit():
