@@ -83,17 +83,46 @@ None inherited. No logo, no wordmark, no existing palette the user is
 attached to. The current editorial/print look is the builder's own earlier
 attempt and is explicitly up for replacement.
 
-**Standing visual commitment (chosen 2026-11-20).** The application shell
-executes the category canon at a high craft bar: the restraint register of
-Linear and Stripe. Near-white ground, hairline borders, a tight spacing
-scale, monospace for every figure, and colour withheld everywhere except
-the divergence count, which is the one number on the page that carries a
-judgement. This was chosen from four rendered comps against an
-accountant's-worksheet, an engineering-drawing and a giant-type direction;
-the owner picked the canon deliberately for a specific professional
-audience and asked for minimalism rather than invention. Execute it
-straight, at full fidelity, with no smuggled quirk. The research note keeps
-its own document world and is not restyled.
+**Standing visual commitment (chosen 2026-11-21): The Broadsheet.**
+
+Supersedes the 2026-11-20 commitment to the category canon, which the owner
+graded 6/10 as "lacking instead of tastefully minimal." The fault was named:
+the shell committed to no idea. This one commits to a single idea and pushes
+it.
+
+*The thesis.* Every competitor in this category shouts in bold sans. The
+shell whispers: a high-contrast serif held at a light weight carries every
+display line, a functional sans carries every working surface, and colour is
+withheld from the entire page except the one figure that encodes a judgement.
+Confidence is signalled by restraint, not by volume. The register is a
+financial broadsheet, not a product page — which is also the register of the
+thing being sold, a research note.
+
+*The commitments, which are not negotiable without re-deciding the world:*
+
+- One light palette. A cold near-monochrome ground, not a warm one — the
+  shell is cold so the note's warm paper reads as a different surface.
+- The display serif never appears above its light weight, and never below
+  the display sizes. A serif at a working size is a document, not chrome.
+- One accent, used on the divergence count and on links, and nowhere else.
+  An accent that appears twice is decoration; appearing once, it is a signal.
+- Every figure stays monospaced. That is product truth, not taste.
+- No slogans, no hero copy, no marketing voice, no emoji, no gradients, no
+  decorative illustration, no drop shadows used as depth.
+
+*Derived from, not copied from:* Public (monochrome editorial, the serif held
+light, one accent for links) and Wealthsimple (editorial display serif over a
+functional sans, hairline rules instead of card chrome), read as Refero style
+references. Neither palette nor typeface is reused; the traits carried are the
+convention inversion and the hairline-over-chrome discipline. The result must
+not be mistakable for either site.
+
+*Scope.* Shell only. The research note keeps its own document world — warm
+paper, its own serif, its 9rem left rail — and is not restyled. The two are
+different surfaces on purpose: the shell is chrome, the note is the document.
+The shell's type and colour tokens are therefore shell-scoped; the document's
+tokens are untouched, so every exported file and every sealed sample stays
+exactly as built.
 
 Two commitments that are product truth rather than taste: published research
 conventions in tables and figures (fixed column order, dollars in millions,

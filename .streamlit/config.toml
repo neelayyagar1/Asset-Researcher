@@ -13,10 +13,22 @@
 # design that no longer ships. A test now reads these values back out
 # of the stylesheet's own tokens, because a frame painted in a
 # retired world is the first impression of the page.
+#
+# Third time, 2026-11-21: the shell became The Broadsheet and this file
+# still held the near-white ground AND #4f46e5 as the primary - which is
+# Tailwind indigo-600, the most recognisable tell of a generated
+# interface, painted before any of our own CSS arrives. Both now come
+# from the stylesheet tokens, and the test reads both back.
+#
+# primaryColor mirrors --shell-focus and NOT --shell-accent, deliberately:
+# Streamlit paints its own widget focus rings and the progress bar with
+# it, and the accent is reserved for the divergence count and links. An
+# accent on the progress bar would be the second place it appears, which
+# is the point at which it stops reading as a signal.
 [theme]
 base = "light"
-primaryColor = "#4f46e5"
-backgroundColor = "#fcfcfd"
+primaryColor = "#2563eb"
+backgroundColor = "#f4f6f9"
 secondaryBackgroundColor = "#ffffff"
 textColor = "#15161a"
 

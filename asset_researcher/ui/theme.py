@@ -73,6 +73,32 @@ FONT_DISPLAY = "'Faustina', Georgia, serif"
 FONT_SANS = "'Public Sans', -apple-system, BlinkMacSystemFont, sans-serif"
 FONT_MONO = "'Spline Sans Mono', ui-monospace, Menlo, monospace"
 
+# ------------------------------------------------------------- the shell
+# The Broadsheet. These are the shell's own, declared apart from the three
+# above because `_root()` travels with every exported file: a shell face
+# declared there would restyle six sealed notes and every copy a reader has
+# already downloaded. The document keeps Faustina; the shell does not.
+#
+# Newsreader stands in for Denton, the face Public holds at weight 300.
+# It is the closest high-contrast serif with true light weights that can be
+# served from Google Fonts, and it was drawn for screens rather than for
+# print, which matters at a display size on a laptop. The weight is the
+# whole point: a serif at 600 is what every competitor already does.
+FONT_SHELL_DISPLAY = "'Newsreader', 'Faustina', Georgia, serif"
+
+# A cold ground, so the note's warm paper reads as a different surface the
+# moment it opens. The previous shell sat at #fcfcfd, which is neutral to
+# the point of being nothing; this commits.
+SHELL_BG = "#f4f6f9"  # marble, the page
+SHELL_PANEL = "#ffffff"  # a panel lifted off it
+
+# The one accent. It is on the divergence count and on links, and nowhere
+# else on the page. An accent used twice is decoration; used once it reads
+# as switched on. Measured 9.47:1 on the marble ground and 10.25:1 on a
+# white panel, so it clears AA for text at every size it is set at, and
+# clears the 3:1 the WCAG 2.2 control rules ask of a boundary.
+SHELL_ACCENT = "#1b3a8f"
+
 # Chart type sizes in pixels, pegged to the page scale so a size inside an
 # SVG is the same size beside it: --t-label, --t-micro and --t-data at a
 # 16px root.
@@ -87,6 +113,16 @@ _FONT_IMPORT = (
     "family=Faustina:wght@400..600&"
     "family=Public+Sans:wght@400;500;600&"
     "family=Spline+Sans+Mono:wght@400;500&display=swap');"
+)
+
+# Kept apart from the three above, and served only to the running app. An
+# exported note is read offline and forwarded; it should not open a network
+# request for a typeface it has no rule for. Two weights only: 300 carries
+# every display line, 400 exists for the one place a display line sits at a
+# working size and the light weight would go thin.
+_SHELL_FONT_IMPORT = (
+    "@import url('https://fonts.googleapis.com/css2?"
+    "family=Newsreader:opsz,wght@6..72,300;6..72,400&display=swap');"
 )
 
 # Ten type steps and eight spacing stops. A raw rem inside a component rule
@@ -736,8 +772,17 @@ button[data-testid="stExpandSidebarButton"]:hover,
    three edges no two blocks could ever share. */
 
 :root {
-  --shell-bg: #fcfcfd;
+  /* The Broadsheet. A cold marble ground rather than the near-white that
+     stood here, which was neutral to the point of committing to nothing -
+     the exact fault the redesign exists to fix. Cold is also what makes
+     the note's warm paper read as a second surface the moment it opens.
+     Generated names stay in Python (SHELL_BG, SHELL_ACCENT) so a palette
+     does not live in two places. */
+  --shell-bg: #f4f6f9;
   --shell-panel: #ffffff;
+  /* The shell's display face, declared here and not in `:root`, because
+     `:root` travels with every exported note. */
+  --shell-display: 'Newsreader', 'Faustina', Georgia, serif;
   --shell-ink: #15161a;
   --shell-soft: #50535c;
   /* 4.91:1 on the ground and 5.04:1 on a panel. The comp's own muted
@@ -763,11 +808,31 @@ button[data-testid="stExpandSidebarButton"]:hover,
      of something you press; this is the same tone as the field
      boundary, for the same reason. */
   --shell-btn-line: #8b8e98;
-  /* The one focus colour, declared once. 8.2:1 on the page and 4.4:1
-     on the bypass link's near-black pill, so it is visible wherever a
-     ring is drawn. */
-  --shell-focus: #4f46e5;
-  --shell-sink: #fbfbfc;      /* table head */
+  /* The one focus colour, declared once.
+
+     This was #4f46e5, which is Tailwind's indigo-600 to the digit - the
+     most-cited fingerprint of a generated interface, sitting on the focus
+     ring of every control in a product whose whole argument is that a
+     person made it carefully. That alone was reason to replace it.
+
+     The comment that stood here claimed 8.2:1 on the page and 4.4:1 on
+     the bypass link's near-black pill. Measured, it was 5.81:1 and
+     2.88:1 - and 2.88:1 FAILS the 3:1 that WCAG 2.2 asks of a focus
+     indicator. The figure that justified the colour was never true.
+
+     This one measures 4.77:1 on the marble ground, 5.17:1 on a panel and
+     3.50:1 on the ink pill, so the ring is visible everywhere it is
+     drawn. It is deliberately a step brighter than --shell-accent: a ring
+     is a state and has to carry at a 2px stroke, while the accent is a
+     signal set in text. Same hue family, two jobs, neither borrowed from
+     the other. */
+  --shell-focus: #2563eb;
+  /* The one accent, and the whole of the shell's colour. It is on the
+     divergence count and on a link, and on nothing else: an accent that
+     appears twice is decoration, and appearing once it reads as switched
+     on. Measured 9.47:1 on the marble ground and 10.25:1 on a panel. */
+  --shell-accent: #1b3a8f;
+  --shell-sink: #f7f9fb;      /* table head */
   /* A row under the pointer. The index rows carry no underline and no
      link colour by design, so this is the only pointer-level signal
      that a row opens something - and it was painted --shell-sink,
@@ -861,10 +926,40 @@ button[data-testid="stExpandSidebarButton"]:hover,
   text-transform: uppercase; color: var(--shell-mute);
   border: 1px solid var(--shell-line); border-radius: 999px;
   padding: 2px 8px; line-height: 1.6; }
+/* THE BROADSHEET - the shell's display voice.
+
+   What stood here set every heading on every screen in the sans at 15px
+   weight 600. There was no display level at all: a section head and a
+   line of body copy were two sizes of the same voice, which is the
+   mechanical form of "commits to no idea".
+
+   The serif is the commitment. It is held at 300 - the whisper weight -
+   because the inversion is the whole point: every competitor in this
+   category shouts in bold sans, and a light serif is the one move that
+   reads as composure rather than volume. At 400 it is a magazine; at 600
+   it is the thing it is arguing against.
+
+   It appears at display sizes only. A serif at a working size stops
+   being chrome and starts being a document, and the note next door is
+   the document. Below this, everything is the sans.
+
+   Two display ranks, and nothing between them. A rank that exists once
+   is a rank a reader cannot learn. `font-synthesis-weight: none` is
+   load-bearing rather than tidy: if Newsreader fails to arrive the
+   browser must fall back to a real Faustina or Georgia, not smear a
+   synthetic 300 out of a 400, which is how a light serif turns muddy on
+   exactly the screen that is meant to carry the idea. */
 .ar-head h1, .ar-head h2 {
-  font-family: var(--sans) !important; font-size: 15px !important;
-  font-weight: 600 !important; letter-spacing: -.015em !important;
-  line-height: 1.3 !important; color: var(--shell-ink); margin: 0; }
+  font-family: var(--shell-display) !important; font-size: 26px !important;
+  font-weight: 300 !important; letter-spacing: -.012em !important;
+  line-height: 1.22 !important; color: var(--shell-ink); margin: 0;
+  font-optical-sizing: auto; font-synthesis-weight: none; }
+
+/* The screen's opening line. The one display moment in the product, and
+   the only place the serif is allowed to be large. */
+.ar-head.ar-open h1, .ar-head.ar-open h2 {
+  font-size: clamp(34px, 4.6vw, 46px) !important;
+  line-height: 1.08 !important; letter-spacing: -.02em !important; }
 .ar-head p {
   font-size: 12.5px; color: var(--shell-mute); margin: 3px 0 0;
   line-height: 1.5; }
@@ -1474,5 +1569,14 @@ def document_stylesheet() -> str:
 
 
 def stylesheet() -> str:
-    """The document rules plus the shell overrides, for the running app."""
-    return f"<style>{_FONT_IMPORT}{_root()}{_DOCUMENT_CSS}{_APP_CSS}</style>"
+    """The document rules plus the shell overrides, for the running app.
+
+    The shell's own font import rides here and not in `_FONT_IMPORT`, so
+    the standalone export stays free of it. Both `@import` rules have to
+    precede every other statement in the sheet, which is why they are
+    concatenated first rather than written beside the rules that use them.
+    """
+    return (
+        f"<style>{_FONT_IMPORT}{_SHELL_FONT_IMPORT}"
+        f"{_root()}{_DOCUMENT_CSS}{_APP_CSS}</style>"
+    )

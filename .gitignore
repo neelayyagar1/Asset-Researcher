@@ -36,3 +36,14 @@ build/
 # machine-readable copy the tool regenerates from it.
 .impeccable/
 .reports/
+
+# Vendored third-party agent skills, installed per-machine (refero-design).
+# Not ours, not reviewed line by line, and this repository is public and is
+# itself the work sample - a browsing reader should find our code in it.
+.agents/
+skills-lock.json
+
+# Session handoff notes. Internal, personal, and explicitly a one-off (HANDOFF
+# sec 2.1 says there is exactly one owner-facing document and it is NOTES.md).
+# This repository is public and is itself the work sample.
+HANDOFF.md

@@ -12,8 +12,8 @@ rebuilding, not that this page needs another appendix.
 
 # 1. What it is, in one paragraph
 
-A ticker goes in. About a minute later a sourced research note comes
-out: the filed financial record, the narrative management wrapped
+A ticker goes in. About seven minutes later a sourced research note
+comes out: the filed financial record, the narrative management wrapped
 around it, and the places where the two do not agree. Every figure is
 read from the company's XBRL submissions to the SEC. Every narrative
 claim carries a citation resolved against stored source text. It issues
@@ -195,27 +195,30 @@ One exception, stated: a paragraph of running prose may carry a reading
 measure, because line length is a property of text rather than layout,
 and it keeps the column's left edge so it creates no competing axis.
 
-## Why dark mode follows the system and has no switch
+## Why there is one palette and no dark mode
 
-A toggle is a control, a preference to persist and a state to get
-wrong, and the reader this is built for has already told their laptop
-which they want. Nothing moves and nothing changes shape between the
-two: the register is restraint, and a dark mode that reorganises the
-page is a second design rather than the same one after dark. It is
-entirely a redefinition of the token block, which is the reason the
-palette was worth declaring in one place.
+There was a dark mode. It is gone, and the honest version of why is
+worth more than the design argument that used to sit here.
 
-Every tone is measured rather than eyeballed, at the same 4.5:1 floor
-the light scheme is held to, on every ground it lands on, with control
-boundaries and the focus ring at the 3:1 the WCAG 2.2 control rules
-ask for. The suite fails if the light scheme declares a colour the dark
-one does not answer — the real failure mode of a half-written dark mode
-is not ugliness but a light token surviving on a dark ground.
+It shipped half-done. The dark scheme answered every shell token and no
+document token, on the assumption that a note always renders in its own
+frame and keeps its paper world. That is true of the reading screen and
+false of the report screen, which writes the document straight into the
+page — so on the longest screen in the product the title was near-black
+on near-black at 1.06:1 and the prose about 1.4:1. A page of readable
+tables with invisible headings between them.
 
-A downloaded note stays on paper in both schemes. The dark document
-tokens live in the shell stylesheet, which the exported file does not
-carry, so the same markup follows the shell inside the app and stays a
-document when it leaves.
+Asked which way to commit, you said to delete it: it was the last thing
+you cared about and the design work mattered more. So it was deleted
+rather than half-kept — thirteen tests retired with it, and
+`_scheme_block("dark")` now raises deliberately with the message "no
+dark scheme: this product has one palette", so nobody half-reintroduces
+it by accident.
+
+What this buys: one committed light palette, measured once, on one set
+of grounds. A half-written second scheme does not fail by being ugly.
+It fails by letting a light token survive on a dark ground, which is
+invisible to whoever wrote it and the only thing the reader sees.
 
 ## Why the note keeps its own look
 
@@ -271,7 +274,7 @@ ask.
 
 ## The suite
 
-782 tests, no network, about a minute. Every fix below was
+792 tests, no network, about a minute. Every fix below was
 written as a failing test first, and the failure was watched before the
 fix was written.
 
