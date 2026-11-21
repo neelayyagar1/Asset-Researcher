@@ -2,27 +2,35 @@
 name: Asset Researcher
 description: A quiet application shell that frames one object - the research note it produces.
 colors:
-  shell-bg: "#fcfcfd"
+  shell-bg: "#f4f6f9"
   shell-panel: "#ffffff"
   shell-ink: "#15161a"
   shell-soft: "#50535c"
   shell-mute: "#6b6f78"
   shell-line: "#eceef1"
   shell-line-2: "#e2e4e9"
-  shell-sink: "#fbfbfc"
+  shell-sink: "#f7f9fb"
   shell-field-line: "#8b8e98"
   shell-ink-hover: "#26272d"
   shell-secondary-hover: "#f7f8f9"
   shell-secondary-hover-line: "#d6d9df"
   # Declared in the stylesheet as --shell-focus and used by every
-  # focus ring in the shell, including the bypass link, whose ring was
-  # the replaced world's paper colour at 1.04:1 until it was measured.
-  shell-focus: "#4f46e5"
+  # focus ring in the shell. This was #4f46e5 - Tailwind indigo-600
+  # exactly, the commonest fingerprint of a generated interface - and
+  # it measured 2.88:1 on the bypass link's near-black pill, failing
+  # the 3:1 WCAG 2.2 asks of a focus indicator. The comment beside it
+  # claimed 4.4:1. This one measures 4.77 / 5.17 / 3.50 on the three
+  # grounds it lands on.
+  shell-focus: "#2563eb"
   count-fill: "#f3f4f6"
   count-hot-ink: "#b4231a"
   count-hot-fill: "#fdf2f1"
   count-cool-ink: "#16794f"
   count-cool-fill: "#f0f8f4"
+  # The shell's one accent, on the divergence count and on links and
+  # nowhere else. 9.47:1 on the marble ground. The shell had no accent
+  # at all before this direction.
+  shell-accent: "#1b3a8f"
   code-fill: "#f4f5f7"
   ink: "#17150f"
   ink-soft: "#403c33"
@@ -350,64 +358,75 @@ components:
 
 ## Overview
 
-**Creative North Star: "The Quiet Instrument Around the Document"**
+**Creative North Star: "The Broadsheet Around the Document"**
 
 This product ships two surfaces, and the whole system is the relationship
 between them. The **research note** is the object the product makes: warm paper
 (`paper`), a Faustina masthead, a 9rem left rail, square corners, hairlines, and
 colour used only as an index. The **application shell** is the frame that makes
-and lists those notes: near-white ground (`shell-bg`), Public Sans throughout,
-hairline-bordered panels on a 7px/10px radius pair, monospace figures, and
-colour withheld from everything except one count. Both live in one stylesheet,
+and lists those notes. Both live in one stylesheet,
 `asset_researcher/ui/theme.py`: `_DOCUMENT_CSS` is the note and travels with the
 exported HTML file, the block marked `application shell` is the chrome and never
 leaves the app. `document_stylesheet()` emits the first; `stylesheet()` emits
 both.
 
-The shell executes the category canon at the Linear/Stripe restraint bar. This
-is a **standing brand commitment**, not a preference: PRODUCT.md records it as
-chosen on 2026-11-20 from four rendered comps (against an
-accountant's-worksheet, an engineering-drawing and a giant-type direction), with
-the instruction to execute it straight, at full fidelity, with no smuggled
-quirk. The same commitment says the note keeps its own document world and is not
-restyled - which is why this file documents two worlds instead of reconciling
-them into one.
+**The shell direction, chosen 2026-11-21: The Broadsheet.** It supersedes the
+category-canon commitment of 2026-11-20, which the owner graded 6/10 as "lacking
+instead of tastefully minimal". That shell was not badly made; it was neutral,
+and the mechanical proof is that every heading on every screen was set in the
+sans at 15px weight 600, so the product had no display rank at all.
 
-The shell's restraint is load-bearing rather than decorative. A reader comes here
-to get a note, so the chrome's job is to be legible, say where they are, and get
-out of the way: a 52px topbar, one heading, panels with real content in them, and
-the primary action always the highest-contrast thing on the screen - the darkest
-in the light scheme and the lightest in the dark one. Contrast is measured, not
-eyeballed: `tests/test_contrast.py` reads the shipped stylesheet and fails the
-build if any text tone drops below 4.5:1 on any ground it renders on, in EITHER
-scheme, and if a control boundary or the focus ring drops below 3:1.
+The thesis is an inversion. Every competitor in this category shouts in bold
+sans; this shell whispers. A high-contrast serif (Newsreader) held at weight
+**300** carries every display line and appears at display sizes only; Public Sans
+carries every working surface; Spline Sans Mono carries every figure; and colour
+is withheld from the entire page except the one figure that encodes a judgement.
+The register is a financial broadsheet, which is also the register of the thing
+the product makes. Derived from Public and Wealthsimple as Refero references, by
+carrying the convention inversion and the hairline-over-chrome discipline, and
+neither palette nor typeface.
 
-**Dark is the same design, not a second one.** It follows
-`prefers-color-scheme` and offers no switch: a toggle is a control, a preference
-to persist and a state to get wrong. Nothing moves and nothing changes shape -
-it is entirely a redefinition of the token block, which is the reason the
-palette is declared in one place. The suite fails if the light scheme declares a
-colour the dark one does not answer, because the failure mode of a half-written
-dark mode is not ugliness but a light token surviving on a dark ground.
+**The two surfaces are deliberately opposed in temperature.** The shell ground is
+a cold marble `#f4f6f9`; the note keeps its warm paper `#faf8f3`. A reader should
+feel the move from chrome into document the moment a note opens. That opposition
+is load-bearing, and it is why `--paper` and `--ink` appearing anywhere in the
+shell is a defect rather than a shortcut - it has been found and fixed three
+times (on `html`/`body`, on the bypass link, and on the status block).
 
-The dark scheme answers the DOCUMENT tokens as well as the shell ones, and does
-so in the shell stylesheet only. The report screen writes the note's markup
-straight into the page, so those tokens have to follow the shell there; the
-exported file and the iframe'd note carry `document_stylesheet()`, which does
-not include that block, so a downloaded note stays on paper in both schemes.
+**There is ONE light palette and no dark mode.** A dark scheme shipped once and
+was deleted. It answered every shell token and no document token, so on the live
+report screen - which writes the note's markup straight into the page rather than
+into an iframe - the title rendered near-black on near-black at 1.06:1 and the
+prose at about 1.4:1. Asked which way to commit, the owner said to delete it.
+`_scheme_block("dark")` now raises deliberately with the message "no dark scheme:
+this product has one palette", so it cannot be half-reintroduced. The product
+also declares `color-scheme: light` so the user agent paints its own surfaces -
+form controls, scrollbar gutter, overscroll band - to match.
+
+Contrast is measured, not eyeballed: `tests/test_contrast.py` reads the shipped
+stylesheet and fails the build if any text tone drops below 4.5:1 on any ground
+it renders on, or if a control boundary or the focus ring drops below 3:1.
 
 **Key Characteristics:**
-- Two documented surfaces: the note (warm, serif, square, ruled) and the shell
-  (near-white, sans, rounded, panelled). They share one stylesheet and one
-  type/figure pairing, nothing else.
+- Two documented surfaces, opposed in temperature: the note (warm paper, serif,
+  square, ruled) and the shell (cold marble, serif display over sans, hairline-
+  ruled). They share one stylesheet and the figure face, nothing else.
 - ONE column in the shell, declared once on `.block-container`. No descendant
   sets its own width, and no width is expressed in `ch`.
-- Colour is withheld across the entire shell except the divergence count and the
-  focus ring.
+- The shell's display serif appears at display sizes ONLY (46/32/26px). Below
+  those it would stop being chrome and start impersonating the document.
+- Colour is withheld across the entire shell except the divergence count, links
+  and the focus ring. The home screen carries none of the first two, so it is
+  monochrome end to end.
 - Every shell text tone measures at or above 4.5:1 on every ground; the control
-  boundary measures 3.27:1 to meet WCAG 2.2 SC 1.4.11.
-- Two families plus a monospace: Faustina (note display), Public Sans (all UI
-  and prose), Spline Sans Mono (every figure).
+  boundary measures 3.27:1 and the focus ring 3.50:1 at worst, to meet WCAG 2.2
+  SC 1.4.11.
+- Three families plus a monospace: Newsreader 300 (shell display), Faustina
+  (note display), Public Sans (all UI and prose), Spline Sans Mono (every
+  figure). The two display faces never meet on one surface.
+- NO CARDS as a grouping device. Hairlines group; a border, fill and radius
+  around content the rules already group is decoration. Both the step row and
+  the report index had one and lost it.
 - Shell depth is one 1px-blur ambient shadow; the note has no shadow at all.
 
 ## Colors
@@ -417,11 +436,21 @@ The shell is a grey ramp on near-white with exactly two coloured states; the not
 is warm paper and ink with two indexing hues and three semantic signals.
 
 ### Primary
-The shell has no accent. Its primary is its ink.
+The shell's primary is its ink. It now also has exactly one accent, which it did
+not before: `shell-accent`, on the divergence count and on links, and on nothing
+else. An accent that appears twice is decoration; appearing once, it reads as
+switched on. On the home screen it does not appear at all, because there is no
+divergence count there - so that screen is entirely monochrome, which is the
+rule working rather than a gap.
 
 - **Shell Ink** (`{colors.shell-ink}`): the shell's only strong value. Headings,
   table cells, key-value answers, the brand mark, and the fill of the primary
-  button (white text on it). 15.6:1 on the ground.
+  button (white text on it). 16.7:1 on the marble ground.
+- **Shell Accent** (`{colors.shell-accent}`): the divergence count and links.
+  9.47:1 on the ground, 10.25:1 on a panel. Deliberately a step deeper than
+  `shell-focus`: a ring is a state and must carry at a 2px stroke, an accent is
+  a signal set in text. Same hue family, two jobs, neither borrowed from the
+  other.
 - **Note Slate** (`{colors.accent}`): in the note only - the subject and this
   analysis. Links, `::selection`, `caret-color`, the subject bar in a peer chart,
   the left rule on the summary and on a finding's assessment, the nav hover
