@@ -316,3 +316,36 @@ def test_a_citation_is_located_never_verified(report):
     assert "Citations verified" not in html
     if report.citations:
         assert ">Located<" in html
+
+
+def test_a_framed_note_sizes_its_own_frame():
+    """A note is about 36,000px tall and was rendered in a 2,000px
+    frame: a reader saw one eighteenth of the document at a time,
+    through a scrollbar nested inside the page's own, with the note's
+    own section index trapped in the frame.
+
+    The frame is same-origin, so the document inside it can reach
+    `window.frameElement` and set its height to its own content. The
+    page then scrolls once, as one document.
+
+    It must no-op in the standalone export, where there is no frame.
+    """
+    from asset_researcher.ui.export import _JUMP_SCRIPT
+
+    assert "frameElement" in _JUMP_SCRIPT, (
+        "the note no longer sizes its frame"
+    )
+    # Guarded: a downloaded note has no frameElement and must not throw.
+    assert "if (!frame)" in _JUMP_SCRIPT or "frame &&" in _JUMP_SCRIPT, (
+        "frame sizing is not guarded for the standalone export"
+    )
+    # Re-measured when the viewport changes, or a reflow leaves a gap.
+    assert "resize" in _JUMP_SCRIPT
+
+
+def test_the_frame_sizing_survives_a_cross_origin_frame():
+    """Reaching `frameElement` throws if the frame is ever not
+    same-origin. A note that raises on load shows nothing at all."""
+    from asset_researcher.ui.export import _JUMP_SCRIPT
+
+    assert "try" in _JUMP_SCRIPT and "catch" in _JUMP_SCRIPT

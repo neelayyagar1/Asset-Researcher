@@ -322,3 +322,20 @@ def test_the_report_marks_itself_for_the_wider_column(
     for a sixteen-column comparables table rendered in the standard one."""
     at = _with_report(monkeypatch, built_report)
     assert '<span class="ar-report-view"' in rendered_markup(at)
+
+
+# ------------------------------------------------- the note inside a frame
+
+def test_a_note_built_before_the_fix_still_sizes_its_frame(monkeypatch):
+    """Notes are artifacts carrying whatever the renderer emitted the
+    day they were built. A note is about 36,000px tall and the frame is
+    2,000px, so without sizing a reader sees one eighteenth of it
+    through a nested scrollbar - and fixing that at build time only
+    would cost six API calls to deploy."""
+    source = pathlib.Path(APP).read_text(encoding="utf-8")
+    assert "_framed(note.html)" in source, (
+        "the note is framed without the display-time sizing wrapper"
+    )
+    assert "if \"fitFrame\" in note_html" in source, (
+        "the wrapper is not idempotent, so a new note gets the script twice"
+    )

@@ -277,6 +277,27 @@ _LEAD_STAT = re.compile(
 )
 
 
+def _framed(note_html: str) -> str:
+    """A note about to be shown inside the app's frame.
+
+    Notes are artifacts: the six that ship were built by a pipeline run
+    and carry whatever scripts the renderer emitted that day. Appending
+    the frame-sizing script here rather than only at build time means a
+    note built last month behaves like one built this minute, and the
+    fix does not cost six API calls to deploy.
+
+    Idempotent. A freshly built note carries the same function from
+    `_JUMP_SCRIPT`; running it twice sets the same height twice.
+    """
+    from asset_researcher.ui.export import _JUMP_SCRIPT
+
+    if "fitFrame" in note_html:
+        return note_html
+    if "</body>" in note_html:
+        return note_html.replace("</body>", f"{_JUMP_SCRIPT}</body>", 1)
+    return note_html + _JUMP_SCRIPT
+
+
 def _headline_of(html: str) -> tuple[str, str]:
     """The note's own lead statistic, or two empty strings.
 
@@ -889,13 +910,18 @@ if st.session_state["view"] == "samples":
     # Rendered in its own document rather than injected into this page:
     # each note is a complete HTML file carrying its own stylesheet, and
     # inlining it would let those rules reach the app around it.
-    # Tall enough that the note reads as a document rather than through a
-    # letterbox. A note measures about 33,000px; at 900 the reviewer saw
-    # one thirty-sixth of it at a time, through a scrollbar nested inside
-    # the page's own, with the note's sticky index trapped in the frame.
-    # This cannot be made to fit - the honest fix is a page of its own -
-    # but 2,000px stops the frame from being the thing they notice.
-    components.html(note.html, height=2000, scrolling=True)
+    # 2,000px is the height Streamlit is told; the note then sizes its
+    # own frame to its content, because the frame is same-origin and the
+    # document inside it can reach `window.frameElement`. Measured: a
+    # note runs 36,843px and the frame now matches it, so the page
+    # scrolls once through Streamlit's own container and the note's
+    # section index is no longer trapped behind a nested scrollbar.
+    #
+    # The comment here used to say this could not be made to fit and
+    # that the honest fix was a page of its own. The second half is
+    # still true - a note deserves its own route - but "cannot" was
+    # wrong, and it had stopped anyone looking.
+    components.html(_framed(note.html), height=2000, scrolling=True)
     st.stop()
 
 

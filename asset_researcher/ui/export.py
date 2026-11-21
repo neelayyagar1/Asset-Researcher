@@ -76,6 +76,34 @@ _JUMP_SCRIPT = """<script>
     target.setAttribute('tabindex', '-1');
     target.focus({ preventScroll: true });
   });
+
+  // A note runs to about 36,000px and was shown in a 2,000px frame:
+  // one eighteenth of the document at a time, through a scrollbar
+  // nested inside the page's own, with the note's section index
+  // trapped in the frame. The frame is same-origin, so the document
+  // can size it to its own content and the page then scrolls once.
+  //
+  // Guarded twice. A downloaded note has no frameElement, and reaching
+  // for one across origins throws - a note that raises on load shows a
+  // reader nothing at all.
+  function fitFrame() {
+    try {
+      var frame = window.frameElement;
+      if (!frame) return;
+      var height = document.documentElement.scrollHeight;
+      if (!height) return;
+      frame.style.height = height + 'px';
+      var wrap = frame.parentElement;
+      if (wrap) wrap.style.height = height + 'px';
+    } catch (e) {
+      // Cross-origin, or a host that does not allow it. The frame keeps
+      // whatever height it was given and scrolls, which is the old
+      // behaviour rather than a broken one.
+    }
+  }
+  if (document.readyState === 'complete') fitFrame();
+  else window.addEventListener('load', fitFrame);
+  window.addEventListener('resize', fitFrame);
 })();
 </script>"""
 
