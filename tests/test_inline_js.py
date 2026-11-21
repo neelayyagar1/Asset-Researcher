@@ -123,3 +123,33 @@ def test_the_back_bridge_binds_to_the_window_that_owns_the_address_bar():
     assert "try" in js and "catch" in js, (
         "reaching for a cross-origin top throws and must be guarded"
     )
+
+
+def test_the_bridge_looks_for_the_report_where_the_report_lives():
+    """Two different windows, and the fix for one broke the other.
+
+    Binding popstate to the top window was right: that is the window
+    that owns the address bar on Streamlit Cloud. But the guard that
+    protects a generated report then read
+    `host.document.getElementById('ar-report')`, and on Cloud the top
+    window's document holds the Streamlit chrome, not the app - the app
+    is inside an iframe. So the lookup returned null, the confirm never
+    fired, and Back silently discarded a report that cost a minute and
+    about a dollar.
+
+    The two concerns are separate: the address bar belongs to the top
+    window, the document belongs to the app window.
+    """
+    source = (ROOT / "app.py").read_text(encoding="utf-8")
+    bridge = re.search(r"components\.html\(\s*r?\"\"\"(.*?)\"\"\"", source, re.S)
+    assert bridge, "the back bridge's script block was not found"
+    js = bridge.group(1)
+
+    assert "host.document.getElementById('ar-report')" not in js, (
+        "the report lookup is on the address-bar window, whose document "
+        "does not hold the app on a framed deployment"
+    )
+    assert "appWindow" in js, (
+        "the bridge does not distinguish the app window from the window "
+        "that owns the address bar"
+    )

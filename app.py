@@ -505,6 +505,14 @@ def _back_bridge() -> None:
           } catch (e) {
             host = window.parent;
           }
+          // The app's own window, which is where the report lives.
+          // On Streamlit Cloud these are two different windows: the top
+          // window holds the Cloud chrome and the address bar, the app
+          // runs in an iframe inside it. Binding popstate to the top
+          // window and then looking for the report in the top window's
+          // document found nothing, so the confirm never fired and Back
+          // silently discarded a note that cost a minute and a dollar.
+          var appWindow = window.parent || host;
           if (!host || host.__arBack) return;
           host.__arBack = true;
           host.addEventListener('popstate', function () {
@@ -513,7 +521,13 @@ def _back_bridge() -> None:
             // with it. A report costs a minute and about a dollar, so it
             // is not something to discard without asking. Navigation that
             // costs nothing still happens silently.
-            var hasReport = host.document.getElementById('ar-report');
+            var hasReport = null;
+            try {
+              hasReport = appWindow.document.getElementById('ar-report');
+            } catch (e) {
+              // Unreachable document: treat as no report rather than
+              // blocking navigation on a guess.
+            }
             if (hasReport && !host.confirm(
                   'Leaving this page will discard the report you just '
                   + 'generated. Download it first if you want to keep it.\n\n'
