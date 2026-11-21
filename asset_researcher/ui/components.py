@@ -955,7 +955,13 @@ def topbar(active: str = "reports") -> str:
     return _one_line(
         '<div class="ar-topbar"><span class="brand"><i></i>'
         "Asset Researcher</span>"
-        f'<span class="where" aria-current="page">{_text(name)}</span>'
+        # No `aria-current`. That attribute marks which link in a set
+        # of navigation links you are on, and this is a label - the
+        # pills that used to sit here were removed precisely because
+        # nothing in this bar is clickable, so announcing "current
+        # page" on it invites the same reach they did. The words
+        # already say where you are.
+        f'<span class="where">{_text(name)}</span>'
         '<span class="meta">SEC EDGAR &middot; XBRL</span></div>'
     )
 

@@ -103,3 +103,13 @@ def test_the_bar_names_the_screen_the_reader_is_on(monkeypatch):
     at = _open(monkeypatch)
     at.button(key="enter").click().run()
     assert "New report" in rendered_markup(at)
+
+
+def test_the_bar_does_not_claim_to_be_a_destination():
+    """`aria-current="page"` belongs on a link in a set of navigation
+    links, marking which one you are on. The bar's screen name is a
+    label - the docstring is explicit that the clickable-looking pills
+    were removed because nothing there was clickable - so announcing
+    "current page" on it invites the same reach the pills did."""
+    assert "aria-current" not in ui.topbar("reports")
+    assert "Home" in ui.topbar("reports")

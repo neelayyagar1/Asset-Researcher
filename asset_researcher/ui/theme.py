@@ -751,6 +751,13 @@ button[data-testid="stExpandSidebarButton"]:hover,
      ring is drawn. */
   --shell-focus: #4f46e5;
   --shell-sink: #fbfbfc;      /* table head */
+  /* A row under the pointer. The index rows carry no underline and no
+     link colour by design, so this is the only pointer-level signal
+     that a row opens something - and it was painted --shell-sink,
+     which against the table's own fill measures 1.04:1 in dark. The
+     affordance did not exist on the scheme where it was the only
+     one. */
+  --shell-row-hover: #eef0f4;
   /* Three radii, and the mark is one of them. The two product marks
      were drawn at 4px in the bar and 6px on the gate - the same object
      at two shapes, forty pixels apart on the only screen that shows
@@ -811,6 +818,7 @@ button[data-testid="stExpandSidebarButton"]:hover,
     --shell-btn-line: #6a6f7e;
     --shell-focus: #a5a0ff;
     --shell-sink: #121419;
+    --shell-row-hover: #232838;
     --shell-shadow: 0 1px 2px rgba(0, 0, 0, .4);
     --shell-on-ink: #11131a;
     --shell-ink-hover: #ffffff;
@@ -977,9 +985,9 @@ a.ar-row-link {
   padding: 11px 16px; color: inherit;
   text-decoration: none; font: inherit; letter-spacing: inherit; }
 table.ar-list td.num a.ar-row-link { justify-content: flex-end; }
-table.ar-list tr:hover td { background: var(--shell-sink); }
+table.ar-list tr:hover td { background: var(--shell-row-hover); }
 table.ar-list tr:has(a.ar-row-link:focus-visible) td {
-  background: var(--shell-sink); }
+  background: var(--shell-row-hover); }
 a.ar-row-link:focus-visible {
   outline: 2px solid var(--shell-focus); outline-offset: -2px; }
 table.ar-list td.co { color: var(--shell-soft); }

@@ -451,3 +451,25 @@ def test_the_document_focus_ring_passes_on_both_grounds():
             f"{scheme}: the fallback focus ring {ring} measures "
             f"{measured:.2f}:1 on {ground}"
         )
+
+
+def test_the_row_hover_is_visible_in_both_schemes():
+    """The index rows carry no underline and no link colour by design,
+    so hover is the only pointer-level signal that a row opens
+    something. It was painted `--shell-sink`, which against
+    `--shell-panel` measures 1.04:1 in dark - the affordance did not
+    exist on the scheme where it was the only one.
+
+    A surface difference is not text, so the floor is the 3:1 of SC
+    1.4.11 rather than 4.5:1; this asks only that it be perceptible.
+    """
+    for scheme in ("light", "dark"):
+        tokens = _all_tokens(scheme)
+        assert "shell-row-hover" in tokens, (
+            f"{scheme}: the row hover has no token of its own"
+        )
+        measured = contrast(tokens["shell-row-hover"], tokens["shell-panel"])
+        assert measured >= 1.12, (
+            f"{scheme}: row hover measures {measured:.3f}:1 against the "
+            f"table's own fill, which is not a visible change"
+        )
