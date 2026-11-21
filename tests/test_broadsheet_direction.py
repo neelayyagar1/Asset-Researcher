@@ -141,6 +141,30 @@ def test_no_shell_colour_is_the_indigo_every_generator_reaches_for():
         )
 
 
+def test_centring_the_gate_cannot_push_anything_out_of_reach():
+    """`justify-content: center` splits overflow evenly above and below,
+    and the half above the top of a scroll container cannot be reached
+    because scrollTop does not go negative.
+
+    Found by shrinking the window until the gate plus its error message
+    was taller than the viewport. At 380x260 the product mark sat at
+    top -12 with scrollTop already 0 - cut off, with no way to scroll to
+    it. `safe` falls back to flex-start at exactly the point where
+    centring would start hiding something; re-measured at the same size
+    afterwards, nothing sits above the viewport at scrollTop 0.
+    """
+    rule = re.search(
+        r"\.block-container:has\(\.ar-gate\) \{([^}]*)\}", theme.stylesheet()
+    )
+    assert rule, "the gate's container has no rule"
+    body = rule.group(1)
+    if "justify-content" in body:
+        assert "safe center" in body, (
+            "the gate centres unsafely, which makes its top unreachable "
+            "on a viewport shorter than its content"
+        )
+
+
 def test_the_first_screen_speaks_in_the_products_voice():
     """The gate is the first thing anyone sees and was the last screen
     still set in the old voice - the product's name in the sans at 17px

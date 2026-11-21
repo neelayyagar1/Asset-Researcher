@@ -1294,7 +1294,17 @@ table.ar-list th.num, table.ar-list td.num {
   max-width: 320px;
   padding-top: 0;
   min-height: 100svh;
-  display: flex; flex-direction: column; justify-content: center;
+  display: flex; flex-direction: column;
+  /* `safe`, and it is load-bearing.
+     Plain `center` splits any overflow evenly above and below, and the
+     half above the top of a scroll container cannot be reached, because
+     scrollTop does not go negative. Found by shrinking the window until
+     the gate plus its error message was taller than the viewport: at
+     380x260 the product mark sat at top -12 with scrollTop already 0,
+     cut off with no way to scroll to it. `safe` falls back to
+     flex-start at exactly the point where centring would start hiding
+     something. */
+  justify-content: safe center;
   /* Above dead centre by a little. An object centred exactly looks low,
      because the eye reads the optical centre as higher than the
      geometric one. */
