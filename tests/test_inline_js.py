@@ -20,6 +20,7 @@ from __future__ import annotations
 
 import ast
 import pathlib
+import re
 
 ROOT = pathlib.Path(__file__).resolve().parents[1]
 
@@ -90,3 +91,35 @@ def test_the_detector_catches_the_original_defect():
         "</script>"
     )
     assert _unbalanced_quote_line(fixed) is None
+
+
+def test_the_back_bridge_binds_to_the_window_that_owns_the_address_bar():
+    """On Streamlit Cloud the app itself runs inside an iframe.
+
+    The bridge bound `popstate` to `window.parent`, which from a
+    component iframe is the APP window. That is correct on a directly
+    served app, where the app window owns the address bar, and wrong on
+    Streamlit Cloud, where the app is framed inside
+    `//<app>.streamlit.app/~/+/` and Back fires on the TOP window.
+
+    The consequence was the original complaint, unfixed in production
+    while passing every local check: the address bar went back and the
+    page stayed put. Local verification could not see it because a
+    directly served Streamlit is not framed - window.top and
+    window.parent are the same object there, so the same code passes.
+
+    Both frames are same-origin, so the top window is reachable; the
+    reach is guarded because a cross-origin top throws.
+    """
+    source = (ROOT / "app.py").read_text(encoding="utf-8")
+    bridge = re.search(r"components\.html\(\s*r?\"\"\"(.*?)\"\"\"", source, re.S)
+    assert bridge, "the back bridge's script block was not found"
+    js = bridge.group(1)
+
+    assert "window.top" in js, (
+        "the bridge does not reach for the top window, so it cannot hear "
+        "Back on a framed deployment"
+    )
+    assert "try" in js and "catch" in js, (
+        "reaching for a cross-origin top throws and must be guarded"
+    )

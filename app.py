@@ -482,7 +482,29 @@ def _back_bridge() -> None:
     components.html(
         r"""<script>
         (function () {
-          var host = window.parent;
+          // The window that owns the ADDRESS BAR, which is not always
+          // the one above this frame.
+          //
+          // This read `window.parent`. From a component iframe that is
+          // the app window, which is correct on a directly served
+          // Streamlit and wrong on Streamlit Cloud, where the whole app
+          // runs inside `//<app>.streamlit.app/~/+/`. There, Back fires
+          // on the top window and the listener never heard it: the
+          // address bar went back and the page stayed put, which is the
+          // original fault, unfixed in production while every local
+          // check passed. A directly served app is not framed, so
+          // window.top and window.parent are the same object and the
+          // broken code looks correct.
+          //
+          // Both frames are same-origin. Reaching across origins throws,
+          // so the reach is guarded and falls back to the parent.
+          var host;
+          try {
+            host = window.top && window.top.location ? window.top
+                                                     : window.parent;
+          } catch (e) {
+            host = window.parent;
+          }
           if (!host || host.__arBack) return;
           host.__arBack = true;
           host.addEventListener('popstate', function () {
