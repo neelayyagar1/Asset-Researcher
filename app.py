@@ -555,11 +555,13 @@ def _back_bridge() -> None:
           if (!host || host.__arBack) return;
           host.__arBack = true;
           host.addEventListener('popstate', function () {
-            // A reload is the only way to follow Back, and a reload ends
-            // the Streamlit session - which takes any generated report
-            // with it. A report costs a minute and about a dollar, so it
-            // is not something to discard without asking. Navigation that
-            // costs nothing still happens silently.
+            // A reload is the only way to follow Back, and a reload
+            // ends the Streamlit session - which takes the LIVE report
+            // with it. That used to mean losing the work, and the guard
+            // asked every time. It no longer does: the rendered
+            // document is written to disk before this screen draws and
+            // the first screen links to it, so the only case left worth
+            // asking about is a save that failed.
             var hasReport = null;
             try {
               hasReport = appWindow.document.getElementById('ar-report');
@@ -567,10 +569,15 @@ def _back_bridge() -> None:
               // Unreachable document: treat as no report rather than
               // blocking navigation on a guess.
             }
-            if (hasReport && !host.confirm(
-                  'Leaving this page will discard the report you just '
-                  + 'generated. Download it first if you want to keep it.\n\n'
-                  + 'Leave anyway?')) {
+            // Only when the save failed. A saved report is in the
+            // list on the first screen, so leaving loses the live
+            // view and not the work.
+            var unsaved = hasReport
+              && hasReport.getAttribute('data-saved') !== '1';
+            if (unsaved && !host.confirm(
+                  'This report could not be saved, so leaving this page '
+                  + 'loses it. Download it first if you want to keep '
+                  + 'it.\n\nLeave anyway?')) {
               // Put the entry back, so the address bar matches the page.
               host.history.forward();
               return;
@@ -1134,8 +1141,8 @@ context = bundle.cash_context
 # The bar the rest of the shell carries. This screen is the longest in
 # the product and had no persistent chrome at all, so a reader deep in a
 # 33,000px note had no indication of where they were and no way out
-# except the browser's Back - which discards the report they just paid
-# for.
+# except the browser's Back - which ends the session holding the live
+# report, though the rendered document survives in the index.
 # The marker the stylesheet widens the column for. It was declared and
 # never emitted, so the report screen - the one that needs the width for
 # a sixteen-column comparables table - was rendering in the standard
@@ -1170,7 +1177,17 @@ actions[2].download_button(
 )
 
 _skip_link("ar-report", "Skip to report")
-write('<span id="ar-report" tabindex="-1"></span>')
+# The marker the Back guard looks for, carrying whether this report
+# was written to disk. It almost always was - `_run_pending` saves the
+# rendered document before this screen draws - and when it was, leaving
+# costs the live view and nothing else, because the index links to the
+# file. The guard reads this rather than asking on every Back, which is
+# the friction the owner has objected to three times.
+write(
+    '<span id="ar-report" tabindex="-1" data-saved="'
+    + ("1" if st.session_state.get("report_slug") else "0")
+    + '"></span>'
+)
 write(
     ui.masthead(
         bundle.company_name,
