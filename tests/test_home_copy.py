@@ -154,3 +154,23 @@ def test_the_strategy_box_is_driven_by_state_alone(monkeypatch):
         "the strategy box still passes a default alongside the state "
         "that overrides it"
     )
+
+
+def test_the_steps_are_a_list_in_the_markup_not_only_in_the_paint():
+    """SC 1.3.1. `steps()` says in its own docstring that instructions
+    are a numbered list because that is what instructions are - and then
+    emitted four sibling divs whose numbers came only from a CSS
+    `counter()` on a `:before`.
+
+    Generated content is announced by some AT and browser pairs and not
+    others, so the order was at best unreliable and at worst four
+    unrelated paragraphs. The ordering IS the content here: step three
+    does not make sense before step two.
+    """
+    from asset_researcher.ui import components as ui
+
+    html = ui.steps(("First thing", "Second thing"))
+    assert "<ol" in html and "</ol>" in html
+    assert html.count("<li") == 2
+    # Safari strips the list role when list-style is none.
+    assert 'role="list"' in html

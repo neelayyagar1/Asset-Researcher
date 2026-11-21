@@ -233,12 +233,34 @@ abbr.ar-token { text-decoration: underline dotted var(--ink-muted);
 
 /* A bypass link: offscreen until focused, which is the one pattern that
    serves a keyboard user without showing a control nobody else needs. */
-.ar-skip { position: absolute; left: -9999px; top: 0; z-index: 100;
+/* `fixed`, not `absolute`, and clipped rather than flung off-screen.
+
+   `position: absolute` resolves against the nearest positioned
+   ancestor. This link is written by st.markdown, so it lives several
+   Streamlit containers deep, and those containers routinely carry
+   `position: relative`, `transform`, `filter`, `contain` or
+   `overflow: hidden` - any one of which becomes the containing block.
+   The focused link would then land 12px from THAT element's corner
+   instead of the page's, or be clipped out of view entirely. This is
+   the first control a keyboard user reaches in the whole product, so
+   it is the worst possible thing to leave resolving against whatever
+   the host framework happens to wrap it in this release.
+
+   `fixed` always resolves against the viewport. And the hidden state
+   is a 1px clipped box rather than `left: -9999px`, because an
+   off-screen offset is itself defeated by a clipping ancestor, while
+   `clip-path` is not - it is the same technique `.ar-sr` already uses
+   for screen-reader-only text. */
+.ar-skip { position: fixed; z-index: 100;
+  left: var(--s3); top: var(--s3);
+  width: 1px; height: 1px; overflow: hidden;
+  clip-path: inset(50%); white-space: nowrap;
   background: var(--ink); color: var(--paper); padding: var(--s2) var(--s3);
   font-family: var(--sans); font-size: var(--t-label);
   letter-spacing: var(--t-label-ls); text-transform: uppercase;
   text-decoration: none; }
-.ar-skip:focus { left: var(--s3); top: var(--s3); }
+.ar-skip:focus {
+  width: auto; height: auto; overflow: visible; clip-path: none; }
 
 /* ---------------------------------------------------------- typography */
 
@@ -1246,7 +1268,22 @@ table.ar-list th.num, table.ar-list td.num {
   counter-reset: step; display: grid; gap: 0;
   grid-template-columns: repeat(4, minmax(0, 1fr));
   border-top: 1px solid var(--shell-line-2);
-  padding-top: 18px; margin-top: 14px; }
+  padding-top: 18px; margin-top: 14px;
+  list-style: none; }
+/* The host out-specifies the line above.
+   Streamlit ships `.st-emotion-cache-… > ul, … > ol { display: block;
+   width: fit-content }` - a child combinator on a class, (0,2,0),
+   against `.ar-steps` at (0,1,0). So the moment these steps became a
+   real `ol` for screen readers, the host collapsed the four columns
+   into a stacked, indented list. The semantics fix broke the layout,
+   which is the whole reason this is verified in the browser and not in
+   the stylesheet.
+   Declared with `!important` rather than by escalating the selector,
+   because the emotion class is a build hash and any selector written
+   against it is wrong at the next Streamlit release. */
+ol.ar-steps {
+  display: grid !important; width: auto !important;
+  list-style: none !important; }
 .ar-step {
   display: grid; grid-template-rows: auto 1fr; gap: 7px;
   align-content: start; padding: 2px 20px 2px 0; }
@@ -1482,6 +1519,28 @@ section:focus-visible, div[class*="block-container"]:focus-visible {
    focus ring suppressed: the first control a keyboard user meets was
    invisible and close to unreadable. The export, whose shell we write, is
    unaffected. */
+/* The status block, when it renders in the SHELL rather than the note.
+
+   `.ar-status` is a document component - it carries the note's own
+   warnings - so it is declared in the document rules, in document
+   tokens. But the shell renders it too: the gate's "Refused" and "Slow
+   down" messages and the workspace's failure panel are all this
+   component, sitting on the cold marble ground wearing the note's warm
+   cream-world neutrals.
+
+   Only the NEUTRALS are remapped. The severity hues stay exactly as
+   they are: negative, caution and positive are semantic, they mean the
+   same thing on both surfaces, and they were measured for contrast on
+   both (the error tone computes about 7.9:1 on marble). Remapping those
+   would be inventing a second vocabulary for one meaning.
+
+   The `:not()` chain matters: the severity classes set the border
+   colour themselves, and a blanket override here would win on source
+   order and erase the one thing the border is for. */
+[data-testid="stMarkdown"] .ar-status { color: var(--shell-soft); }
+[data-testid="stMarkdown"] .ar-status:not(.ok):not(.warn):not(.bad) {
+  border-left-color: var(--shell-line-2); }
+
 /* Shell tokens, not document ones. The contrast was never the problem
    here - cream on near-black is fine - but this is the shell, and it
    was painting a control in --paper and --ink, which are the note's
@@ -1511,7 +1570,14 @@ section:focus-visible, div[class*="block-container"]:focus-visible {
    silent invisible stop covering the whole page. Negative offset keeps
    the ring inside the viewport. */
 section.stMain:focus-visible, [data-testid="stMain"]:focus-visible {
-  outline: 2px solid var(--accent) !important; outline-offset: -2px; }
+  /* --shell-focus, not --accent. This was the one control in the shell
+     painting its ring in the DOCUMENT's slate (#1d5a86) while every
+     other control - buttons, fields, selects, row links, the shell nav,
+     the bypass link - used #2563eb. Not a contrast failure: the slate
+     measures 6.87:1 on the marble ground, well past the 3:1 SC 1.4.11
+     asks. It is a consistency failure, and a second focus hue that
+     appears exactly once is a hue a reader cannot learn. */
+  outline: 2px solid var(--shell-focus) !important; outline-offset: -2px; }
 
 [data-testid="stExpander"] { background: var(--surface);
   border: 1px solid var(--rule); border-radius: 0; box-shadow: none; }

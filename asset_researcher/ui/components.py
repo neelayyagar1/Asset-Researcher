@@ -1042,10 +1042,22 @@ def steps(items) -> str:
     and no instructions for using it, so a first-time reader learned
     what it promised and not what to do. Instructions are a numbered
     list because that is what instructions are.
+
+    An `ol`, because the sentence above is only true if the markup says
+    it. This emitted four sibling `div`s and got its numbers from a CSS
+    `counter()` on a `:before` - so the order existed in the paint and
+    nowhere else. Generated content is announced by some screen reader
+    and browser pairs and not others, which made the sequence at best
+    unreliable and at worst four unrelated paragraphs. The ordering is
+    the content here: step three does not mean anything before step two.
+
+    `role="list"` is not redundant. Safari drops the list role from any
+    `ol` whose `list-style` is `none`, which this one's is, and the
+    visible numbers come from the counter rather than from the marker.
     """
-    rows = "".join(f'<div class="ar-step"><div class="t">{body}</div></div>'
+    rows = "".join(f'<li class="ar-step"><div class="t">{body}</div></li>'
                    for body in items)
-    return _one_line(f'<div class="ar-steps">{rows}</div>')
+    return _one_line(f'<ol class="ar-steps" role="list">{rows}</ol>')
 
 
 def report_rows(rows, token: str = "", scope: str = "") -> str:
@@ -1075,11 +1087,31 @@ def report_rows(rows, token: str = "", scope: str = "") -> str:
     # Citation coverage especially: it is this product's central claim,
     # and showing it per row on the first screen is the claim made
     # where a reader meets it rather than four clicks in.
+    # `thead`, `tbody` and `scope="col"`, none of which were here.
+    #
+    # The header was a bare `tr` of `th` concatenated straight into the
+    # table, so the parser dropped it into the same implied `tbody` as
+    # the data rows and header association was left to the browser's
+    # table algorithm instead of being declared. In a screen reader's
+    # table-navigation mode that lets the header row read as a data row,
+    # and the column announcement on each cell becomes unreliable - which
+    # on this table means Value and Cited get read without the label that
+    # gives them meaning, on the screen that makes the product's central
+    # claim.
+    #
+    # The caption names the table. The heading above it is a sibling in
+    # the document, not a name the table itself carries.
     header = (
-        "<tr><th>Ticker</th><th>Company</th>"
-        '<th class="num">Price</th><th>Headline metric</th>'
-        '<th class="num">Value</th><th class="num">Filed</th>'
-        '<th class="num">Cited</th></tr>'
+        '<caption class="ar-sr">Reports, seven columns: ticker, company, '
+        "price, headline metric, value, filing date and citation "
+        "coverage. Each row opens its report.</caption>"
+        '<thead><tr><th scope="col">Ticker</th>'
+        '<th scope="col">Company</th>'
+        '<th scope="col" class="num">Price</th>'
+        '<th scope="col">Headline metric</th>'
+        '<th scope="col" class="num">Value</th>'
+        '<th scope="col" class="num">Filed</th>'
+        '<th scope="col" class="num">Cited</th></tr></thead>'
     )
     body = []
     for r in rows:
@@ -1160,7 +1192,8 @@ def report_rows(rows, token: str = "", scope: str = "") -> str:
             f'<td class="num dim">{link}{cited}</td></tr>'
         )
     return _one_line(
-        f'<table class="ar-list">{header}{"".join(body)}</table>'
+        f'<table class="ar-list">{header}'
+        f'<tbody>{"".join(body)}</tbody></table>'
     )
 
 

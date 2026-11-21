@@ -208,9 +208,13 @@ def test_the_index_carries_the_columns_the_notes_support():
 
 
 def test_each_row_has_a_cell_for_every_header():
+    """Counted with a pattern rather than `count("<th")`, which also
+    matched the `<thead>` the header row now sits inside."""
+    import re
+
     html = ui.report_rows(WIDE, token="t")
     head, _, rest = html.partition("</tr>")
-    assert head.count("<th") == rest.count("<td")
+    assert len(re.findall(r"<th[ >]", head)) == len(re.findall(r"<td[ >]", rest))
 
 
 def test_a_figure_the_note_does_not_carry_is_left_blank():
@@ -446,3 +450,39 @@ def test_the_scope_reaches_the_url_as_soon_as_a_report_is_saved():
         "a successful save does not put the scope in the URL, so the "
         "first report is orphaned by a reload"
     )
+
+
+def test_the_index_declares_its_header_row_as_a_header():
+    """SC 1.3.1. The header was a bare `tr` of `th` concatenated straight
+    into the table, with no `thead`, no `tbody` and no `scope`.
+
+    The parser then drops that row into the same implied `tbody` as the
+    data rows, so header association is left to the browser's table
+    algorithm rather than declared. In table-navigation mode a screen
+    reader can read the header row as a data row, and the column
+    announcement on each cell becomes unreliable - which on this table
+    means Value and Cited are read without the label that gives them
+    meaning, on the screen that makes the product's central claim.
+    """
+    from asset_researcher.ui import components as ui
+
+    html = ui.report_rows([
+        {"ticker": "ADP", "company": "Automatic Data Processing Inc.",
+         "slug": "adp"},
+    ])
+    assert "<thead>" in html and "</thead>" in html
+    assert "<tbody>" in html and "</tbody>" in html
+    assert html.count('scope="col"') == 7, (
+        "every column header should declare its scope"
+    )
+    # The header must be inside thead, not loose in the table.
+    head = html[html.index("<thead>"):html.index("</thead>")]
+    assert "Ticker" in head and "Cited" in head
+
+
+def test_the_index_names_itself_for_a_screen_reader():
+    """The heading above the table is a sibling, not the table's name."""
+    from asset_researcher.ui import components as ui
+
+    html = ui.report_rows([{"ticker": "ADP", "company": "ADP", "slug": "adp"}])
+    assert "<caption" in html

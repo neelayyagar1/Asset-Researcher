@@ -1332,7 +1332,7 @@ if st.session_state["view"] == "home":
     _skip_link("ar-home", "Skip to start")
     write(ui.topbar("reports"))
     write(ui.home())
-    write('<span id="ar-home" tabindex="-1"></span>')
+    write('<span id="ar-home" tabindex="-1" role="region" aria-label="Start"></span>')
 
     notes = _documents()
     has_samples = bool(notes)
@@ -1417,7 +1417,6 @@ if st.session_state["view"] == "samples":
     # here would break any later call to samples.load in this block.
     notes = _documents()
     write(ui.topbar("samples"))
-    write('<span id="ar-samples" tabindex="-1"></span>')
 
     # Before any control. This view is addressable by URL, so a bookmark,
     # a pasted link or the browser's Back reaches it whether or not the
@@ -1427,6 +1426,13 @@ if st.session_state["view"] == "samples":
     # expensive single thing that can happen on a page a reader is
     # judging.
     if not notes:
+        # The empty state is this screen's content, so the bypass link
+        # has to land on it here too. Moving the single target down to
+        # the iframe left this branch with a link pointing at an id that
+        # was never written - caught by the suite, which checks the
+        # target exists on the screen rather than that the markup
+        # contains the word.
+        write('<span id="ar-samples" tabindex="-1" role="region" aria-label="The report"></span>')
         write(ui.samples_empty())
         if st.session_state.get("samples_problem"):
             write(ui.status("warning", "Samples",
@@ -1485,6 +1491,19 @@ if st.session_state["view"] == "samples":
     # own frame to its content, because the frame is same-origin and the
     # document inside it can reach `window.frameElement`.
     _nav_bridge()
+    # The bypass target belongs HERE, not under the topbar.
+    #
+    # It sat immediately after the bar, which put it before the note's
+    # title, the Back button, "Generate a new report" and the four
+    # export buttons. A keyboard user who took a link reading "Skip to
+    # the report" still had five controls to traverse before reaching
+    # one. The link did not bypass the block it is named after, which is
+    # the whole of SC 2.4.1, and it is the kind of defect that only
+    # exists for the people who need the link.
+    #
+    # Home and the workspace already place their targets after the
+    # content being skipped. This view was the one that was not updated.
+    write('<span id="ar-samples" tabindex="-1" role="region" aria-label="The report"></span>')
     components.html(framed(note.html), height=2000, scrolling=True)
     st.stop()
 
@@ -1518,7 +1537,7 @@ if st.session_state["view"] != "report" or report is None:
             st.rerun()
     # Below the heading and below any failure message, so "Skip to the
     # form" lands at the form rather than above the page.
-    write('<span id="ar-form" tabindex="-1"></span>')
+    write('<span id="ar-form" tabindex="-1" role="region" aria-label="Report form"></span>')
     ticker, mandate_text, urls_text, run = _controls("inline")
     if run and ticker:
         st.session_state["pending"] = (ticker, mandate_text, urls_text)
