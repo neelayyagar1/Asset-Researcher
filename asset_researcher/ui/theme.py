@@ -552,7 +552,16 @@ table.ar-table tbody tr.subject td.nm {
 @media (prefers-reduced-motion: no-preference) {
   .ar-masthead { animation: ar-settle 560ms var(--ease) both; }
   .ar-stats { animation: ar-settle 560ms var(--ease) 120ms both; }
-  .ar-progress i { animation: ar-fill 75s cubic-bezier(.2,.7,.3,1) both; }
+  /* Two phases. The first is the time estimate, and stops short of
+     full because the run is not measured. The second creeps for
+     another four minutes, so a slow run - a cold EDGAR cache, a
+     retried provider call - does not sit at a frozen near-full bar,
+     which is the hung-process impression the bar exists to prevent,
+     arriving later. It never reaches the end, because it does not
+     know where the end is. */
+  .ar-progress i {
+    animation: ar-fill 75s cubic-bezier(.2,.7,.3,1) both,
+      ar-creep 240s linear 75s both; }
 
   /* A press with no acknowledgement, followed by a rerun most of a second
      later, reads as a button that did not work. These are the product's
@@ -582,7 +591,8 @@ table.ar-table tbody tr.subject td.nm {
   .ar-prose a { padding: 0 0.25em;
     transition: background-color 120ms var(--ease); }
 }
-@keyframes ar-fill { from { transform: scaleX(0) } to { transform: scaleX(.97) } }
+@keyframes ar-fill { from { transform: scaleX(0) } to { transform: scaleX(.9) } }
+@keyframes ar-creep { from { transform: scaleX(.9) } to { transform: scaleX(.99) } }
 @keyframes ar-fill-full { from { transform: scaleX(0) } to { transform: scaleX(1) } }
 @keyframes ar-settle {
   from { opacity: 0; transform: translateY(5px); }

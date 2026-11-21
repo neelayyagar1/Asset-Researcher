@@ -77,3 +77,12 @@ def test_the_valuation_range_labels_a_negative_case_in_parentheses():
 
     assert c._case_label(-9.56) == "($10)"
     assert c._case_label(9.56) == "$10"
+
+
+def test_the_spoken_chart_description_uses_parentheses_too():
+    """The visible tick labels were fixed and this was missed, and it
+    is the text a screen reader actually reads."""
+    from asset_researcher.ui import charts as c
+
+    assert c._case_money(-9.56) == "($9.56)"
+    assert c._case_money(3.83) == "$3.83"

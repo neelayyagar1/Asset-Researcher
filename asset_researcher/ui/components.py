@@ -514,16 +514,21 @@ def table(
     # statement live. The comparables table keeps `region`, being a
     # genuine landmark; the rest take `group`, so the export does not
     # grow ten landmarks.
+    # Focusability is set from MEASUREMENT, by the script that already
+    # runs on load and resize, not from markup here. It was
+    # unconditional while the overflow is not: `.ar-table-wrap`
+    # scrolls only below 900px, plus the comparables table. So at
+    # desktop width ten of eleven wrappers were tab stops that
+    # scrolled nothing, held nothing operable, and announced
+    # themselves as "Table, scrollable when narrow" - the dozen empty
+    # stops the comment here says they exist to avoid.
     if scrolls:
         wrap = (
             '<div class="ar-table-wrap" tabindex="0" role="region"'
             ' aria-label="Comparable companies, scrollable">'
         )
     else:
-        wrap = (
-            '<div class="ar-table-wrap" tabindex="0" role="group"'
-            ' aria-label="Table, scrollable when narrow">'
-        )
+        wrap = '<div class="ar-table-wrap">'
     return _one_line(
         f'{wrap}<table class="ar-table{variant}">'
         f"<thead><tr>{head}</tr></thead>"

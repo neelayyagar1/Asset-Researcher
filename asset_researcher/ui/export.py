@@ -86,7 +86,27 @@ _JUMP_SCRIPT = """<script>
   // Guarded twice. A downloaded note has no frameElement, and reaching
   // for one across origins throws - a note that raises on load shows a
   // reader nothing at all.
-  function fitFrame() {
+  function arTableStops() {
+  /* A wrapper is a tab stop only where it actually scrolls.
+     Announcing "scrollable when narrow" on a wrapper that cannot
+     scroll describes a capability it does not have, and ten of
+     eleven were in that state above 900px. */
+  var wraps = document.querySelectorAll('.ar-table-wrap');
+  for (var i = 0; i < wraps.length; i++) {
+    var w = wraps[i];
+    if (w.getAttribute('role') === 'region') continue;
+    if (w.scrollWidth > w.clientWidth + 1) {
+      w.setAttribute('tabindex', '0');
+      w.setAttribute('role', 'group');
+      w.setAttribute('aria-label', 'Table, scrollable');
+    } else {
+      w.removeAttribute('tabindex');
+      w.removeAttribute('role');
+      w.removeAttribute('aria-label');
+    }
+  }
+}
+function fitFrame() {
     try {
       var frame = window.frameElement;
       if (!frame) return;
@@ -101,7 +121,7 @@ _JUMP_SCRIPT = """<script>
       // behaviour rather than a broken one.
     }
   }
-  if (document.readyState === 'complete') fitFrame();
+  if (document.readyState === 'complete') fitFrame();arTableStops();
   else window.addEventListener('load', fitFrame);
   window.addEventListener('resize', fitFrame);
 })();

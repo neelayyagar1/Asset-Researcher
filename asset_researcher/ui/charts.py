@@ -182,6 +182,19 @@ def _floor_log10(value: float) -> int:
     return exponent
 
 
+def _case_money(value: float) -> str:
+    """A per-share figure for the chart's spoken description.
+
+    The visible tick labels were put into parentheses for negatives;
+    this was missed, and it is the text a screen reader actually
+    reads. The Lumen note described its own range as "Bear $-9.56;
+    Base $-5.09", which is spoken "dollar minus nine point five six"
+    beside statement rows set as "(9.56)".
+    """
+    rendered = f"${abs(value):,.2f}"
+    return f"({rendered})" if value < 0 else rendered
+
+
 def _case_label(value: float) -> str:
     """A case tick on the valuation range, negatives in parentheses."""
     rendered = f"${abs(value):,.0f}"
@@ -660,9 +673,9 @@ def valuation_range(
         label="Valuation range against the traded price",
         describe=_describe(
             "Each modelled case, and the traded price as a rule",
-            [(c.name, f"${c.value_per_share:,.2f}") for c in cases]
+            [(c.name, _case_money(c.value_per_share)) for c in cases]
             + (
-                [("Traded price", f"${market_price:,.2f}")]
+                [("Traded price", _case_money(market_price))]
                 if market_price
                 else []
             ),
@@ -823,6 +836,35 @@ def dcf_bridge(
     )
 
 
+def fcf_points(series: MetricSeries):
+    """The free cash flow series, from the one place it is defined.
+
+    This chart used to compute its own, and did it wrongly:
+
+        values = [p.value - capex.get(p.frame_label, 0.0) for p in cash]
+
+    A year whose capital expenditure is not tagged got a default of
+    zero, so the chart plotted OPERATING cash flow under a caption
+    reading "Operating cash flow less capital expenditure". On the
+    shipped ADP note every year was affected - the chart read FY2026
+    $5.4B against the Financials row's 5,245, and $5,444m is exactly
+    the operating cash flow recovered from that note's own ratios.
+
+    That is the defect `valuation.free_cash_flow_history` documents
+    having fixed: "Defaulting it to zero turned free cash flow into
+    operating cash flow for that year and said nothing." It survived
+    here because the fix was applied to one copy of a calculation
+    that existed in three places - this, the statements table, and
+    the valuation - and a document is not allowed to print two series
+    under one definition.
+
+    Now there is one implementation and this calls it.
+    """
+    from asset_researcher.quant.valuation import free_cash_flow_history
+
+    return free_cash_flow_history(series)
+
+
 def free_cash_flow_history(
     series: MetricSeries, width: float = 548, height: float = 232
 ) -> str | None:
@@ -832,16 +874,11 @@ def free_cash_flow_history(
     and a reader comparing a modelled target against a traded price needs to
     see whether the cash flow behind it has actually grown.
     """
-    cash = _points(series, "operating_cash_flow")
-    if len(cash) < 2:
+    points = fcf_points(series)
+    if len(points) < 2:
         return None
-    capex = {
-        p.frame_label: abs(p.value)
-        for p in _points(series, "capital_expenditures")
-    }
-
-    labels = [p.frame_label for p in cash]
-    values = [p.value - capex.get(p.frame_label, 0.0) for p in cash]
+    labels = [label for _, label, _ in points]
+    values = [value for _, _, value in points]
 
     pad_l, pad_r, pad_t, pad_b = 52.0, 10.0, 42.0, 26.0
     plot_w = width - pad_l - pad_r
@@ -930,6 +967,16 @@ def free_cash_flow_history(
         label="Free cash flow by filed year",
         describe=_describe(
             "Operating cash flow less capital expenditure, by filed year",
-            [(p.frame_label, _money_precise(p.value)) for p in cash],
+            # The POINTS, not the raw operating cash flow. This read
+            # `p.value` off the operating-cash-flow series while the
+            # bars beside it were drawn from the capex-subtracted
+            # figures, so the chart's spoken description - and its
+            # caption, which is what anyone reading the file sees -
+            # printed operating cash flow under a label reading
+            # "less capital expenditure". On the shipped ADP note it
+            # said FY2026 $5.4B where the Financials row read 5,245,
+            # and $5,444m is exactly that note's operating cash flow
+            # recovered from its own ratios.
+            [(label, _money_precise(value)) for _, label, value in points],
         ),
     )
