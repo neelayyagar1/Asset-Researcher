@@ -19,6 +19,8 @@ Markdown the app has already rendered, and which is documented as such.
 
 from __future__ import annotations
 
+from urllib.parse import urlencode
+
 import re
 from dataclasses import dataclass
 from html import escape
@@ -869,10 +871,11 @@ def samples_intro(count: int) -> str:
     on a screen that had crashed below the fold.
     """
     return _one_line(
-        '<div class="ar-head"><h1>Sample notes</h1>'
-        f"<p>{escape_text(plural(count, 'note'))}, built from live SEC "
-        "filings by the same pipeline the tool runs. Nothing is a mock-up "
-        "and nothing is regenerated when you open it, so reading one is "
+        '<div class="ar-head"><h1>Reports</h1>'
+        f"<p>{escape_text(plural(count, 'report'))}, built from live SEC "
+        "filings by the same pipeline the tool runs &mdash; the shipped "
+        "samples and anything you have generated. Nothing is a mock-up "
+        "and nothing is rebuilt when you open it, so reading one is "
         "instant and costs nothing.</p></div>"
     )
 
@@ -941,7 +944,12 @@ def topbar(active: str = "reports") -> str:
     radius and no inactive sibling to invite a click. Navigation lives
     in the page, in real buttons.
     """
-    name = {"reports": "Reports", "samples": "Samples",
+    # Four screens, four names. "reports" was the index and "samples"
+    # the reading screen, and renaming the second to Reports - which is
+    # what it now holds, the shipped samples and the reader's own -
+    # gave both the same label, so the one piece of chrome that answers
+    # "where am I" answered the same thing on two different screens.
+    name = {"reports": "Home", "samples": "Reports",
             "tool": "New report", "report": "Report"}.get(
                 active, active.title())
     return _one_line(
@@ -1019,7 +1027,7 @@ def steps(items) -> str:
     return _one_line(f'<div class="ar-steps">{rows}</div>')
 
 
-def report_rows(rows) -> str:
+def report_rows(rows, token: str = "") -> str:
     """The notes that exist, as a table.
 
     This is the product's own output on the first screen. The previous
@@ -1050,11 +1058,30 @@ def report_rows(rows) -> str:
         # column headed "Value".
         metric = _text(r["metric"]) if r["metric"] else "&mdash;"
         value = _text(r["value"]) if r["value"] else "&mdash;"
+        # The anchor is repeated into every cell rather than wrapping
+        # the row. A link cannot wrap table cells - `<a>` is not valid
+        # between `<tr>` and `<td>`, and a browser hoists it out of the
+        # table entirely - so a row-shaped hit target is made of four
+        # cell-filling links that go to the same place. The stylesheet
+        # makes each fill its cell, so there is no dead strip between
+        # them for a reader to click into nothing.
+        #
+        # Every parameter is quoted. The token is a signed value rather
+        # than a word, and it is being written into a query string by
+        # hand: an unescaped one ends the parameter at its first `&`
+        # and sends the reader to the gate.
+        query = {"view": "samples", "s": r["slug"]}
+        # A deployment with no gate has no token, and `k=` empty in
+        # every link is noise in the address bar that means nothing.
+        if token:
+            query["k"] = token
+        href = _text("?" + urlencode(query))
+        link = f'<a href="{href}" class="ar-row-link">'
         body.append(
-            f'<tr><td class="tk">{_text(r["ticker"])}</td>'
-            f'<td class="co">{_text(r["company"])}</td>'
-            f'<td class="co">{metric}</td>'
-            f'<td class="num">{value}</td></tr>'
+            f'<tr><td class="tk">{link}{_text(r["ticker"])}</a></td>'
+            f'<td class="co">{link}{_text(r["company"])}</a></td>'
+            f'<td class="co">{link}{metric}</a></td>'
+            f'<td class="num">{link}{value}</a></td></tr>'
         )
     return _one_line(
         f'<table class="ar-list">{header}{"".join(body)}</table>'

@@ -50,6 +50,7 @@ from asset_researcher.sources.edgar.client import EdgarClient
 from asset_researcher.sources.finnhub import FinnhubClient
 from asset_researcher.sources.web import UrlRejected, fetch_user_source
 from asset_researcher.ui import document, markdown, theme
+from asset_researcher import reports_store
 from asset_researcher.ui import components as ui
 from asset_researcher.ui.export import report_to_html, report_to_markdown
 from asset_researcher.ui.headline import headline_stats
@@ -335,6 +336,43 @@ def _headline_of(html: str) -> tuple[str, str]:
         return "", ""
     label, value = (re.sub(r"<[^>]+>", "", g).strip() for g in match.groups())
     return label, value
+
+
+class _Doc:
+    """One readable document, whatever it came from.
+
+    The index used to list only the sealed samples, and a report a
+    visitor generated appeared nowhere: it existed for the life of a
+    websocket and then did not. Samples and generated reports are the
+    same object to a reader - a rendered note with a title - so they
+    are the same object here, and the screen that lists them does not
+    have to know which is which.
+    """
+
+    __slots__ = ("slug", "title", "html")
+
+    def __init__(self, slug: str, title: str, html: str) -> None:
+        self.slug = slug
+        self.title = title
+        self.html = html
+
+
+def _documents() -> list:
+    """What there is to read: this visitor's reports, then the samples.
+
+    Theirs first, because a report someone just generated is the thing
+    they came back for, and the samples do not move.
+    """
+    mine = [
+        _Doc(s.slug, s.title, s.html) for s in reports_store.listing()
+    ]
+    shipped = [_Doc(s.slug, s.title, s.html) for s in _samples()]
+    # A generated report's slug carries a timestamp, so it cannot
+    # collide with a sample's - but the index is addressable by slug
+    # and a collision would make one document unreachable rather than
+    # merely duplicated, which is worth one line to rule out.
+    seen = {d.slug for d in mine}
+    return mine + [d for d in shipped if d.slug not in seen]
 
 
 @st.cache_resource(show_spinner=False)
@@ -865,6 +903,23 @@ def _run_pending() -> None:
     st.session_state.pop("failure", None)
     if fresh is not None:
         st.session_state["report"] = fresh
+        # Written down before it is shown. The index on the first
+        # screen is a table of links now, and a link is a page load:
+        # without this, the first row a reader clicked would end the
+        # session holding the report they had just paid for. A failure
+        # to save is not a reason to lose the report that is in hand,
+        # so it is logged and the screen carries on.
+        try:
+            saved = reports_store.save(
+                fresh.ticker,
+                f"{fresh.bundle.company_name} ({fresh.ticker})",
+                report_to_html(fresh),
+            )
+            st.session_state["report_slug"] = saved.slug
+        except Exception:
+            logging.getLogger("asset_researcher").exception(
+                "could not save the rendered report for %s", fresh.ticker
+            )
         # A finished run is its own screen. Without this the report was
         # not a view at all: it rendered whenever one existed, whatever
         # the view said, which is what made Home a dead button.
@@ -879,7 +934,7 @@ if st.session_state["view"] == "home":
     write(ui.topbar("reports"))
     write(ui.home())
 
-    notes = _samples()
+    notes = _documents()
     has_samples = bool(notes)
 
     # A real two-column layout, which is what host columns are for. The
@@ -900,11 +955,13 @@ if st.session_state["view"] == "home":
                     "company": name.strip() or label,
                     "metric": metric,
                     "value": value,
+                    "slug": note.slug,
                 }
             )
-        write(ui.head("Sample reports", "Built from live filings. Open one "
-                      "to see what the tool produces."))
-        write(ui.flush_card(ui.report_rows(rows)))
+        write(ui.head("Reports", "Built from live filings. Open one to see "
+                      "what the tool produces; reports you generate join "
+                      "the list."))
+        write(ui.flush_card(ui.report_rows(rows, token=_unlock_token())))
 
     with rail:
         write(ui.head("Get started"))
@@ -918,8 +975,11 @@ if st.session_state["view"] == "home":
         if st.session_state.get("report") is not None:
             if st.button("Return to report", key="back_to_report"):
                 go("report")
-        if has_samples and st.button("Read a sample", key="to_samples"):
-            go("samples")
+        # "Read a sample" is gone. Every row in the table beside this
+        # one is now a link to the report it names, so the button was a
+        # second, worse route to a place the reader can already see and
+        # point at - and one more control on a screen the owner said
+        # carried too many.
         if st.session_state.get("samples_problem"):
             write(ui.status("warning", "Samples",
                             st.session_state["samples_problem"]))
@@ -933,7 +993,7 @@ if st.session_state["view"] == "samples":
     write('<span id="ar-samples" tabindex="-1"></span>')
     # Not `samples`: that is the module, imported above, and rebinding it
     # here would break any later call to samples.load in this block.
-    notes = _samples()
+    notes = _documents()
     write(ui.topbar("samples"))
 
     # Before any control. This view is addressable by URL, so a bookmark,
@@ -962,8 +1022,25 @@ if st.session_state["view"] == "samples":
     if back[1].button(ui.START_LABEL, key="samples_build"):
         go("tool")
 
+    # A row on the index links here with the document it wants in `s`,
+    # which is how a clickable row reaches a specific report. The
+    # parameter is hostile input: it is matched against the documents
+    # that exist rather than used to find one, so an unknown or hand-
+    # edited value falls back to the first rather than raising.
+    #
+    # Written into the widget's state rather than passed as an index,
+    # because the radio owns its selection after the first render and
+    # an index argument would be ignored from then on - the same
+    # Streamlit rule that left the strategy box holding a preset the
+    # reader had deselected.
+    asked = st.query_params.get("s") or ""
+    if asked and any(d.slug == asked for d in notes):
+        if st.session_state.get("sample_asked") != asked:
+            st.session_state["sample_asked"] = asked
+            st.session_state["sample_pick"] = asked
+
     chosen = st.radio(
-        "Sample note",
+        "Report",
         [s.slug for s in notes],
         format_func=lambda slug: _sample_label(
             next(s.title for s in notes if s.slug == slug)
@@ -971,7 +1048,7 @@ if st.session_state["view"] == "samples":
         horizontal=True,
         key="sample_pick",
     )
-    note = next(s for s in notes if s.slug == chosen)
+    note = next((s for s in notes if s.slug == chosen), notes[0])
     st.download_button(
         "Download this note",
         data=note.html,

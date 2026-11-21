@@ -833,6 +833,26 @@ table.ar-list td {
   padding: 11px 16px; border-bottom: 1px solid var(--shell-line);
   font-size: 13px; color: var(--shell-ink); }
 table.ar-list tr:last-child td { border-bottom: 0; }
+
+/* A row is a link made of four cell-filling links. Each anchor fills
+   its own cell's padding box, so the whole row is a hit target with no
+   dead strip between cells, and the padding moves from the cell to the
+   anchor to make that true. Colour and underline are inherited from
+   the cell so the table looks like a table rather than like four
+   columns of blue. The hover and focus states are on the row, because
+   that is the object the reader is pointing at - and the focus ring is
+   drawn with an outline offset inward, since an outline on a table
+   cell is otherwise clipped by the card's own edge. */
+table.ar-list td { padding: 0; }
+a.ar-row-link {
+  display: block; padding: 11px 16px; color: inherit;
+  text-decoration: none; font: inherit; letter-spacing: inherit; }
+table.ar-list td.num a.ar-row-link { text-align: right; }
+table.ar-list tr:hover td { background: var(--shell-sink); }
+table.ar-list tr:has(a.ar-row-link:focus-visible) td {
+  background: var(--shell-sink); }
+a.ar-row-link:focus-visible {
+  outline: 2px solid var(--shell-focus); outline-offset: -2px; }
 table.ar-list td.co { color: var(--shell-soft); }
 table.ar-list td.tk { font-weight: 600; letter-spacing: -.01em; }
 table.ar-list th.num, table.ar-list td.num {
@@ -1223,7 +1243,11 @@ table.ar-list th.num { font-family: var(--sans); letter-spacing: .03em; }
      there. */
   table.ar-list th:nth-child(3),
   table.ar-list td:nth-child(3) { display: none; }
-  table.ar-list th, table.ar-list td { padding: 9px 10px; }
+  /* The padding moved onto the row link, so the phone rule has to
+     follow it there or the rows keep their desktop height. */
+  table.ar-list th { padding: 9px 10px; }
+  table.ar-list td { padding: 0; }
+  a.ar-row-link { padding: 9px 10px; }
 }
 
 /* The dialog that carries the form once a report is on screen. */
