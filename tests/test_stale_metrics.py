@@ -144,3 +144,31 @@ def test_an_instant_a_day_off_the_period_end_is_not_counted_as_a_period():
         f"metrics' instants fell a day earlier: "
         f"{[i.message for i in result.issues]}"
     )
+
+
+def test_a_stale_debt_tag_refuses_the_equity_bridge():
+    """ADP's shape, which the first version of this guard missed.
+
+    The model discounts cash flow to an enterprise value and bridges to
+    equity across net debt. Operating cash flow and capital expenditure
+    were guarded; total debt was not - so ADP, whose debt concept stops
+    at FY2011 at $37m against FY2026 cash of $4.23bn, produced a bridge
+    that added about $4.4bn of net cash the company does not have, and
+    the note led with a per-share target built on it.
+
+    The figure a reader acts on is the per-share target, and it is the
+    bridge that produces it, so a stale bridge refuses the model.
+    """
+    from asset_researcher.quant.valuation import derive_dcf_inputs
+
+    s = _current()
+    assert derive_dcf_inputs(s, shares_outstanding=1e9) is not None
+
+    s.series["total_debt"] = [
+        MetricPeriod("2010-12-31", "FY2010", 38e6, "x"),
+        MetricPeriod("2011-12-31", "FY2011", 37e6, "x"),
+    ]
+    assert derive_dcf_inputs(s, shares_outstanding=1e9) is None, (
+        "a debt series that stopped in FY2011 must not produce an equity "
+        "value for a filer reporting through FY2025"
+    )

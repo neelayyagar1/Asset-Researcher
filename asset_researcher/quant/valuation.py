@@ -420,9 +420,21 @@ def derive_dcf_inputs(
     # Refusing here reuses the established path: the caller prints NM and
     # the note says it declined, which is what a REIT or a bank already
     # gets, instead of a target built on a decade-old cash flow.
-    if not _is_current(series, "operating_cash_flow") or not _is_current(
-        series, "capital_expenditures"
-    ):
+    #
+    # Total debt is in this list, and was missed the first time. The
+    # model discounts cash flow to an ENTERPRISE value and bridges to
+    # equity across net debt, so a stale debt tag corrupts the one
+    # number a reader acts on. ADP's debt concept stops at FY2011 at
+    # $37m against FY2026 cash of $4.23bn: the bridge added about
+    # $4.4bn of net cash the company does not have, and the note led
+    # with a per-share target built on it.
+    stale = [
+        metric
+        for metric in ("operating_cash_flow", "capital_expenditures",
+                       "total_debt")
+        if series.series.get(metric) and not _is_current(series, metric)
+    ]
+    if stale:
         return None
 
     # A bank or a REIT does not get one of these, at all.

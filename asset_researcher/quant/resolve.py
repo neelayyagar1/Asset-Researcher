@@ -86,10 +86,18 @@ def _call_llm(
     }
 
 
+# Bumped when what the resolver is SHOWN changes, not only when the
+# metric list does. Concepts are now offered with the last year each was
+# reported; a mapping cached from the bare-name era was chosen without
+# that signal and would otherwise be served forever.
+_RESOLVER_INPUT_VERSION = "2-dated-concepts"
+
+
 def _taxonomy_fingerprint(sector: str) -> str:
-    """A short, stable digest of the metric names requested for a sector."""
+    """A short, stable digest of what this resolution depends on."""
     names = sorted(li.name for li in line_items_for_sector(sector))
-    return hashlib.sha256("|".join(names).encode("utf-8")).hexdigest()[:12]
+    seed = "|".join(names) + "|" + _RESOLVER_INPUT_VERSION
+    return hashlib.sha256(seed.encode("utf-8")).hexdigest()[:12]
 
 
 def resolve_concepts(
@@ -129,7 +137,10 @@ def resolve_concepts(
 
     if mapping is None:
         mapping = _call_llm(
-            provider, settings, sector, facts.available_concept_names()
+            # Annotated with the last year each tag was reported, so the
+            # resolver can tell a live concept from one the filer
+            # abandoned. It had no such signal and chose dead tags.
+            provider, settings, sector, facts.concept_listing()
         )
         # Only a non-empty result is cached, and the cache never expires. One
         # call that came back with no mappings would otherwise write an empty

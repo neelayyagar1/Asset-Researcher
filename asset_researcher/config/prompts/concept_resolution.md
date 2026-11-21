@@ -36,5 +36,19 @@ Rules:
 Canonical metrics to map:
 {canonical_metrics}
 
-Available XBRL concept names for this filer:
+Available XBRL concepts for this filer. Each carries the last year the
+filer actually reported it:
 {available_concepts}
+
+PREFER A CONCEPT THE FILER STILL REPORTS. A tag whose last year is well
+behind the others is one this company stopped using, and a mapping to it
+produces a series that looks complete and stopped years ago - which is
+worse than no mapping, because nothing downstream can tell the
+difference. Two real cases: `LongTermDebtNoncurrent` was chosen for a
+filer's total debt and last appeared in 2011 at $37m against real debt
+near $3bn, and a capital-expenditure tag was chosen that stopped in
+2013, so a discounted cash flow was built from decade-old cash flows.
+
+Where several concepts fit, choose the one reported through the most
+recent year. Where the only fit is clearly abandoned, return an empty
+list for that metric rather than mapping to it.
