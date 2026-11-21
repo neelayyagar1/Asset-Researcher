@@ -411,7 +411,13 @@ def _store_stamp() -> float:
         return 0.0
 
 
-@st.cache_resource(show_spinner=False)
+# Bounded. `cache_resource` does not evict by default, and this holds
+# the full HTML of every report in every scope it has been asked
+# about - a quarter of a megabyte each. One long-lived container
+# meeting many visitors would accumulate all of them for its whole
+# life. Thirty-two entries is far more than a demo needs and a ceiling
+# rather than a guess at the right number.
+@st.cache_resource(show_spinner=False, max_entries=32)
 def _saved_documents(scope: str, stamp: float):
     """This visitor's saved reports, re-read only when one is added.
 
