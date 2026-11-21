@@ -125,6 +125,30 @@ def test_the_bypass_link_focus_ring_is_visible_against_the_page():
 
 # --------------------------------------------------------------- dark mode
 
+def _without_comments(css: str) -> str:
+    """CSS with its comments removed.
+
+    The token blocks carry a great deal of explanatory comment, and
+    this module slices them by brace. A comment quoting a rule - say
+    `.ar-title { color: var(--ink) }` - puts a brace inside the block
+    and ends it early, so the slice silently loses every token after
+    that point and the tests report tokens as missing when they are
+    declared. Scanned rather than regexed, for the same reason the
+    stylesheet well-formedness test scans.
+    """
+    out = []
+    at = 0
+    while True:
+        opened = css.find("/*", at)
+        if opened < 0:
+            out.append(css[at:])
+            return "".join(out)
+        closed = css.find("*/", opened + 2)
+        assert closed >= 0, "unterminated comment in the stylesheet"
+        out.append(css[at:opened])
+        at = closed + 2
+
+
 def _scheme_block(scheme: str) -> str:
     """The token declarations for one colour scheme.
 
@@ -132,7 +156,7 @@ def _scheme_block(scheme: str) -> str:
     is the light value, so a dark palette checked with it would measure
     the light one and pass by accident.
     """
-    css = theme.stylesheet()
+    css = _without_comments(theme.stylesheet())
     if scheme == "light":
         # Not the first `:root` in the file: the document world
         # declares its own tokens before the shell does, and that block
@@ -293,4 +317,137 @@ def test_the_card_hairline_stays_a_hairline():
         tokens = _tokens(scheme)
         assert contrast(tokens["line-2"], tokens["bg"]) < 2.0, (
             f"{scheme}: the panel hairline has become a border"
+        )
+
+
+# ----------------------------------------- the document, inside the shell
+
+def _all_tokens(scheme: str) -> dict[str, str]:
+    """Every custom property in one scheme's block, shell and document.
+
+    `_tokens` reads only `--shell-*`, which is why nothing caught the
+    finding below: the report screen is the one place document markup
+    is written straight into the Streamlit page, so a document tone
+    lands on a shell ground, and no test paired the two.
+    """
+    return {
+        name: value
+        for name, value in re.findall(
+            r"--([a-z0-9-]+):\s*(#[0-9a-fA-F]{3,6})\s*;",
+            _scheme_block(scheme),
+        )
+    }
+
+
+def test_the_dark_scheme_answers_the_document_tones_too():
+    """The report screen writes `ui.masthead`, `ui.stat_strip` and each
+    section's HTML directly into the page - not into the iframe the
+    reading screen uses - so `.ar-title { color: var(--ink) }` is
+    painted on `.stApp`, which the dark scheme makes near-black. The
+    title, every paragraph and every headline figure on the longest
+    screen in the product would be near-black on near-black.
+    """
+    dark = _all_tokens("dark")
+    ground = dark["shell-bg"]
+    for name, floor in (("ink", AA_NORMAL), ("ink-soft", AA_NORMAL),
+                        ("ink-muted", AA_NORMAL)):
+        assert name in dark, f"--{name} is not answered in the dark scheme"
+        measured = contrast(dark[name], ground)
+        assert measured >= floor, (
+            f"dark --{name} {dark[name]} on the shell ground {ground} "
+            f"measures {measured:.2f}:1"
+        )
+
+
+def test_the_dark_document_surfaces_are_not_left_white():
+    """`[data-testid="stExpander"]` is painted `var(--surface)`, and
+    the run status block is an expander. Left at #ffffff it is a white
+    panel carrying `.ar-stage` in `--shell-ink`, which is near-white -
+    so for the whole ninety seconds the one line saying what the
+    system is doing is invisible."""
+    dark = _all_tokens("dark")
+    for name in ("paper", "surface"):
+        assert name in dark, f"--{name} is not answered in the dark scheme"
+        measured = contrast(dark["ink"], dark[name])
+        assert measured >= AA_NORMAL, (
+            f"dark --ink on --{name} measures {measured:.2f}:1"
+        )
+    # And the shell's own ink has to work there too, since shell rules
+    # paint text onto these surfaces.
+    assert contrast(dark["shell-ink"], dark["surface"]) >= AA_NORMAL
+
+
+def test_the_progress_track_is_darker_than_its_fill_in_dark():
+    """`--rule` is the light hairline. Left un-darkened the empty
+    track is the brightest thing in the status block and the fill
+    reads as the gap, so the bar appears to run backwards."""
+    dark = _all_tokens("dark")
+    assert "rule" in dark
+    track = _luminance(dark["rule"])
+    fill = _luminance(dark["accent"]) if "accent" in dark else None
+    assert fill is not None, "--accent is not answered in the dark scheme"
+    assert fill > track, (
+        "the progress fill is darker than its own track, so the bar "
+        "reads inverted"
+    )
+
+
+def test_the_documents_focus_ring_uses_a_token_the_document_sheet_has():
+    """An audit recommended pointing the global `:focus-visible` rule
+    at `--shell-focus`, for consistency with the shell's own ring.
+
+    That rule lives in _DOCUMENT_CSS, and `document_stylesheet()` -
+    what an exported note and the iframe'd note carry - is the font
+    import plus `_root()` plus _DOCUMENT_CSS. It has no `--shell-*`
+    in it. An undefined custom property makes the whole declaration
+    invalid, so the swap would have removed the focus outline from
+    every downloaded note: a worse accessibility outcome, in the
+    artifact that leaves the building, from a change made in the name
+    of accessibility.
+
+    The ring is fine as it stands - `--accent` measures 7.16:1 on the
+    light ground and 9.05:1 on the dark one, against a 3:1 floor.
+    """
+    doc = theme.document_stylesheet()
+    rings = re.findall(r":focus-visible[^{}]*\{[^}]*outline:[^;]*;", doc)
+    assert rings, "the document sheet declares no focus ring"
+    for ring in rings:
+        for name in re.findall(r"var\(--([a-z0-9-]+)\)", ring):
+            assert f"--{name}:" in doc, (
+                f"the document's focus ring reads --{name}, which the "
+                f"document stylesheet does not define, so the outline "
+                f"is dropped in every exported note"
+            )
+
+
+def _resolved(name: str, scheme: str) -> str:
+    """One token's value in one scheme, wherever it is declared.
+
+    The document tokens and the shell tokens live in two different
+    `:root` blocks - `_root()` and _APP_CSS - and the dark scheme
+    answers both from a third. A test that reads only one block
+    reports a token as missing when it is simply declared elsewhere,
+    which is how the first version of the test below failed.
+    """
+    if scheme == "dark":
+        dark = _all_tokens("dark")
+        if name in dark:
+            return dark[name]
+    css = _without_comments(theme.stylesheet())
+    shell = _all_tokens("light")
+    if name in shell:
+        return shell[name]
+    match = re.search(rf"--{name}:\s*(#[0-9a-fA-F]{{3,6}})\s*;", css)
+    assert match, f"--{name} is declared nowhere"
+    return match.group(1)
+
+
+def test_the_document_focus_ring_passes_on_both_grounds():
+    for scheme in ("light", "dark"):
+        ring = _resolved("accent", scheme)
+        ground = _resolved("shell-bg", scheme)
+        measured = contrast(ring, ground)
+        assert measured >= 3.0, (
+            f"{scheme}: the fallback focus ring {ring} measures "
+            f"{measured:.2f}:1 on {ground}"
         )

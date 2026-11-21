@@ -817,6 +817,45 @@ button[data-testid="stExpandSidebarButton"]:hover,
     --shell-chip: #1d212b;
     --shell-hover: #1d212b;
     --shell-hover-line: #3a3f52;
+
+    /* The DOCUMENT tokens, answered here and only here.
+    
+       The reading screen puts a note in an iframe, where it keeps its
+       own paper world and nothing out here reaches it. The REPORT
+       screen does not: it writes `ui.masthead`, `ui.stat_strip` and
+       every section's HTML straight into the Streamlit page. So on
+       the longest screen in the product, `.ar-title { color:
+       var(--ink) }` was painting #17150f on a near-black ground -
+       1.06:1 - with the prose at --ink-soft around 1.4:1, and only
+       the tables legible, because `table.ar-table` paints its own
+       white. A page of readable tables with invisible headings
+       between them.
+    
+       Also reached by this: `[data-testid="stExpander"]`, which is
+       what `st.status` renders as, was left at --surface #ffffff
+       while `.ar-stage` inside it is painted --shell-ink, near-white.
+       For the whole ninety seconds of a run, the one line telling a
+       dark-mode reader what the system was doing was white on white.
+       And `.ar-progress` drew its track in --rule, the light
+       hairline, so the empty track was brighter than the fill and the
+       bar read as running backwards.
+    
+       These live in _APP_CSS rather than in `_root()` deliberately.
+       `document_stylesheet()` - what the exported file and the
+       iframe'd note carry - is the font import plus `_root()` plus
+       _DOCUMENT_CSS, and does NOT include this block. So a downloaded
+       note stays on paper, which is what a document should be, while
+       the same markup inside the shell follows the shell. */
+    --ink: #e9ebf0;
+    --ink-soft: #c2c6d0;
+    --ink-muted: #9aa0ac;
+    --paper: #14161c;
+    --surface: #171a21;
+    --rule: #2a2e38;
+    --rule-soft: #21242c;
+    --accent: #8fb6d8;
+    --accent-soft: #1b2a36;
+    --accent-2: #c9a227;
   }
 
   /* Streamlit paints a few surfaces from its own static config, which
@@ -824,8 +863,6 @@ button[data-testid="stExpandSidebarButton"]:hover,
      reader meets. */
   .stApp, [data-testid="stAppViewContainer"],
   [data-testid="stHeader"] { background: var(--shell-bg); }
-  [data-testid="stDialog"] div[role="dialog"] {
-    background: var(--shell-panel); }
 
   /* The note renders in its own document, which carries its own paper
      world and is not restyled here - a research note is a document,
@@ -1394,6 +1431,12 @@ table.ar-list th.num { font-family: var(--sans); letter-spacing: .03em; }
 }
 
 /* The dialog that carries the form once a report is on screen. */
+/* One rule, both schemes. The dark block used to set this selector
+   too, and the same selector at the same specificity appeared again
+   here - a media query adds no specificity, so this one won in both
+   and the New report dialog stayed cream while its labels were
+   painted from dark tokens. It needs no dark twin: --paper and --ink
+   are answered in the dark scheme, so this follows. */
 [data-testid="stDialog"] div[role="dialog"] { border-radius: 0;
   border: 1px solid var(--ink); background: var(--paper); }
 
