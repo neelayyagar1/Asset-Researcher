@@ -309,3 +309,33 @@ def test_no_link_is_named_only_by_an_em_dash():
     html = ui.report_rows([thin], token="t")
     for anchor in re.findall(r'<a [^>]*>(?:&mdash;)</a>', html):
         assert 'aria-hidden="true"' in anchor
+
+
+def test_a_title_without_a_ticker_does_not_fill_the_ticker_column(
+    monkeypatch, tmp_path
+):
+    """`rpartition("(")` on a string with no "(" returns ("", "",
+    whole), so the Ticker cell took the entire company name and the
+    Company cell was left empty - then fell back to the same name, so
+    the row printed it twice. `reports_store.save` always writes
+    "Company (TICK)", so this needs a hand-edited or legacy file; it
+    is one line to rule out."""
+    monkeypatch.setenv("DEMO_PASSPHRASE", PHRASE)
+    monkeypatch.delenv("SAMPLES_KEY", raising=False)
+    monkeypatch.setenv("REPORTS_DIR", str(tmp_path))
+    saved = reports_store.save(
+        "WXYZ", "A Company With No Ticker In Its Title",
+        "<html>x</html>", scope=SCOPE,
+    )
+    at = AppTest.from_file(APP, default_timeout=60)
+    at.query_params["sid"] = SCOPE
+    markup = rendered_markup(_unlock(at))
+
+    row = re.search(r"<tr><td class=\"tk\">.*?</tr>", markup, re.S)
+    assert row, "no data row rendered"
+    cells = re.findall(r"<td[^>]*>.*?</td>", row.group(0), re.S)
+    ticker_cell = re.sub(r"<[^>]+>", "", cells[0]).strip()
+    assert "A Company With No Ticker" not in ticker_cell, (
+        f"the company name is in the Ticker column: {ticker_cell!r}"
+    )
+    assert ticker_cell == saved.slug.split("-")[0].upper()

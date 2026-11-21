@@ -653,8 +653,16 @@ presets = load_presets()
 def _controls(key: str) -> tuple[str, str, str, bool]:
     """The report form. Rendered inline on the empty workspace and inside
     a dialog once there is a report to replace."""
+    # `help` rather than another caption: it is the one parameter
+    # Streamlit wires to the widget with aria-describedby, and this
+    # constraint appears nowhere on screen - `max_chars` truncates
+    # typing silently, so a reader who pastes a longer symbol watches
+    # characters vanish with no explanation. The longer prose below
+    # stays a visible caption, because it is read by everyone there
+    # and a tooltip is read by almost nobody.
     ticker = st.text_input(
-        "Ticker", value="AAPL", max_chars=8, key=f"{key}_ticker"
+        "Ticker", value="AAPL", max_chars=8, key=f"{key}_ticker",
+        help="Up to 8 characters.",
     ).strip().upper()
     st.caption(
         "A US-listed company symbol. The tool looks it up in the SEC's own "
@@ -716,6 +724,9 @@ def _controls(key: str) -> tuple[str, str, str, bool]:
         "Other documents to read (URLs, optional)", height=70,
         placeholder="https://  one per line",
         key=f"{key}_urls",
+        # The format lived only in the placeholder, which disappears
+        # on the first keystroke and was never an accessible name.
+        help="One URL per line.",
     )
     # No running budget figure here. It used to print the remaining daily
     # allowance, which told a reviewer a number that is none of their
@@ -1026,11 +1037,22 @@ if st.session_state["view"] == "home":
     rows = []
     for note in notes:
         label = _sample_label(note.title)
-        name, _, ticker = label.rpartition("(")
+        # Guarded, because `rpartition` on a string with no "(" returns
+        # ("", "", whole): the Ticker cell took the entire company name
+        # and the Company cell fell back to the same name, printing it
+        # twice across two columns. Every title this app writes carries
+        # a ticker in parentheses, so it takes a hand-edited or legacy
+        # file to reach - which is exactly the kind of row an index has
+        # to survive rather than garble.
+        if "(" in label:
+            name, _, ticker = label.rpartition("(")
+            ticker = ticker.rstrip(")")
+        else:
+            name, ticker = label, ""
         figures = note_index.summarise(note.html)
         rows.append(
             {
-                "ticker": ticker.rstrip(")") or note.slug.upper(),
+                "ticker": ticker or note.slug.split("-")[0].upper(),
                 "company": name.strip() or label,
                 "slug": note.slug,
                 **figures,
