@@ -1211,6 +1211,19 @@ table.ar-list th.num { font-family: var(--sans); letter-spacing: .03em; }
      the notes above the instructions and the primary action last. */
   [data-testid="stHorizontalBlock"] { flex-direction: column; gap: 22px; }
   [data-testid="stColumn"] { width: 100% !important; flex: 1 1 100%; }
+
+  /* Four columns do not fit 375px, and it showed on the deployed site:
+     the header wrapped to "Headlin e metric", the Value column was
+     clipped, and the right edge was cut off. A table a reader cannot
+     read is worse than one column fewer.
+
+     The metric LABEL goes. On a phone a reader wants the ticker and
+     the figure; the label explains the figure and is on the note
+     itself. The figure stays, because it is the reason the row is
+     there. */
+  table.ar-list th:nth-child(3),
+  table.ar-list td:nth-child(3) { display: none; }
+  table.ar-list th, table.ar-list td { padding: 9px 10px; }
 }
 
 /* The dialog that carries the form once a report is on screen. */

@@ -132,3 +132,23 @@ def test_no_shell_width_is_expressed_in_ch():
         f"the shell declares widths in `ch`, which resolve to fractions "
         f"and break the one-column rule: {found}"
     )
+
+
+def test_the_reports_table_sheds_a_column_on_a_phone():
+    """Four columns do not fit 375px, and it showed.
+
+    On the deployed site at phone width the home table overflowed its
+    container: the header wrapped to "Headlin e metric", the Value
+    column was clipped and the right edge was cut off. A table a reader
+    cannot read is worse than one column fewer.
+
+    The metric LABEL is the column to drop. A reader on a phone wants
+    the ticker and the figure; the label explains the figure and can be
+    read on the note itself.
+    """
+    css = theme._APP_CSS
+    phone = css[css.index("@media (max-width: 700px)"):]
+    assert "table.ar-list th:nth-child(3)" in phone, (
+        "the metric label column is not dropped at phone width"
+    )
+    assert "table.ar-list td:nth-child(3)" in phone
