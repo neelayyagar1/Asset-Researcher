@@ -1152,13 +1152,23 @@ def _run_pending() -> None:
         # to save is not a reason to lose the report that is in hand,
         # so it is logged and the screen carries on.
         try:
+            scope = _session_scope()
             saved = reports_store.save(
                 fresh.ticker,
                 f"{fresh.bundle.company_name} ({fresh.ticker})",
                 report_to_html(fresh),
-                scope=_session_scope(),
+                scope=scope,
             )
             st.session_state["report_slug"] = saved.slug
+            # The scope goes into the URL HERE, not on the next
+            # render. `_session_scope` publishes it only once the
+            # store holds something, and the only call during a run is
+            # the one above - which happens before the file exists. So
+            # a visitor's first report left the URL bare, and a reload
+            # at that moment started a fresh session with a fresh
+            # scope and orphaned it: on disk, under a name nothing in
+            # the UI could reach again.
+            st.query_params["sid"] = scope
         except Exception:
             logging.getLogger("asset_researcher").exception(
                 "could not save the rendered report for %s", fresh.ticker

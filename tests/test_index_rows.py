@@ -415,3 +415,27 @@ def test_the_row_links_are_bare_for_a_visitor_with_no_reports(
     at = AppTest.from_file(APP, default_timeout=60)
     at = _unlock(at)
     assert "sid=" not in rendered_markup(at)
+
+
+def test_the_scope_reaches_the_url_as_soon_as_a_report_is_saved():
+    """The ordering trap in deferring the scope.
+
+    `_session_scope` writes it to the URL only when the store already
+    holds something, and the only call during a run happens while
+    saving - before the file exists. So the first report a visitor
+    generated left the URL bare, and a reload at that point started a
+    fresh session with a fresh scope and orphaned it: the report was
+    on disk, under a name nothing in the UI could reach again.
+
+    The save has to publish the scope itself.
+    """
+    import pathlib
+    import re
+
+    source = pathlib.Path(APP).read_text(encoding="utf-8")
+    saved = source.index('st.session_state["report_slug"] = saved.slug')
+    window = source[saved - 900 : saved + 1200]
+    assert re.search(r'query_params\[\s*"sid"\s*\]', window), (
+        "a successful save does not put the scope in the URL, so the "
+        "first report is orphaned by a reload"
+    )
