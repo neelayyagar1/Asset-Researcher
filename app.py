@@ -791,11 +791,15 @@ if st.session_state["view"] == "home" and report is None:
             ui.card(
                 ui.steps(
                     (
-                        "Enter a US-listed ticker. For example <code>AAPL</code>",
-                        "Say how you invest, so the note is written to the "
-                        "way you actually hold things.",
-                        "Read the note. Every figure links back to the "
-                        "filing it was read from.",
+                        "Enter a US-listed ticker, for example <code>AAPL</code>",
+                        "Say how you invest. It sets which findings the "
+                        "note leads with, not which figures it reports.",
+                        "Press <b>Generate a report</b>. It reads the "
+                        "filings and writes the note, which takes about "
+                        "a minute.",
+                        "Read it. Every figure links back to the filing "
+                        "it came from &mdash; located in the source, "
+                        "which is not the same as supporting the claim.",
                     )
                 )
             )
@@ -921,6 +925,11 @@ context = bundle.cash_context
 # 33,000px note had no indication of where they were and no way out
 # except the browser's Back - which discards the report they just paid
 # for.
+# The marker the stylesheet widens the column for. It was declared and
+# never emitted, so the report screen - the one that needs the width for
+# a sixteen-column comparables table - was rendering in the standard
+# column the whole time.
+write('<span class="ar-report-view" hidden></span>')
 write(ui.topbar("report"))
 
 # A new report is an occasional act once one is on screen, so the form is

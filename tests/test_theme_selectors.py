@@ -55,3 +55,45 @@ def test_every_streamlit_test_id_in_the_stylesheet_is_one_streamlit_emits():
         f"emit, so those rules style nothing: {missing}. Either the hook was "
         "renamed upstream or it never existed."
     )
+
+
+_AR_CLASS = re.compile(r"\.(ar-[a-z0-9-]+)")
+
+
+def _classes_the_code_emits() -> set[str]:
+    """Every `ar-*` class any Python module actually writes into markup."""
+    root = pathlib.Path(__file__).resolve().parents[1]
+    emitted: set[str] = set()
+    sources = list((root / "asset_researcher").rglob("*.py")) + [root / "app.py"]
+    for path in sources:
+        if path.name == "theme.py":
+            continue  # the stylesheet declares; it does not emit
+        emitted.update(
+            re.findall(r"\bar-[a-z0-9-]+", path.read_text(encoding="utf-8"))
+        )
+    return emitted
+
+
+def test_the_stylesheet_has_no_rules_for_classes_nothing_emits():
+    """Dead rules are worse than missing ones.
+
+    When the editorial shell was replaced, `.ar-about`, `.ar-doors`,
+    `.ar-claims` and `.ar-workspace` rules stayed behind with nothing in
+    Python emitting those classes. They styled nothing, and the real
+    cost is the next surface: a new component that happens to use one of
+    those names inherits a layout from a world that was deliberately
+    discarded.
+    """
+    # Comments first: a rule's own removal note names the class it
+    # removed, and matching that would report the fix as the defect.
+    strip = lambda css: re.sub(r"/\*.*?\*/", "", css, flags=re.S)
+    declared = set(_AR_CLASS.findall(strip(theme.stylesheet())))
+    declared |= set(_AR_CLASS.findall(strip(theme.document_stylesheet())))
+    emitted = _classes_the_code_emits()
+
+    orphans = sorted(declared - emitted)
+    assert not orphans, (
+        "the stylesheet declares rules for classes no Python module "
+        f"writes into markup: {orphans}. Either something stopped "
+        "emitting them, or they outlived the surface they were built for."
+    )

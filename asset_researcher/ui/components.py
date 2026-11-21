@@ -776,21 +776,28 @@ def bullets(items: Sequence[str]) -> str:
 
 
 def home() -> str:
-    """The first screen past the gate: what it is, and how to drive it.
+    """The first screen past the gate.
 
-    One sentence in the plainest words that are still accurate. What
-    stood here before - "Read the filings, then read what management
-    said about them" over a second sentence about "the narrative
-    management wrapped around it" - was writing that enjoyed itself. A
-    reader who has not seen the product cannot tell from it what the
-    product does, which is the only job this screen has.
+    Reads as a project rather than a product, which is what it is: a
+    tool someone built, with its name and what it does, not a hook. The
+    line that stood here - "Research notes from the filings themselves"
+    - was a slogan, and a slogan on a credibility artifact invites the
+    reader to discount everything under it.
+
+    It also no longer repeats itself. The sentence here used to open
+    "Enter a US-listed ticker", which is the first line of Get started
+    three inches below, and the heading then repeated the product name
+    the topbar carries fifty pixels above it. Saying anything twice on
+    one screen makes it look unedited. The name stays as a heading for
+    the document outline and for a screen reader, and is not drawn
+    twice.
     """
     return _one_line(
-        '<div class="ar-head"><h1>Research notes from the filings '
-        "themselves</h1><p>Enter a US-listed ticker. Every figure is read "
-        "from the company's own SEC submissions, and every claim carries a "
-        "quote located in the filing it came from &mdash; located, which is "
-        "not the same as supporting it.</p></div>"
+        '<div class="ar-head"><h1 class="ar-sr">Asset Researcher</h1>'
+        "<p class=\"lead\">Reads a company's filings to the SEC and "
+        "writes a research note from them: the filed numbers, what "
+        "management said about them, and where the two disagree.</p>"
+        "</div>"
     )
 
 

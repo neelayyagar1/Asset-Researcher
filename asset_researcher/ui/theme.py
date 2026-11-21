@@ -207,7 +207,7 @@ a, a:visited { color: var(--accent); text-decoration: underline;
 a:hover { text-decoration-color: var(--accent); }
 
 /* The one label style. It was ten. */
-.ar-sec-label, .ar-stat-label, .ar-col-label, .ar-pill, .ar-field,
+.ar-sec-label, .ar-stat-label, .ar-col-label, .ar-pill,
 table.ar-table thead th, .ar-status .tag, .ar-finding-grid .lbl,
 /* The widget labels were the last text in the product still set in
    Streamlit's own voice: 14px sentence-case regular, directly above a
@@ -550,9 +550,6 @@ table.ar-table tbody tr.subject td.nm {
 @media (prefers-reduced-motion: no-preference) {
   .ar-masthead { animation: ar-settle 560ms var(--ease) both; }
   .ar-stats { animation: ar-settle 560ms var(--ease) 120ms both; }
-  /* The workspace has neither a masthead nor a stat strip, so home to
-     workspace was the one transition in the product that hard-cut. */
-  .ar-workspace { animation: ar-settle 560ms var(--ease) both; }
   .ar-progress i { animation: ar-fill 75s cubic-bezier(.2,.7,.3,1) both; }
 
   /* A press with no acknowledgement, followed by a rerun most of a second
@@ -656,8 +653,7 @@ html, body, .stApp, [data-testid="stAppViewContainer"] {
    headings rather than three, but it is set as a label, not as a display
    heading. The restatement above reaches it at (0,1,1), so the label face
    has to be restated here above that. */
-[data-testid="stAppViewContainer"] h2.ar-sec-label,
-[data-testid="stAppViewContainer"] h3.ar-block-label {
+[data-testid="stAppViewContainer"] h2.ar-sec-label {
   font-family: var(--sans); font-size: var(--t-label);
   line-height: var(--t-label-lh); letter-spacing: var(--t-label-ls);
   font-weight: 600; text-transform: uppercase; }
@@ -790,6 +786,13 @@ button[data-testid="stExpandSidebarButton"]:hover,
 .ar-head p {
   font-size: 12.5px; color: var(--shell-mute); margin: 3px 0 0;
   line-height: 1.5; }
+/* The screen's opening statement, which carries no heading above it
+   because the bar already names the project. It is the first thing read,
+   so it is set at reading size in the primary tone rather than as a
+   caption. */
+.ar-head p.lead {
+  font-size: 14px; color: var(--shell-soft); max-width: 62ch;
+  margin-top: 0; }
 
 .ar-card {
   background: var(--shell-panel); border: 1px solid var(--shell-line-2);
@@ -820,18 +823,14 @@ table.ar-list th.num, table.ar-list td.num {
   text-align: right; font-family: var(--mono); font-size: 12.5px;
   font-feature-settings: "tnum" 1, "lnum" 1; }
 
-/* The only colour on the page. A divergence count is the one figure
-   here that carries a judgement, so it is the one that is allowed to
-   catch the eye. */
-/* Named `ar-count`, not `ar-pill`: the document stylesheet already owns
-   `.ar-pill` for the note's provenance chips, and two meanings on one
-   class name is how a shell change silently restyles a report. */
-.ar-count {
-  display: inline-flex; align-items: center; font-family: var(--mono);
-  font-size: 11px; padding: 2px 7px; border-radius: 5px;
-  background: #f3f4f6; color: var(--shell-soft); }
-.ar-count.hot { background: #fdf2f1; color: #b4231a; }
-.ar-count.cool { background: #f0f8f4; color: #16794f; }
+/* The divergence pill (`.ar-count`) was removed with it. It was the
+   shell's one coloured device, and it lost its only caller when the
+   home table dropped the Divergences column - the count does not exist
+   outside a rendered note, so the column was a header promising data
+   the product could not supply. A device with no use is not a device,
+   and leaving its rules behind would let a later surface pick up a
+   colour convention nothing documents. Colour in the shell is now the
+   focus ring alone; the note keeps its own semantic palette. */
 
 .ar-kv {
   display: flex; justify-content: space-between; gap: 16px;
@@ -853,6 +852,10 @@ table.ar-list th.num, table.ar-list td.num {
   font-family: var(--mono); font-size: 11px; color: var(--shell-mute); }
 .ar-step .t { font-size: 13px; color: var(--shell-ink); line-height: 1.5; }
 .ar-step .t span { color: var(--shell-soft); }
+/* The chip ends its line. Padding on an inline element puts visible
+   space between it and whatever follows, so a comma or a full stop
+   after one reads as a typo - "AAPL , say". Keep punctuation off its
+   right-hand side rather than fighting the box model. */
 .ar-step code {
   font-family: var(--mono); font-size: 12px; background: #f4f5f7;
   border-radius: 4px; padding: 1px 5px; color: var(--shell-ink); }
@@ -1094,21 +1097,16 @@ hr { border-color: var(--rule); margin: var(--s5) 0; }
 .ar-prose code { font-family: var(--mono); font-size: 0.88em;
   background: var(--surface); padding: 0.1em 0.3em; }
 
-/* The guide's own headings, which were falling through to browser
-   defaults and rendering the page title smaller than its sections. */
-.ar-about h2 { font-size: var(--t-d2); letter-spacing: var(--t-d2-ls);
-  margin: 0 0 var(--s4); }
-.ar-about h3 { font-size: var(--t-h1); margin: var(--s6) 0 var(--s3); }
-.ar-about h4 { font-size: var(--t-h2); margin: var(--s5) 0 var(--s2); }
-.ar-about { border-top: 2px solid var(--ink); padding-top: var(--s5); }
-
 /* Streamlit's "Press Enter to apply" hint. It renders half inside the
    field and half under the reveal toggle, and it explains a convention
    nobody needs explaining. */
 [data-testid="InputInstructions"] { display: none !important; }
 
-.ar-doors { display: flex; gap: var(--s5); flex-wrap: wrap;
-  margin-top: var(--s3); }
+/* Also removed with it: `.ar-about`, `.ar-doors`, `.ar-claims` and
+   `.ar-workspace` rules. No Python module emits any of those classes,
+   so they styled nothing - and a dead rule in a stylesheet is worse
+   than no rule, because the next surface inherits it by accident.
+
 /* The editorial shell that stood here is gone: `.ar-about` (its page
    is deleted), `.ar-home`, `.ar-gate` and `.ar-workspace-intro` display
    rules, the three-column `.ar-claims` row, and a block of `max-width`
@@ -1140,7 +1138,7 @@ table.ar-list, table.ar-list th, table.ar-list td, .ar-gate, .ar-gate * {
 /* Figures are monospace; the headings above them are not. A column
    header set in mono AND tracked reads as "V a l u e". */
 .ar-step code, .ar-kv b, table.ar-list td.num,
-.ar-count, .ar-topbar .meta { font-family: var(--mono); }
+.ar-topbar .meta { font-family: var(--mono); }
 table.ar-list th.num { font-family: var(--sans); letter-spacing: .03em; }
 
 /* The current screen, named. Not a pill and not a tab: it is a label,
@@ -1172,12 +1170,6 @@ table.ar-list th.num { font-family: var(--sans); letter-spacing: .03em; }
 /* The dialog that carries the form once a report is on screen. */
 [data-testid="stDialog"] div[role="dialog"] { border-radius: 0;
   border: 1px solid var(--ink); background: var(--paper); }
-
-@media (max-width: 900px) {
-  .ar-claims { grid-template-columns: 1fr; }
-  .ar-claims > div + div { border-left: none; padding-left: 0;
-    border-top: 1px solid var(--rule); }
-}
 
 /* ---------------------------------------------------------- open state */
 
