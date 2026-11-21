@@ -54,6 +54,7 @@ from asset_researcher.ui import document, markdown, theme
 from asset_researcher import reports_store
 from asset_researcher.ui import components as ui
 from asset_researcher.ui import note_index
+from asset_researcher.ui.frame import framed
 from asset_researcher.ui.export import report_to_html, report_to_markdown
 from asset_researcher.ui.headline import headline_stats
 
@@ -301,27 +302,6 @@ _LEAD_STAT = re.compile(
     r'<div class="ar-stat-value[^"]*">(.*?)</div>',
     re.S,
 )
-
-
-def _framed(note_html: str) -> str:
-    """A note about to be shown inside the app's frame.
-
-    Notes are artifacts: the six that ship were built by a pipeline run
-    and carry whatever scripts the renderer emitted that day. Appending
-    the frame-sizing script here rather than only at build time means a
-    note built last month behaves like one built this minute, and the
-    fix does not cost six API calls to deploy.
-
-    Idempotent. A freshly built note carries the same function from
-    `_JUMP_SCRIPT`; running it twice sets the same height twice.
-    """
-    from asset_researcher.ui.export import _JUMP_SCRIPT
-
-    if "fitFrame" in note_html:
-        return note_html
-    if "</body>" in note_html:
-        return note_html.replace("</body>", f"{_JUMP_SCRIPT}</body>", 1)
-    return note_html + _JUMP_SCRIPT
 
 
 def _headline_of(html: str) -> tuple[str, str]:
@@ -612,6 +592,17 @@ def _back_bridge() -> None:
           // window and then looking for the report in the top window's
           // document found nothing, so the confirm never fired and Back
           // silently discarded a note that cost a minute and a dollar.
+          // This frame carries a script and nothing a reader can
+          // use, and Streamlit titles it "st.iframe". Hide it rather
+          // than offer it as a frame with the framework's name.
+          try {
+            var self = window.frameElement;
+            if (self) {
+              self.setAttribute('aria-hidden', 'true');
+              self.setAttribute('tabindex', '-1');
+              self.setAttribute('title', '');
+            }
+          } catch (e) {}
           var appWindow = window.parent || host;
           if (!host || host.__arBack) return;
           host.__arBack = true;
@@ -1164,7 +1155,7 @@ if st.session_state["view"] == "samples":
     # that the honest fix was a page of its own. The second half is
     # still true - a note deserves its own route - but "cannot" was
     # wrong, and it had stopped anyone looking.
-    components.html(_framed(note.html), height=2000, scrolling=True)
+    components.html(framed(note.html), height=2000, scrolling=True)
     st.stop()
 
 

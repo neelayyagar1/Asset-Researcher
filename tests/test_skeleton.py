@@ -334,11 +334,24 @@ def test_a_note_built_before_the_fix_still_sizes_its_frame(monkeypatch):
     through a nested scrollbar - and fixing that at build time only
     would cost six API calls to deploy."""
     source = pathlib.Path(APP).read_text(encoding="utf-8")
-    assert "_framed(note.html)" in source, (
+    # Renamed and moved to asset_researcher/ui/frame.py so it could be
+    # tested without standing up a Streamlit script.
+    assert "framed(note.html)" in source, (
         "the note is framed without the display-time sizing wrapper"
     )
-    assert "if \"fitFrame\" in note_html" in source, (
-        "the wrapper is not idempotent, so a new note gets the script twice"
+    # Behaviour, not source text. The idempotence guard moved to
+    # asset_researcher/ui/frame.py, and a test grepping app.py for it
+    # was pinning where the code lives rather than what it does.
+    from asset_researcher.ui.frame import framed
+
+    fresh = framed("<html><body><p>x</p></body></html>")
+    assert fresh.count("function fitFrame") == 1
+    assert framed(fresh).count("function fitFrame") == 1, (
+        "the wrapper is not idempotent, so a note gets the script twice"
+    )
+    already = "<html><body><script>function fitFrame(){}</script></body></html>"
+    assert framed(already).count("function fitFrame") == 1, (
+        "a note built before this got a second copy of the script"
     )
 
 
