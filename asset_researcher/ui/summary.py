@@ -163,9 +163,15 @@ def conversion_sentence(
         if abs(delta) < 0.05:
             movement = f"level with {first} at the start of the filed window"
         else:
+            # "at the start of", not "across": `first` is the first
+            # measured period, and "across the filed window" reads as a
+            # property of the window - Cintas printed "down from 124.4%
+            # across the filed window" where 124.4% is the first of five
+            # years and the window's mean is 121.4%. The flat branch
+            # above already said it the right way.
             movement = (
-                f"{'down' if delta < 0 else 'up'} from {first} across the "
-                f"filed window"
+                f"{'down' if delta < 0 else 'up'} from {first} at the "
+                f"start of the filed window"
             )
         sentence = f"Cash conversion is {latest} of net income{asof}, {movement}"
         trough = _as_number(values[low])
