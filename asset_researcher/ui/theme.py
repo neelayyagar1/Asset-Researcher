@@ -802,7 +802,12 @@ button[data-testid="stExpandSidebarButton"]:hover,
    so it is set at reading size in the primary tone rather than as a
    caption. */
 .ar-head p.lead {
-  font-size: 14px; color: var(--shell-soft); max-width: 62ch;
+  /* 560px, not 62ch. A `ch` resolves against a proportional face and
+     lands on a fraction - this one measured 531.067px - which is the
+     exact defect the one-column rule exists to prevent, reintroduced
+     by the person who wrote the rule. Widths in the shell are whole
+     pixels on the grid. */
+  font-size: 14px; color: var(--shell-soft); max-width: 560px;
   margin-top: 0; }
 
 .ar-card {
@@ -869,7 +874,8 @@ table.ar-list th.num, table.ar-list td.num {
    right-hand side rather than fighting the box model. */
 .ar-step code {
   font-family: var(--mono); font-size: 12px; background: #f4f5f7;
-  border-radius: 4px; padding: 1px 5px; color: var(--shell-ink); }
+  border-radius: var(--shell-r-sm); padding: 1px 5px;
+  color: var(--shell-ink); }
 
 .ar-empty {
   padding: 28px 16px; text-align: center; color: var(--shell-mute);
@@ -1106,7 +1112,8 @@ hr { border-color: var(--rule); margin: var(--s5) 0; }
 [data-testid="stTextInputRootElement"] button {
   background: transparent; border: 0; color: var(--shell-mute); }
 [data-testid="stTextInputRootElement"] button:focus-visible {
-  outline: 2px solid var(--shell-focus); outline-offset: -2px; border-radius: 4px; }
+  outline: 2px solid var(--shell-focus); outline-offset: -2px;
+  border-radius: var(--shell-r-sm); }
 
 /* A pull quote in the written guide, set as print sets one. */
 .ar-prose blockquote { margin: var(--s4) 0; padding-left: var(--s4);

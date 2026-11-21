@@ -97,3 +97,38 @@ def test_the_stylesheet_has_no_rules_for_classes_nothing_emits():
         f"writes into markup: {orphans}. Either something stopped "
         "emitting them, or they outlived the surface they were built for."
     )
+
+
+_CH_WIDTH = re.compile(r"(max-width|width|min-width)\s*:\s*[\d.]+ch")
+
+
+def test_no_shell_width_is_expressed_in_ch():
+    """The one-column rule, enforced rather than trusted.
+
+    A `ch` resolves against a proportional face and lands on a
+    fraction. The shell this replaced carried 394.017px, 528.62px and
+    630.59px that way - three container edges no two blocks could ever
+    share - which is what produced the three competing centre axes.
+
+    The rule was then broken twice by the person who wrote it: once by a
+    lead paragraph at `62ch`, which measured 531.067px in the live DOM
+    and put a second container width back on the home screen.
+
+    The note is exempt and keeps `ch` for its prose measures, which is
+    what `ch` is for: a reading measure is a count of characters. This
+    checks the shell only.
+    """
+    # The app sheet is the document sheet plus the shell block, both
+    # wrapped in one <style>, so subtracting the rendered document sheet
+    # leaves its closing tag behind and none of its rules. The shell
+    # block itself is what to read.
+    shell_only = theme._APP_CSS
+    assert shell_only.strip(), "the shell stylesheet could not be isolated"
+    assert "ar-topbar" in shell_only, "that is not the shell block"
+
+    offenders = _CH_WIDTH.findall(shell_only)
+    found = [m.group(0) for m in _CH_WIDTH.finditer(shell_only)]
+    assert not offenders, (
+        f"the shell declares widths in `ch`, which resolve to fractions "
+        f"and break the one-column rule: {found}"
+    )
