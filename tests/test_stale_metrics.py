@@ -117,3 +117,30 @@ def test_the_discounted_cash_flow_refuses_a_stale_capex_series():
         "a capex series that stopped in FY2013 must not produce a "
         "discounted cash flow for a filer reporting through FY2025"
     )
+
+
+def test_an_instant_a_day_off_the_period_end_is_not_counted_as_a_period():
+    """Balance-sheet facts are instants and income facts are durations,
+    and for some filers they land a day apart within the same fiscal
+    year. Indexing raw end dates made every such pair an extra slot, so
+    a line exactly one year late - which this check tolerates - counted
+    as two behind, was reported as abandoned, and had its valuation
+    refused. Lag is counted in fiscal periods for that reason.
+    """
+    s = _current()
+    for metric in ("total_assets", "total_liabilities", "total_equity"):
+        s.series[metric] = [
+            MetricPeriod(end.replace("-31", "-30"), label, value, "x")
+            for end, label, value in (
+                (p.end, p.frame_label, p.value) for p in s.series[metric]
+            )
+        ]
+    # One fiscal year late, which is ordinary and must be tolerated.
+    s.series["total_debt"] = s.series["total_debt"][:-1]
+
+    result = validate(s)
+    assert result.ok, (
+        "a one-year-late line was reported as abandoned because other "
+        f"metrics' instants fell a day earlier: "
+        f"{[i.message for i in result.issues]}"
+    )

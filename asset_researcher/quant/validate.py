@@ -355,31 +355,40 @@ def check_metrics_are_current(
     concept mapping and rebuild, not to publish a figure derived from a
     line the company stopped reporting before the analysis window.
     """
+    # Ordered by FISCAL LABEL, not by raw end date.
+    #
+    # Indexing the union of end dates looked equivalent and was not:
+    # balance-sheet facts are instants and income and cash-flow facts are
+    # durations, and for some filers those land a day or two apart
+    # (2025-12-30 against 2025-12-31). Every such pair added a slot to
+    # the index, so a line exactly one fiscal year late - which this
+    # check deliberately tolerates - counted as two behind and was
+    # reported as abandoned. The same helper gates the model, so that
+    # filer's valuation would have been refused outright. Caught by
+    # probing the check with mismatched instants rather than by reading
+    # it.
     labels = sorted({
-        period.end
+        period.frame_label
         for points in series.series.values()
         for period in points
     })
     if not labels:
         return
     newest = labels[-1]
-    # Position of the newest period, so "how far behind" is counted in
-    # filed periods rather than in days - fiscal years are not 365 days
-    # apart and a 53-week year must not read as a gap.
-    order = {end: index for index, end in enumerate(labels)}
+    order = {label: index for index, label in enumerate(labels)}
 
     for metric in _LOAD_BEARING:
         points = series.series.get(metric)
         if not points:
             continue  # absence is a different check's business
         last = points[-1]
-        behind = order[newest] - order.get(last.end, 0)
+        behind = order[newest] - order.get(last.frame_label, 0)
         if behind <= _STALE_AFTER_PERIODS:
             continue
         result.add(
             "metric_not_current",
             f"'{metric}' stops at {last.frame_label} while this filer's "
-            f"most recent period is {newest[:4]}. The series is populated, "
+            f"most recent period is {newest}. The series is populated, "
             f"so it looks complete, but the concept behind it was "
             f"abandoned: anything derived from this line - a free cash "
             f"flow, a net-debt bridge, a multiple - is built on a figure "

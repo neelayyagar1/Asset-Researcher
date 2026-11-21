@@ -740,7 +740,10 @@ def _run_pending() -> None:
         )
         write(ui.status("error", "Failed", _failure_message(exc)))
         if st.button("Try again", key="retry_failed"):
-            st.session_state["pending"] = (ticker, mandate_text, urls)
+            # urls_text, not urls: this slot is unpacked above as the raw
+            # textarea contents and split here. Storing the parsed list
+            # would hand a list to `.splitlines()` on the next run.
+            st.session_state["pending"] = (ticker, mandate_text, urls_text)
             st.rerun()
         return
     if fresh is not None:

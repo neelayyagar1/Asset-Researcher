@@ -239,15 +239,19 @@ def _is_current(series: MetricSeries, metric: str, lag: int = 1) -> bool:
     points = series.series.get(metric)
     if not points:
         return False
-    ends = sorted({
-        period.end
+    # Ordered by fiscal label rather than by raw end date: instants and
+    # durations can land a day apart for the same fiscal year, and
+    # indexing raw dates made every such pair an extra slot, so a line
+    # one year late counted as two behind and refused the model.
+    labels = sorted({
+        period.frame_label
         for metric_points in series.series.values()
         for period in metric_points
     })
-    if not ends:
+    if not labels:
         return False
-    order = {end: index for index, end in enumerate(ends)}
-    return order[ends[-1]] - order.get(points[-1].end, 0) <= lag
+    order = {label: index for index, label in enumerate(labels)}
+    return order[labels[-1]] - order.get(points[-1].frame_label, 0) <= lag
 
 
 def _cagr(series: MetricSeries, metric: str) -> tuple[float, int] | None:
