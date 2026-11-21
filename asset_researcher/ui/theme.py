@@ -979,7 +979,20 @@ button[data-testid="stExpandSidebarButton"]:hover,
      document's own name. */
   margin-top: 14px;
   display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; }
-.ar-head.ar-report-head h1 { font-size: 17px !important; }
+/* The screen's title takes the section rank, not a size of its own.
+
+   It was pinned to 17px, which was right when every heading was 15px
+   sans - it read as one step up. Against the display serif it reads as
+   the serif used small, and the rule this direction rests on is that
+   the serif appears at display sizes only: below those it stops being
+   chrome and starts impersonating the document sitting underneath it,
+   which is the one thing the two surfaces must not do.
+
+   At the section rank it is the same size as "Get started" and
+   "Reports", which is correct - it is the same kind of thing, the name
+   of what is on the screen. The SAMPLE tag still baseline-aligns
+   beside it, because they are one statement. */
+.ar-head.ar-report-head h1 { font-size: 26px !important; }
 .ar-tag {
   font-family: var(--mono); font-size: 10px; letter-spacing: .08em;
   text-transform: uppercase; color: var(--shell-mute);
