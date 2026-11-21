@@ -164,17 +164,32 @@ def headline_stats(report: Report) -> list[Stat]:
         implied is not None and implied.caveat is None and not implausible
     )
     if model_is_load_bearing:
+        # The implied expectation leads, not the target.
+        #
+        # Every note tells the reader to treat the implied growth
+        # requirement as the valuation finding and the modelled value as
+        # a byproduct, and the strip then set the target at the largest
+        # size on the page. A reviewer pressed exactly there, and he was
+        # right: a hierarchy stated in prose and contradicted in layout
+        # is the layout's hierarchy, because the headline is what gets
+        # quoted.
+        #
+        # It is also the sounder figure. The target inherits a discount
+        # rate that is the same 8.5% for every filer, which is the
+        # weakest input in the model; the implied growth rate is solved
+        # back from the traded price and does not depend on it. The
+        # target is still shown, in its own rank, because a reader who
+        # wants it should not have to leave the page for it.
         return [
             price_stat,
-            Stat("Probability-weighted target", fmt.usd(target), case_note,
-                 lead=True),
+            leading(implied_growth_stat),
+            Stat("Probability-weighted target", fmt.usd(target), case_note),
             Stat(
                 "Implied upside",
                 fmt.signed_pct(upside),
                 "Target against traded price",
                 tone="pos" if (upside or 0) > 0 else "neg",
             ),
-            implied_growth_stat,
             cash_stat,
         ]
 

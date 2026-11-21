@@ -142,6 +142,28 @@ def sections(report: Report) -> list[Section]:
         + (f", {ui.plural(len(rec.variant_views), 'view')}"
        if rec.variant_views else ""),
     )
+    # What the market actually says, before the note says where it
+    # differs. The section argued against a "prevailing view" that was
+    # inferred from the company's own disclosure, which is circular; the
+    # distribution below is measured. It is sentiment, not estimates -
+    # it says how analysts rate the name, not what they expect it to
+    # earn - and it is labelled that way rather than dressed up as an
+    # expectation the note can disagree with.
+    consensus = getattr(report.bundle, "consensus", None)
+    if consensus is not None and consensus.total:
+        add(
+            ui.block(
+                ui.note(
+                    f"Published consensus, {ui.escape_text(consensus.period)}: "
+                    f"{ui.escape_text(consensus.summary())}. That is a "
+                    f"recommendation distribution, not an estimate: it says "
+                    f"how the name is rated, not what the street expects it "
+                    f"to earn. The prevailing views below are read from the "
+                    f"filings and the company's own framing."
+                )
+            )
+        )
+
     if rec.variant_views:
         for view in rec.variant_views:
             add(

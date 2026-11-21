@@ -431,6 +431,10 @@ def _add_recent_events(
     if not news:
         bundle.add_gap("news", "No recent news available.")
     bundle.news = news
+    # Optional, and never fatal: the notes argue about expectations and
+    # this is the only measured read on the prevailing view available
+    # without a paid tier.
+    bundle.consensus = _safe(lambda: finnhub.get_consensus(ticker))
 
 
 def _earnings_exhibit(edgar, store, cik, filing, bundle):

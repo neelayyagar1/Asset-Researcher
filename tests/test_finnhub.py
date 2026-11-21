@@ -156,3 +156,49 @@ def test_news_text_arrives_unescaped_so_the_renderer_escapes_it_once(client):
     item = news[0]
     assert item.headline == "Keefe, Bruyette & Woods maintains Market Perform"
     assert item.summary == "Shares fell 3% as the firm's outlook <softened>"
+
+
+# ------------------------------------------------- measured consensus
+
+def test_the_recommendation_distribution_is_read_as_filed(client):
+    """What the market actually thinks, rather than what the 10-K
+    implies it thinks.
+
+    The notes carry a section called "Variant perception" - where this
+    analysis departs from the prevailing view - and nothing in the
+    product measured the prevailing view. The prevailing view was
+    inferred from the company's own disclosure, which is circular. This
+    is the one consensus series available on the free tier: an analyst
+    recommendation distribution, which is sentiment rather than
+    estimates, and must be labelled as such.
+    """
+    entries = [
+        {"symbol": "ADP", "period": "2026-11-01", "strongBuy": 3, "buy": 4,
+         "hold": 14, "sell": 1, "strongSell": 1},
+        {"symbol": "ADP", "period": "2026-10-01", "strongBuy": 2, "buy": 5,
+         "hold": 13, "sell": 2, "strongSell": 1},
+    ]
+    with patch("requests.get", return_value=_response(json_data=entries)):
+        view = client.get_consensus("ADP")
+
+    assert view is not None
+    assert view.period == "2026-11-01"      # the most recent, not the first
+    assert view.buy == 7                    # strongBuy + buy
+    assert view.hold == 14
+    assert view.sell == 2                   # sell + strongSell
+    assert view.total == 23
+
+
+def test_no_consensus_returns_none_rather_than_zeroes(client):
+    """A filer nobody covers must read as uncovered, not as unanimous
+    neutrality."""
+    with patch("requests.get", return_value=_response(json_data=[])):
+        assert client.get_consensus("NOBODY") is None
+
+
+def test_a_consensus_failure_does_not_break_the_run(client):
+    """It is one optional input. A report is still worth producing
+    without it."""
+    with patch("requests.get", return_value=_response(status=403, ok=False,
+                                                      text="no access")):
+        assert client.get_consensus("ADP") is None

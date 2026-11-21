@@ -33,7 +33,7 @@ from asset_researcher.quant.valuation import (
     ValuationCase,
 )
 from asset_researcher.quant.validate import ValidationResult
-from asset_researcher.sources.finnhub import NewsItem, Quote
+from asset_researcher.sources.finnhub import Consensus, NewsItem, Quote
 
 
 @dataclass(frozen=True)
@@ -104,6 +104,10 @@ class SourceBundle:
     # --- qualitative (citable text) --------------------------------------
     passages: list[SourcePassage] = field(default_factory=list)
     news: list[NewsItem] = field(default_factory=list)
+    # What analysts currently recommend, as a distribution. Sentiment
+    # rather than estimates, and optional: a filer nobody covers reads
+    # as uncovered rather than as unanimous neutrality.
+    consensus: "Consensus | None" = None
 
     # --- provenance -------------------------------------------------------
     filing_dates: dict[str, str] = field(default_factory=dict)  # form -> date

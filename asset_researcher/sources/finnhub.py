@@ -61,6 +61,40 @@ class NewsItem:
     published: str  # ISO date
 
 
+@dataclass(frozen=True)
+class Consensus:
+    """What sell-side analysts currently recommend, as a distribution.
+
+    Sentiment, not estimates. It says how many analysts rate the name a
+    buy, a hold or a sell; it does not say what they expect it to earn.
+    The distinction matters because the notes argue about expectations,
+    and this is the closest measured proxy available on a free tier -
+    the estimate and price-target endpoints are paid.
+
+    It exists because the product had a section called "Variant
+    perception" and no measurement of the prevailing view at all: the
+    prevailing view was inferred from the company's own disclosure,
+    which is circular.
+    """
+
+    period: str          # ISO month the distribution was published
+    buy: int             # strong buy and buy
+    hold: int
+    sell: int            # sell and strong sell
+
+    @property
+    def total(self) -> int:
+        return self.buy + self.hold + self.sell
+
+    def summary(self) -> str:
+        if not self.total:
+            return ""
+        return (
+            f"{self.total} analysts: {self.buy} buy, {self.hold} hold, "
+            f"{self.sell} sell"
+        )
+
+
 class _RateLimiter:
     def __init__(self, per_second: float) -> None:
         self._min_interval = 1.0 / per_second
@@ -171,6 +205,37 @@ class FinnhubClient:
         if not isinstance(data, list):
             return []
         return [p for p in data if p and p.upper() != symbol.upper()]
+
+    def get_consensus(self, symbol: str) -> Consensus | None:
+        """The most recent recommendation distribution, or None.
+
+        None rather than zeroes when nobody covers the filer: a name
+        with no coverage must read as uncovered, not as unanimous
+        neutrality. None as well on any failure - this is one optional
+        input and a report is worth producing without it.
+        """
+        try:
+            data = self._get(
+                "/stock/recommendation", {"symbol": symbol},
+                f"consensus-{symbol}", _PEERS_TTL_SECONDS,
+            )
+        except FinnhubError:
+            return None
+        if not isinstance(data, list) or not data:
+            return None
+
+        # Finnhub returns newest first, but sort rather than trust it.
+        latest = max(data, key=lambda e: str(e.get("period", "")))
+        buy = int(latest.get("strongBuy", 0) or 0) + int(latest.get("buy", 0) or 0)
+        hold = int(latest.get("hold", 0) or 0)
+        sell = int(latest.get("sell", 0) or 0) + int(
+            latest.get("strongSell", 0) or 0
+        )
+        if buy + hold + sell == 0:
+            return None
+        return Consensus(
+            period=str(latest.get("period", "")), buy=buy, hold=hold, sell=sell
+        )
 
     def get_news(self, symbol: str, days: int = 45, limit: int = 15) -> list[NewsItem]:
         to_date = date.today()

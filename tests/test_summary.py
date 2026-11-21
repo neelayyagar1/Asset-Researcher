@@ -154,3 +154,30 @@ def test_a_negative_modelled_value_is_not_printed_as_a_figure():
     assert headline._is_printable_value(0.0) is False
     assert headline._is_printable_value(-4.52) is False
     assert headline._is_printable_value(None) is False
+
+
+def test_the_implied_expectation_leads_not_the_modelled_target():
+    """The layout has to agree with the prose.
+
+    Every note says to treat the implied growth requirement as the
+    valuation finding and the modelled value as a byproduct - and then
+    set the target at the largest size on the page. A reviewer pressed
+    exactly there: "why is the target the largest number, and why is
+    one of them negative?"
+
+    The target carries a single discount rate used for every filer,
+    which is the weakest input in the model. The implied expectation is
+    solved back from the traded price and does not depend on it, so it
+    is the figure this report actually authored.
+    """
+    from asset_researcher.ui.headline import headline_stats
+    import inspect
+
+    source = inspect.getsource(headline_stats)
+    # The target must not be the stat marked lead.
+    assert 'Stat("Probability-weighted target", fmt.usd(target), case_note,\n                 lead=True)' not in source, (
+        "the modelled target is still the lead statistic"
+    )
+    assert "leading(implied_growth_stat)" in source, (
+        "the implied growth requirement is not led anywhere"
+    )

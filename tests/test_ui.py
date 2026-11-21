@@ -462,12 +462,31 @@ def _report_with(caveat: str | None):
     )
 
 
-def test_the_headline_leads_with_the_target_when_the_model_holds():
+def test_the_headline_leads_with_the_implied_expectation(self=None):
+    """Even when the model holds, the target is not the lead.
+
+    This test used to assert the opposite, and it was pinning the
+    defect: every note tells the reader to treat the implied growth
+    requirement as the valuation finding and the modelled value as a
+    byproduct, and the strip then set the target at the largest size on
+    the page. A hierarchy stated in prose and contradicted in layout is
+    the layout's hierarchy.
+
+    The implied rate is also the sounder figure. The target inherits a
+    discount rate that is the same for every filer; the implied growth
+    is solved back from the traded price and does not depend on it.
+    """
     from asset_researcher.ui.headline import headline_stats
 
-    labels = [s.label for s in headline_stats(_report_with(None))]
-    assert labels[1] == "Probability-weighted target"
-    assert labels[2] == "Implied upside"
+    stats = headline_stats(_report_with(None))
+    labels = [s.label for s in stats]
+    assert labels[1] == "Price implies FCF growth"
+    assert stats[1].lead is True, "the implied expectation is not the lead"
+
+    # The target is still present, a rank down, for a reader who wants it.
+    assert "Probability-weighted target" in labels
+    target = next(s for s in stats if s.label == "Probability-weighted target")
+    assert target.lead is False
 
 
 def test_a_disowned_target_is_demoted_rather_than_led_with():
