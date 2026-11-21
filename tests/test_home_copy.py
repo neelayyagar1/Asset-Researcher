@@ -19,6 +19,8 @@ copy or state fault rather than a layout one:
 
 from __future__ import annotations
 
+import re
+
 import pathlib
 
 from streamlit.testing.v1 import AppTest
@@ -46,8 +48,21 @@ def test_the_lead_calls_the_output_a_report():
     assert "report" in lead
 
 
-def test_the_lead_tells_the_reader_what_to_provide():
-    assert "Provide" in ui.home()
+def test_the_lead_names_both_ways_on_without_explaining_the_product():
+    """The opening line is an instruction, not a description.
+
+    It used to be a three-line paragraph explaining what the tool does,
+    set left at 560px under a centred heading - two centre axes and a
+    wall of prose on the screen a reader spends four seconds on. The
+    owner's note was blunt and correct. The screen offers exactly two
+    things, so the line names exactly those two.
+    """
+    lead = ui.home()
+    assert "Read a report" in lead
+    assert "generate a new one" in lead
+    # Short enough to be read rather than skipped.
+    text = re.sub(r"<[^>]+>", "", lead).strip()
+    assert len(text.split()) < 20, text
 
 
 # ------------------------------------------------------- the two buttons

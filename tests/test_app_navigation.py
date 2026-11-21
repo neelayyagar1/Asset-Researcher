@@ -19,7 +19,7 @@ import pathlib
 import pytest
 from streamlit.testing.v1 import AppTest
 
-from asset_researcher.ui.components import START_LABEL
+from asset_researcher.ui.components import NEW_LABEL, START_LABEL
 from tests.apptest_helpers import page_text, rendered_markup
 
 APP = str(pathlib.Path(__file__).resolve().parents[1] / "app.py")
@@ -31,7 +31,16 @@ def _app(monkeypatch, *, passphrase: str | None = PHRASE, timeout: float = 60):
     # No samples archive in tests: the samples path is covered by
     # test_deployment_safety.py, and leaving it unset keeps these runs
     # free of a scrypt derivation each.
-    monkeypatch.delenv("SAMPLES_KEY", raising=False)
+    #
+    # SET TO EMPTY, not deleted. `app.py` calls `load_dotenv` at import
+    # and AppTest re-imports it on every run, so a deleted variable was
+    # put straight back from the developer's own `.env` and the archive
+    # loaded anyway. `load_dotenv` does not override a name already in
+    # the environment, and an empty string is in the environment - so
+    # this is the one spelling that holds across a rerun. The test that
+    # depends on an empty archive passed only by the order it happened
+    # to run in.
+    monkeypatch.setenv("SAMPLES_KEY", "")
     return AppTest.from_file(APP, default_timeout=timeout)
 
 
@@ -203,7 +212,7 @@ def test_the_samples_view_survives_having_no_samples(monkeypatch):
     text = page_text(at)
     assert "No sample notes shipped" in text
     # And it offers a way on, rather than being a dead end.
-    assert any(START_LABEL in b.label for b in at.button)
+    assert any(NEW_LABEL in b.label for b in at.button)
 
 
 def test_every_known_view_renders_without_an_archive(monkeypatch):

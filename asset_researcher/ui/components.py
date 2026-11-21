@@ -800,11 +800,8 @@ def home() -> str:
     twice.
     """
     return _one_line(
-        '<div class="ar-head"><h1 class="ar-sr">Asset Researcher</h1>'
-        "<p class=\"lead\">Provide a ticker and how you invest, and it "
-        "writes a report out of the company's own filings to the SEC: "
-        "the filed numbers, what management said about them, and where "
-        "the two disagree.</p>"
+        '<div class="ar-head ar-open"><h1 class="ar-sr">Asset Researcher</h1>'
+        '<p class="lead">Read a report, or generate a new one.</p>'
         "</div>"
     )
 
@@ -1013,6 +1010,12 @@ def kv_rows(pairs) -> str:
 # generates; this one opens the form, and says so.
 START_LABEL = "Start a report"
 
+# The same action, named from a screen that already has a report on it.
+# "Start a report" there reads as though the document under it had not
+# started, which is the kind of small wrongness a reader attributes to
+# the whole thing.
+NEW_LABEL = "Generate a new report"
+
 STEPS = (
     f"Press <b>{START_LABEL}</b>, below.",
     "Enter a US-listed ticker, how you invest, and any public URLs "
@@ -1140,11 +1143,12 @@ def report_rows(rows, token: str = "", scope: str = "") -> str:
         # removes an element from the mouse.
         named = _text(f'{r["ticker"]}, {r["company"]}, open report')
         lead_link = (
-            f'<a href="{href}" class="ar-row-link" aria-label="{named}"></a>'
+            f'<a href="{href}" target="_self" class="ar-row-link" '
+            f'aria-label="{named}"></a>'
         )
         link = (
-            f'<a href="{href}" class="ar-row-link" tabindex="-1" '
-            f'aria-hidden="true"></a>'
+            f'<a href="{href}" target="_self" class="ar-row-link" '
+            f'tabindex="-1" aria-hidden="true"></a>'
         )
         body.append(
             f'<tr><td class="tk">{lead_link}{_text(r["ticker"])}</td>'
@@ -1157,4 +1161,20 @@ def report_rows(rows, token: str = "", scope: str = "") -> str:
         )
     return _one_line(
         f'<table class="ar-list">{header}{"".join(body)}</table>'
+    )
+
+
+def report_head(title: str, is_sample: bool = False) -> str:
+    """The one report's name, and whether it shipped with the tool.
+
+    A reader has to be able to tell a note built from live filings
+    minutes ago from one sealed into the repository - a sample passed
+    off as fresh output is the kind of thing that ends a conversation -
+    but a banner saying so would shout it. It is a quiet marker beside
+    the name, in the same register as the rest of the bar.
+    """
+    mark = '<span class="ar-tag">Sample</span>' if is_sample else ""
+    return _one_line(
+        f'<div class="ar-head ar-report-head"><h1>{_text(title)}</h1>'
+        f"{mark}</div>"
     )

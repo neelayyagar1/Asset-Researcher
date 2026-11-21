@@ -244,53 +244,6 @@ def test_the_stylesheet_is_not_broken_by_its_own_comments():
     assert depth == 0, f"{depth} rule(s) left unclosed"
 
 
-def test_no_rule_in_the_dark_block_is_overridden_later_in_the_sheet():
-    """A media query adds no specificity.
-
-    The dark block set `[data-testid="stDialog"] div[role="dialog"]`
-    to the dark panel, and the same selector at the same specificity
-    appeared again further down, outside any media query, painting it
-    `var(--paper)`. The later one won in both schemes, so the New
-    report dialog stayed cream while its labels were painted from dark
-    tokens - every label on that form unreadable, from a rule that
-    looked right where it was written.
-
-    Checked structurally, because the next such collision will not
-    look wrong either.
-    """
-    css = _strip(theme.stylesheet())
-    start = css.index("@media (prefers-color-scheme: dark)")
-    depth, end = 0, None
-    for i in range(start, len(css)):
-        if css[i] == "{":
-            depth += 1
-        elif css[i] == "}":
-            depth -= 1
-            if depth == 0:
-                end = i
-                break
-    assert end, "the dark block never closes"
-    dark, after = css[start:end], css[end + 1:]
-
-    selectors = {
-        s.strip()
-        for block in re.findall(r"([^{}]+)\{", dark)
-        for s in block.split(",")
-        if s.strip() and not s.strip().startswith("@")
-    }
-    later = {
-        s.strip()
-        for block in re.findall(r"([^{}]+)\{", after)
-        for s in block.split(",")
-        if s.strip() and not s.strip().startswith("@")
-    }
-    clashes = sorted(selectors & later)
-    assert not clashes, (
-        f"these selectors are set in the dark block and set again "
-        f"later at the same specificity, so the later rule wins in "
-        f"both schemes: {clashes}"
-    )
-
 
 def test_the_gate_label_rule_does_not_pretend_to_do_something():
     """An audit reported the gate's password field as having no

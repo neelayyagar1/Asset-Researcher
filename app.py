@@ -53,7 +53,7 @@ from asset_researcher.sources.web import UrlRejected, fetch_user_source
 from asset_researcher.ui import document, markdown, theme
 from asset_researcher import reports_store
 from asset_researcher.ui import components as ui
-from asset_researcher.ui import note_index
+from asset_researcher.ui import convert, note_index
 from asset_researcher.ui.frame import framed
 from asset_researcher.ui.export import report_to_html, report_to_markdown
 from asset_researcher.ui.headline import headline_stats
@@ -331,12 +331,17 @@ class _Doc:
     have to know which is which.
     """
 
-    __slots__ = ("slug", "title", "html")
+    __slots__ = ("slug", "title", "html", "shipped")
 
-    def __init__(self, slug: str, title: str, html: str) -> None:
+    def __init__(self, slug: str, title: str, html: str,
+                 shipped: bool = False) -> None:
         self.slug = slug
         self.title = title
         self.html = html
+        # Whether this note was sealed into the repository or built
+        # here. A reader has to be able to tell the two apart; the
+        # screen that says so needs to be told which this is.
+        self.shipped = shipped
 
 
 # Sixteen hex characters, anchored at both ends. The scope arrives in
@@ -442,10 +447,10 @@ def _documents() -> list:
     they came back for, and the samples do not move.
     """
     mine = [
-        _Doc(s.slug, s.title, s.html)
+        _Doc(s.slug, s.title, s.html, False)
         for s in _saved_documents(_session_scope(), _store_stamp())
     ]
-    shipped = [_Doc(s.slug, s.title, s.html) for s in _samples()]
+    shipped = [_Doc(s.slug, s.title, s.html, True) for s in _samples()]
     # A generated report's slug carries a timestamp, so it cannot
     # collide with a sample's - but the index is addressable by slug
     # and a collision would make one document unreachable rather than
@@ -686,6 +691,120 @@ _back_bridge()
 report = st.session_state.get("report")
 presets = load_presets()
 
+
+
+def _download_row(slug: str, html: str, key: str,
+                  markdown_text: str = "") -> None:
+    """The note, in the four shapes a reader circulates it in.
+
+    HTML is the note itself - the file this product actually builds,
+    with its live citations back to EDGAR.
+
+    PDF is the BROWSER'S, not a server renderer's. The note carries a
+    complete print stylesheet, so the browser lays it out with the real
+    typography and keeps every citation clickable; every PDF engine
+    installable without system libraries would re-flow it worse and
+    flatten the links. Calling `print()` on the frame is therefore the
+    higher-fidelity answer, not the lazy one. It is a button and not a
+    download because the file is produced by the reader's own print
+    dialog, where they choose the paper.
+
+    DOCX is for marking up and for pasting a section into a memo, which
+    is the one thing a PDF cannot do.
+
+    PPTX exists because pitches happen in a room. It is a summary and
+    says so on its cover: a slide cannot carry a reconciliation table,
+    and a reader who mistakes the deck for the evidence has been misled
+    by the format.
+    """
+    # Markdown only where a report object exists to render it. It is
+    # NOT derived from the HTML here: `export.report_to_markdown` is
+    # the one implementation, and a second one reading the rendered
+    # document back would be a second source of truth for the same
+    # file - the exact fault that put two free cash flow series in one
+    # note. A screen without a report object offers four, not a fifth
+    # built a different way.
+    cols = st.columns(5 if markdown_text else 4)
+    cols[0].download_button(
+        "HTML", data=html, file_name=f"{slug}-research-note.html",
+        mime="text/html", use_container_width=True, key=f"{key}_dl_html")
+    if cols[1].button("PDF", use_container_width=True, key=f"{key}_dl_pdf"):
+        st.session_state["print_note"] = True
+    cols[2].download_button(
+        "Word", data=convert.to_docx(html, _sample_label_plain(slug, html)),
+        file_name=f"{slug}-research-note.docx",
+        mime=("application/vnd.openxmlformats-officedocument"
+              ".wordprocessingml.document"),
+        use_container_width=True, key=f"{key}_dl_docx")
+    cols[3].download_button(
+        "PowerPoint",
+        data=convert.to_pptx(html, _sample_label_plain(slug, html)),
+        file_name=f"{slug}-research-note.pptx",
+        mime=("application/vnd.openxmlformats-officedocument"
+              ".presentationml.presentation"),
+        use_container_width=True, key=f"{key}_dl_pptx")
+    if markdown_text:
+        cols[4].download_button(
+            "Markdown", data=markdown_text,
+            file_name=f"{slug}-research-note.md", mime="text/markdown",
+            use_container_width=True, key=f"{key}_dl_md")
+    if st.session_state.pop("print_note", False):
+        _print_bridge()
+
+
+def _print_bridge() -> None:
+    """Hand the note's own document to the browser's print dialog.
+
+    The frame is same-origin, so its window is reachable and printing
+    IT rather than the page prints the note alone - without the shell's
+    topbar, buttons and padding, which is what a reader asking for a
+    PDF of a research note means.
+    """
+    components.html(
+        r"""<script>
+        (function () {
+          var doc;
+          try { doc = window.parent.document; } catch (e) { return; }
+          if (!doc) return;
+          // The note is the tallest frame on the page; the bridges are
+          // zero-height. Picking by size avoids depending on an
+          // attribute Streamlit owns and may rename.
+          var best = null;
+          var frames = doc.querySelectorAll("iframe");
+          for (var i = 0; i < frames.length; i++) {
+            if (!best || frames[i].offsetHeight > best.offsetHeight) {
+              best = frames[i];
+            }
+          }
+          // On the live report screen the note is written straight
+          // into the page rather than framed, so there is no tall
+          // frame to print and the page itself is the document.
+          var target = (best && best.offsetHeight > 400 && best.contentWindow)
+            ? best.contentWindow : win;
+          try {
+            target.focus();
+            target.print();
+          } catch (e) { /* a cross-origin frame cannot be printed */ }
+        })();
+        </script>""",
+        height=0,
+    )
+
+
+def _sample_label_plain(slug: str, html: str) -> str:
+    """The document's own title, for the file it is converted into.
+
+    Read out of the note rather than passed in, so a converted file
+    carries the same name the document carries - the one place these
+    could disagree is the one place nobody would look.
+    """
+    found = re.search(r"<h1[^>]*>(.*?)</h1>", html, re.S | re.I)
+    if found:
+        text = re.sub(r"<[^>]+>", " ", found.group(1))
+        text = re.sub(r"\s+", " ", text).strip()
+        if text:
+            return text
+    return slug.replace("-", " ").upper()
 
 
 def _nav_bridge() -> None:
@@ -1253,14 +1372,10 @@ if st.session_state["view"] == "home":
                 **figures,
             }
         )
-    write(ui.head("Reports", "Built from live filings by the same pipeline "
-                  "the tool runs. Open one to read it; reports you "
-                  "generate join the list."))
-    write(ui.flush_card(ui.report_rows(rows, token=_unlock_token(), scope=_scope_for_links())))
-    if st.session_state.get("samples_problem"):
-        write(ui.status("warning", "Samples",
-                        st.session_state["samples_problem"]))
-
+    # Get started FIRST, reports after. A reader who has been sent this
+    # link does not yet know what the tool does; the four steps say so
+    # in the time it takes to read them, and the archive below is then
+    # evidence rather than an unexplained table.
     write(ui.head("Get started"))
     write(ui.card(ui.steps(ui.STEPS)))
 
@@ -1277,13 +1392,20 @@ if st.session_state["view"] == "home":
         if acts[1].button("Return to report", use_container_width=True,
                           key="back_to_report"):
             go("report")
+
+    # The subtitle that stood here said what the table already shows.
+    write(ui.head("Reports"))
+    write(ui.flush_card(ui.report_rows(rows, token=_unlock_token(), scope=_scope_for_links())))
+    if st.session_state.get("samples_problem"):
+        write(ui.status("warning", "Samples",
+                        st.session_state["samples_problem"]))
     st.stop()
 
 
 # ---------------------------------------------------------------- samples
 
 if st.session_state["view"] == "samples":
-    _skip_link("ar-samples", "Skip to the samples")
+    _skip_link("ar-samples", "Skip to the report")
     # Not `samples`: that is the module, imported above, and rebinding it
     # here would break any later call to samples.load in this block.
     notes = _documents()
@@ -1293,85 +1415,68 @@ if st.session_state["view"] == "samples":
     # Before any control. This view is addressable by URL, so a bookmark,
     # a pasted link or the browser's Back reaches it whether or not the
     # button that leads here was ever rendered - and with no archive the
-    # radio below was built over an empty list and raised StopIteration
-    # into a red error panel, which is the most expensive single thing
-    # that can happen on a page a reader is judging.
+    # picker that used to stand here was built over an empty list and
+    # raised StopIteration into a red error panel, which is the most
+    # expensive single thing that can happen on a page a reader is
+    # judging.
     if not notes:
         write(ui.samples_empty())
         if st.session_state.get("samples_problem"):
             write(ui.status("warning", "Samples",
                             st.session_state["samples_problem"]))
-        gone = st.columns([1, 1, 3])
+        gone = st.columns([1.4, 1.4, 4])
         if gone[0].button("Back", key="samples_back_empty"):
             go("home")
-        if gone[1].button(ui.START_LABEL, key="samples_build_empty"):
+        if gone[1].button(ui.NEW_LABEL, type="primary",
+                          use_container_width=True,
+                          key="samples_build_empty"):
             go("tool")
         st.stop()
 
-    write(ui.samples_intro(len(notes)))
+    # ONE report, named by the link that reached here.
+    #
+    # This screen used to carry a radio of every note in the archive
+    # above the document, so opening one report handed the reader a
+    # six-way picker they had already made their choice in. A row on the
+    # index is a link to a document, and a link to a document opens that
+    # document. The list lives on the home screen, which is the one
+    # place a list belongs.
+    #
+    # `s` is hostile input: it is matched against the documents that
+    # exist rather than used to find one, so an unknown or hand-edited
+    # value falls back to the newest rather than raising.
+    asked = st.query_params.get("s") or ""
+    note = next((d for d in notes if d.slug == asked), notes[0])
 
-    back = st.columns([1, 1, 3])
-    if back[0].button("Back", key="samples_back"):
+    write(ui.report_head(
+        _sample_label(note.title),
+        is_sample=getattr(note, "shipped", False),
+    ))
+
+    # Back, then the way on. Sized, and the primary action named for
+    # what it does from HERE - "Start a report" reads as though the
+    # report on screen had not started.
+    acts = st.columns([1.4, 1.9, 3.5])
+    if acts[0].button("Back", key="samples_back"):
         go("home")
-    if back[1].button(ui.START_LABEL, key="samples_build"):
+    if acts[1].button(ui.NEW_LABEL, type="primary",
+                      use_container_width=True, key="samples_build"):
         go("tool")
 
-    # A row on the index links here with the document it wants in `s`,
-    # which is how a clickable row reaches a specific report. The
-    # parameter is hostile input: it is matched against the documents
-    # that exist rather than used to find one, so an unknown or hand-
-    # edited value falls back to the first rather than raising.
-    #
-    # Written into the widget's state rather than passed as an index,
-    # because the radio owns its selection after the first render and
-    # an index argument would be ignored from then on - the same
-    # Streamlit rule that left the strategy box holding a preset the
-    # reader had deselected.
-    asked = st.query_params.get("s") or ""
-    if asked and any(d.slug == asked for d in notes):
-        if st.session_state.get("sample_asked") != asked:
-            st.session_state["sample_asked"] = asked
-            st.session_state["sample_pick"] = asked
+    _download_row(note.slug, note.html, key="sample")
 
-    chosen = st.radio(
-        "Report",
-        [s.slug for s in notes],
-        format_func=lambda slug: _sample_label(
-            next(s.title for s in notes if s.slug == slug)
-        ),
-        horizontal=True,
-        key="sample_pick",
-    )
-    note = next((s for s in notes if s.slug == chosen), notes[0])
-    st.download_button(
-        "Download this note",
-        data=note.html,
-        file_name=f"{note.slug}-research-note.html",
-        mime="text/html",
-        key="sample_dl",
-    )
     # NOTE: `components.v1.html` is deprecated and Streamlit's own warning
     # gives a removal date that has now passed, so this call is on
     # borrowed time. `st.iframe` is not a replacement for it: that takes a
     # URL or a path, and this needs to render a complete HTML document
-    # held in memory. Migrating means serving each note at its own route,
-    # which is the right answer for other reasons too - it would end the
-    # scroll-within-a-scroll - but it is a change of shape, not a swap.
+    # held in memory.
     #
     # Rendered in its own document rather than injected into this page:
     # each note is a complete HTML file carrying its own stylesheet, and
     # inlining it would let those rules reach the app around it.
     # 2,000px is the height Streamlit is told; the note then sizes its
     # own frame to its content, because the frame is same-origin and the
-    # document inside it can reach `window.frameElement`. Measured: a
-    # note runs 36,843px and the frame now matches it, so the page
-    # scrolls once through Streamlit's own container and the note's
-    # section index is no longer trapped behind a nested scrollbar.
-    #
-    # The comment here used to say this could not be made to fit and
-    # that the honest fix was a page of its own. The second half is
-    # still true - a note deserves its own route - but "cannot" was
-    # wrong, and it had stopped anyone looking.
+    # document inside it can reach `window.frameElement`.
     _nav_bridge()
     components.html(framed(note.html), height=2000, scrolling=True)
     st.stop()
@@ -1445,27 +1550,18 @@ _skip_link("ar-report", "Skip to report")
 # behind a control rather than occupying the top of every page. Home is
 # beside it, because leaving should be a control in the page rather than
 # a browser gesture that costs the artifact.
-actions = st.columns([4, 1.1, 1.1, 1.3, 1.1])
-if actions[3].button("New report", use_container_width=True, key="new"):
-    _new_report_dialog()
-if actions[4].button("Home", use_container_width=True, key="to_home"):
+# Navigation first, then the ways out of this document. They used to
+# be one row of five unequal buttons with a stretched spacer, so the
+# order a reader scanned was neither the order of importance nor the
+# order of use.
+actions = st.columns([1.4, 1.9, 3.5])
+if actions[0].button("Home", key="to_home"):
     go("home")
-actions[1].download_button(
-    "HTML",
-    data=report_to_html(report),
-    file_name=f"{report.ticker}-research-note.html",
-    mime="text/html",
-    use_container_width=True,
-    key="dl_html",
-)
-actions[2].download_button(
-    "Markdown",
-    data=report_to_markdown(report),
-    file_name=f"{report.ticker}-research-note.md",
-    mime="text/markdown",
-    use_container_width=True,
-    key="dl_md",
-)
+if actions[1].button(ui.NEW_LABEL, type="primary",
+                     use_container_width=True, key="new"):
+    _new_report_dialog()
+_download_row(report.ticker.lower(), report_to_html(report), key="live",
+              markdown_text=report_to_markdown(report))
 
 # The marker the Back guard looks for, carrying whether this report
 # was written to disk. It almost always was - `_run_pending` saves the

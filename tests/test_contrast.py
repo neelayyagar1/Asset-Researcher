@@ -163,9 +163,13 @@ def _scheme_block(scheme: str) -> str:
         # carries no --shell-* at all. Found by its contents.
         start = css.rindex(":root", 0, css.index("--shell-bg:"))
         return css[start : css.index("}", start)]
-    start = css.index("@media (prefers-color-scheme: dark)")
-    opened = css.index("{", css.index(":root", start))
-    return css[opened : css.index("}", opened)]
+    # There is one scheme. The dark block was deleted on the owner's
+    # instruction - it had shipped half-done, with the shell dark and
+    # the research note still on paper, and one screen in two colour
+    # systems is worse than one honest scheme. The tests that measured
+    # it went with it; the ones that walked BOTH schemes now walk the
+    # one that exists, which is what `_SCHEMES` below carries.
+    raise AssertionError(f"no {scheme} scheme: this product has one palette")
 
 
 def _tokens(scheme: str) -> dict[str, str]:
@@ -178,42 +182,7 @@ def _tokens(scheme: str) -> dict[str, str]:
     }
 
 
-def test_a_dark_scheme_redeclares_every_colour_it_inherits():
-    """The failure mode of a half-written dark mode is not ugliness, it
-    is a light token surviving on a dark ground - black text on black,
-    or a hairline that disappears. Every colour the light scheme
-    declares has to be answered."""
-    light, dark = _tokens("light"), _tokens("dark")
-    assert light, "no light tokens found"
-    missing = sorted(set(light) - set(dark))
-    assert not missing, f"dark mode does not redeclare: {missing}"
 
-
-def test_every_shell_text_tone_passes_aa_on_every_ground_in_dark():
-    dark = _tokens("dark")
-    grounds = {k: dark[k] for k in ("bg", "panel", "sink")}
-    tones = {k: dark[k] for k in ("ink", "soft", "mute")}
-    for tone_name, tone in tones.items():
-        for ground_name, ground in grounds.items():
-            measured = contrast(tone, ground)
-            assert measured >= AA_NORMAL, (
-                f"dark {tone_name} {tone} on {ground_name} {ground} "
-                f"measures {measured:.2f}:1"
-            )
-
-
-def test_the_dark_field_boundary_meets_the_control_floor():
-    """SC 1.4.11: 3:1 for the edge that identifies a control. The light
-    scheme was shipped with a boundary measuring 1.27:1 - a white
-    border on a white fill - and a keyboard reader had no idea which
-    field held focus."""
-    dark = _tokens("dark")
-    for ground in ("bg", "panel"):
-        measured = contrast(dark["field-line"], dark[ground])
-        assert measured >= 3.0, (
-            f"the dark field boundary measures {measured:.2f}:1 on "
-            f"{ground}"
-        )
 
 
 def test_the_focus_ring_is_offset_so_its_neighbour_is_the_ground():
@@ -240,20 +209,12 @@ def test_the_focus_ring_is_offset_so_its_neighbour_is_the_ground():
     )
 
 
-def test_the_dark_focus_ring_is_visible_on_every_ground_it_lands_on():
-    dark = _tokens("dark")
-    for ground in ("bg", "panel", "sink"):
-        measured = contrast(dark["focus"], dark[ground])
-        assert measured >= 3.0, (
-            f"the dark focus ring measures {measured:.2f}:1 on {ground}"
-        )
-
 
 def test_the_primary_button_label_passes_on_its_own_fill():
     """The label was hard-coded white. In a dark scheme the fill
     becomes light, and white on light is unreadable - the one control
     on the screen a reader is meant to press."""
-    for scheme in ("light", "dark"):
+    for scheme in ("light",):
         tokens = _tokens(scheme)
         measured = contrast(tokens["on-ink"], tokens["ink"])
         assert measured >= AA_NORMAL, (
@@ -300,7 +261,7 @@ def test_a_secondary_button_has_a_boundary_a_reader_can_see():
     the wrong one for the edge of a control. The hairline stays where
     it belongs; buttons get the boundary token.
     """
-    for scheme in ("light", "dark"):
+    for scheme in ("light",):
         tokens = _tokens(scheme)
         measured = contrast(tokens["btn-line"], tokens["bg"])
         assert measured >= 3.0, (
@@ -313,7 +274,7 @@ def test_the_card_hairline_stays_a_hairline():
     """The fix must not be applied by darkening the shared line token:
     a card edge at 3:1 is a box drawn round everything, which is the
     register this shell was rebuilt to get away from."""
-    for scheme in ("light", "dark"):
+    for scheme in ("light",):
         tokens = _tokens(scheme)
         assert contrast(tokens["line-2"], tokens["bg"]) < 2.0, (
             f"{scheme}: the panel hairline has become a border"
@@ -339,57 +300,7 @@ def _all_tokens(scheme: str) -> dict[str, str]:
     }
 
 
-def test_the_dark_scheme_answers_the_document_tones_too():
-    """The report screen writes `ui.masthead`, `ui.stat_strip` and each
-    section's HTML directly into the page - not into the iframe the
-    reading screen uses - so `.ar-title { color: var(--ink) }` is
-    painted on `.stApp`, which the dark scheme makes near-black. The
-    title, every paragraph and every headline figure on the longest
-    screen in the product would be near-black on near-black.
-    """
-    dark = _all_tokens("dark")
-    ground = dark["shell-bg"]
-    for name, floor in (("ink", AA_NORMAL), ("ink-soft", AA_NORMAL),
-                        ("ink-muted", AA_NORMAL)):
-        assert name in dark, f"--{name} is not answered in the dark scheme"
-        measured = contrast(dark[name], ground)
-        assert measured >= floor, (
-            f"dark --{name} {dark[name]} on the shell ground {ground} "
-            f"measures {measured:.2f}:1"
-        )
 
-
-def test_the_dark_document_surfaces_are_not_left_white():
-    """`[data-testid="stExpander"]` is painted `var(--surface)`, and
-    the run status block is an expander. Left at #ffffff it is a white
-    panel carrying `.ar-stage` in `--shell-ink`, which is near-white -
-    so for the whole ninety seconds the one line saying what the
-    system is doing is invisible."""
-    dark = _all_tokens("dark")
-    for name in ("paper", "surface"):
-        assert name in dark, f"--{name} is not answered in the dark scheme"
-        measured = contrast(dark["ink"], dark[name])
-        assert measured >= AA_NORMAL, (
-            f"dark --ink on --{name} measures {measured:.2f}:1"
-        )
-    # And the shell's own ink has to work there too, since shell rules
-    # paint text onto these surfaces.
-    assert contrast(dark["shell-ink"], dark["surface"]) >= AA_NORMAL
-
-
-def test_the_progress_track_is_darker_than_its_fill_in_dark():
-    """`--rule` is the light hairline. Left un-darkened the empty
-    track is the brightest thing in the status block and the fill
-    reads as the gap, so the bar appears to run backwards."""
-    dark = _all_tokens("dark")
-    assert "rule" in dark
-    track = _luminance(dark["rule"])
-    fill = _luminance(dark["accent"]) if "accent" in dark else None
-    assert fill is not None, "--accent is not answered in the dark scheme"
-    assert fill > track, (
-        "the progress fill is darker than its own track, so the bar "
-        "reads inverted"
-    )
 
 
 def test_the_documents_focus_ring_uses_a_token_the_document_sheet_has():
@@ -443,7 +354,7 @@ def _resolved(name: str, scheme: str) -> str:
 
 
 def test_the_document_focus_ring_passes_on_both_grounds():
-    for scheme in ("light", "dark"):
+    for scheme in ("light",):
         ring = _resolved("accent", scheme)
         ground = _resolved("shell-bg", scheme)
         measured = contrast(ring, ground)
@@ -463,7 +374,7 @@ def test_the_row_hover_is_visible_in_both_schemes():
     A surface difference is not text, so the floor is the 3:1 of SC
     1.4.11 rather than 4.5:1; this asks only that it be perceptible.
     """
-    for scheme in ("light", "dark"):
+    for scheme in ("light",):
         tokens = _all_tokens(scheme)
         assert "shell-row-hover" in tokens, (
             f"{scheme}: the row hover has no token of its own"

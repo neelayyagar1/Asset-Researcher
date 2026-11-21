@@ -798,106 +798,6 @@ button[data-testid="stExpandSidebarButton"]:hover,
 
 .stApp, [data-testid="stAppViewContainer"] { background: var(--shell-bg); }
 
-/* ------------------------------------------------------------- dark
-
-   The same shell, on the other ground. Nothing moves and nothing
-   changes shape: the register is restraint, and a dark mode that
-   reorganises the page is a second design rather than the same one
-   after dark.
-
-   Every colour is a token redefinition, which is the whole reason the
-   palette is declared in one block. Four colours used to sit inline in
-   the rules - among them the primary button's label, hard-coded white,
-   which on this scheme's near-white fill would have made the one
-   control a reader is meant to press unreadable. The suite now fails
-   if the light scheme declares a colour this one does not answer.
-
-   Following the system rather than offering a switch. A toggle is a
-   control, a preference to persist and a state to get wrong, and the
-   reader this is built for has already told their laptop which they
-   want. The measured ratios are in the suite, not in a comment: every
-   tone is checked against every ground it lands on, at the same 4.5:1
-   floor the light scheme is held to, and the field boundary and focus
-   ring at the 3:1 the WCAG 2.2 control rules ask for. */
-@media (prefers-color-scheme: dark) {
-  :root {
-    --shell-bg: #0d0e12;
-    --shell-panel: #161820;
-    --shell-ink: #e8eaef;
-    --shell-soft: #b9bdc8;
-    --shell-mute: #9499a5;
-    /* Lines read louder on a dark ground than on a light one at the
-       same distance from it, so these sit closer to the panel than
-       their light counterparts do to white. */
-    --shell-line: #242732;
-    --shell-line-2: #2c3040;
-    --shell-field-line: #767c8a;
-    --shell-btn-line: #6a6f7e;
-    --shell-focus: #a5a0ff;
-    --shell-sink: #121419;
-    --shell-row-hover: #232838;
-    --shell-shadow: 0 1px 2px rgba(0, 0, 0, .4);
-    --shell-on-ink: #11131a;
-    --shell-ink-hover: #ffffff;
-    --shell-chip: #1d212b;
-    --shell-hover: #1d212b;
-    --shell-hover-line: #3a3f52;
-
-    /* The DOCUMENT tokens, answered here and only here.
-    
-       The reading screen puts a note in an iframe, where it keeps its
-       own paper world and nothing out here reaches it. The REPORT
-       screen does not: it writes `ui.masthead`, `ui.stat_strip` and
-       every section's HTML straight into the Streamlit page. So on
-       the longest screen in the product, `.ar-title { color:
-       var(--ink) }` was painting #17150f on a near-black ground -
-       1.06:1 - with the prose at --ink-soft around 1.4:1, and only
-       the tables legible, because `table.ar-table` paints its own
-       white. A page of readable tables with invisible headings
-       between them.
-    
-       Also reached by this: `[data-testid="stExpander"]`, which is
-       what `st.status` renders as, was left at --surface #ffffff
-       while `.ar-stage` inside it is painted --shell-ink, near-white.
-       For the whole ninety seconds of a run, the one line telling a
-       dark-mode reader what the system was doing was white on white.
-       And `.ar-progress` drew its track in --rule, the light
-       hairline, so the empty track was brighter than the fill and the
-       bar read as running backwards.
-    
-       These live in _APP_CSS rather than in `_root()` deliberately.
-       `document_stylesheet()` - what the exported file and the
-       iframe'd note carry - is the font import plus `_root()` plus
-       _DOCUMENT_CSS, and does NOT include this block. So a downloaded
-       note stays on paper, which is what a document should be, while
-       the same markup inside the shell follows the shell. */
-    --ink: #e9ebf0;
-    --ink-soft: #c2c6d0;
-    --ink-muted: #9aa0ac;
-    --paper: #14161c;
-    --surface: #171a21;
-    --rule: #2a2e38;
-    --rule-soft: #21242c;
-    --accent: #8fb6d8;
-    --accent-soft: #1b2a36;
-    --accent-2: #c9a227;
-  }
-
-  /* Streamlit paints a few surfaces from its own static config, which
-     has one scheme and cannot follow the system. These are the ones a
-     reader meets. */
-  .stApp, [data-testid="stAppViewContainer"],
-  [data-testid="stHeader"] { background: var(--shell-bg); }
-
-  /* The note renders in its own document, which carries its own paper
-     world and is not restyled here - a research note is a document,
-     and a document on a dark screen is still on paper. The frame it
-     sits in gets an edge so the white does not run into the page. */
-  iframe { border-radius: var(--shell-r); }
-}
-
-
-
 .block-container {
   max-width: var(--shell-col);
   padding: 26px var(--shell-gut) 64px;
@@ -931,7 +831,36 @@ button[data-testid="stExpandSidebarButton"]:hover,
   margin-left: auto; font-family: var(--mono); font-size: 11px;
   color: var(--shell-mute); letter-spacing: .02em; }
 
-.ar-head { margin-bottom: 14px; }
+/* Section rhythm, declared once.
+   Streamlit puts every `write` in its own element container with its own
+   vertical gap, so a margin-bottom here ADDED to that gap and a missing
+   margin-top left none at all. The result on the home screen was a
+   heading sitting flush on the table above it and a canyon between that
+   heading and its own card - the two complaints were one bug.
+   The separation now belongs to the TOP of a section head, which is the
+   edge that actually divides two sections, and the gap to the head's own
+   body is the container's. */
+.ar-head { margin: 40px 0 2px; }
+/* The screen's opening statement is the first thing on the page and has
+   nothing above it to be separated from. */
+.ar-head.ar-open { margin-top: 0; margin-bottom: 8px; text-align: center; }
+.ar-head.ar-open p.lead { margin-inline: auto; }
+/* The single-report screen's title line: the document's name, and the
+   marker that says whether it shipped with the tool. Baseline-aligned
+   rather than stacked, because they are one statement. */
+.ar-head.ar-report-head {
+  /* The first thing under the bar on this screen, so it is separated
+     from the bar rather than from a section above it - 40px of section
+     rhythm here left a band of dead page between the chrome and the
+     document's own name. */
+  margin-top: 14px;
+  display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; }
+.ar-head.ar-report-head h1 { font-size: 17px !important; }
+.ar-tag {
+  font-family: var(--mono); font-size: 10px; letter-spacing: .08em;
+  text-transform: uppercase; color: var(--shell-mute);
+  border: 1px solid var(--shell-line); border-radius: 999px;
+  padding: 2px 8px; line-height: 1.6; }
 .ar-head h1, .ar-head h2 {
   font-family: var(--sans) !important; font-size: 15px !important;
   font-weight: 600 !important; letter-spacing: -.015em !important;
@@ -1480,13 +1409,31 @@ table.ar-list th.num { font-family: var(--sans); letter-spacing: .03em; }
    navigation and the reader should not notice it moved. */
 .ar-shell-nav {
   position: sticky; top: 0; z-index: 5;
-  display: flex; flex-wrap: wrap; gap: 0 18px;
-  padding: 10px 0; margin-bottom: 4px;
+  /* ONE LINE, scrolled, not wrapped.
+     This said `flex-wrap: wrap`, so twenty-two uppercase section names
+     stacked into three ragged rows above the document - the owner's
+     word for it was a blob, and he was right. The index inside the
+     note has always been a single rail that scrolls sideways under a
+     fade; lifting it into the shell was supposed to be invisible to
+     the reader, and the one property that gave it away was this.
+     A rail stays one line deep whatever the section count, which is
+     the only version that reads as chrome rather than as content. */
+  display: flex; flex-wrap: nowrap; gap: 0 20px;
+  overflow-x: auto; scrollbar-width: none;
+  padding: 11px 0; margin-bottom: 6px;
   background: var(--shell-bg);
-  border-bottom: 1px solid var(--shell-line); }
+  border-bottom: 1px solid var(--shell-line);
+  /* The fade says there is more to the right. Without it the last
+     label is cut mid-word, which reads as a rendering fault rather
+     than as an affordance. #000 is an alpha stop, not a colour: a
+     mask reads luminance, so black is opaque and transparent cuts. */
+  /* impeccable-disable-next-line design-system-color -- mask alpha stop, not a palette colour */
+  mask-image: linear-gradient(90deg, #000 calc(100% - 48px), transparent);
+  -webkit-mask-image: linear-gradient(90deg, #000 calc(100% - 48px), transparent); }
+.ar-shell-nav::-webkit-scrollbar { display: none; }
 .ar-shell-nav a {
   font-size: 11px; letter-spacing: .04em; text-transform: uppercase;
-  color: var(--shell-mute); text-decoration: none;
+  color: var(--shell-mute); text-decoration: none; white-space: nowrap;
   padding: 3px 0; min-height: 24px; display: inline-flex;
   align-items: center; }
 .ar-shell-nav a:hover { color: var(--shell-ink); }

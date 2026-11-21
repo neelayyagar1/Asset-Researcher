@@ -20,7 +20,7 @@ import pathlib
 import pytest
 from streamlit.testing.v1 import AppTest
 
-from asset_researcher.ui.components import START_LABEL
+from asset_researcher.ui.components import NEW_LABEL, START_LABEL
 from tests.apptest_helpers import page_text, rendered_markup
 
 from asset_researcher.hosting import samples as samples_mod
@@ -84,11 +84,16 @@ def test_the_samples_screen_lists_every_note_in_the_archive(
     at.run()
     assert not at.exception
 
-    assert at.radio, "no picker on the samples screen"
-    # The picker shows the reader-facing label, not the slug: the EDGAR
-    # conformed name is normalised on the way out.
-    options = set(at.radio[0].options)
-    assert options == {"Apple Inc. (AAPL)", "Realty Income Corp. (O)"}, options
+    # ONE report, not a picker over the archive. Reaching this screen
+    # with no `s` lands on the newest note and names it; the list of
+    # every note lives on the home screen, which is where a list
+    # belongs. The label is the reader-facing one, not the slug: the
+    # EDGAR conformed name is normalised on the way out.
+    assert not at.radio, "the archive picker is back on the report screen"
+    text = page_text(at)
+    shown = [n for n in ("Apple Inc. (AAPL)", "Realty Income Corp. (O)")
+             if n in text]
+    assert len(shown) == 1, shown
 
 
 def test_the_samples_screen_offers_the_note_as_a_download(
@@ -100,7 +105,13 @@ def test_the_samples_screen_offers_the_note_as_a_download(
     # Download buttons are their own element type in AppTest, not
     # ordinary buttons, which is why a `at.button` scan finds nothing.
     downloads = [d.label for d in at.download_button]
-    assert downloads == ["Download this note"], downloads
+    # Four shapes a reader circulates a note in. PDF is a BUTTON rather
+    # than a download, because the file is produced by the reader's own
+    # print dialog from the note's print stylesheet - higher fidelity
+    # than any engine installable without system libraries, and it
+    # keeps the citations clickable.
+    assert downloads == ["HTML", "Word", "PowerPoint"], downloads
+    assert any(b.label == "PDF" for b in at.button), _labels(at)
 
 
 def test_the_samples_screen_can_be_left_in_both_directions(
@@ -110,7 +121,8 @@ def test_the_samples_screen_can_be_left_in_both_directions(
     at.query_params["view"] = "samples"
     at.run()
     assert any(b.label == "Back" for b in at.button)
-    assert any(b.label == START_LABEL for b in at.button)
+    # Named for what it does from a screen that already holds a report.
+    assert any(b.label == NEW_LABEL for b in at.button), _labels(at)
 
     next(b for b in at.button if b.label == "Back").click().run()
     assert not at.exception
@@ -288,7 +300,9 @@ def test_home_offers_the_way_back_to_a_report_it_still_holds(
 def test_the_report_offers_both_exports(monkeypatch, built_report):
     at = _with_report(monkeypatch, built_report)
     labels = [d.label for d in at.download_button]
-    assert "HTML" in labels and "Markdown" in labels, labels
+    for want in ("HTML", "Markdown", "Word", "PowerPoint"):
+        assert want in labels, (want, labels)
+    assert any(b.label == "PDF" for b in at.button), _labels(at)
 
 
 def test_the_exports_carry_the_company_and_the_sections(
@@ -312,7 +326,7 @@ def test_the_exports_carry_the_company_and_the_sections(
 
 def test_the_report_screen_offers_a_new_run(monkeypatch, built_report):
     at = _with_report(monkeypatch, built_report)
-    assert any(b.label == "New report" for b in at.button), _labels(at)
+    assert any(b.label == NEW_LABEL for b in at.button), _labels(at)
 
 
 def test_the_report_marks_itself_for_the_wider_column(

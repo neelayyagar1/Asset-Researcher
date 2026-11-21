@@ -139,7 +139,14 @@ def test_opening_a_row_lands_on_that_report(monkeypatch, tmp_path):
     at.query_params["s"] = first.slug
     at = _unlock(at)
     assert not at.exception
-    assert at.radio(key="sample_pick").value == first.slug
+    # The TITLE of the asked-for report is on the screen, and the other
+    # report's is not. There used to be a radio of every note above the
+    # document, so following a link to one report handed the reader a
+    # six-way picker for a choice they had already made. A link to a
+    # document opens that document.
+    text = page_text(at)
+    assert first.title in text, text[:400]
+    assert second.title not in text, text[:400]
 
 
 def test_a_slug_nobody_shipped_does_not_raise(monkeypatch, tmp_path):
