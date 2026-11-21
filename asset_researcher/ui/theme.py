@@ -1262,18 +1262,53 @@ table.ar-list th.num, table.ar-list td.num {
    that is itself centred, so there is a single centre line and nothing
    can drift off it. The previous gate centred each block inside its own
    max-width box and produced three. */
-.block-container:has(.ar-gate) { max-width: 320px; padding-top: 128px; }
+/* The gate is the first thing anyone sees, and it was the last screen
+   still speaking in the old voice: the product's name set in the sans at
+   17px semibold, which is the size of a form label rather than of an
+   introduction.
+
+   Centred here, and that is not the fault the home screen had. Home was
+   one centred sentence above a column of left-aligned content, so the
+   eye was given two different places to start. The gate holds exactly
+   one object and nothing to align against, which is the case where a
+   centre axis is the only sensible one.
+
+   The 128px top pad put the whole object in the upper third and left a
+   dead band under it taller than the object itself. It sits on a true
+   vertical centre now, so the space above and below is the same space
+   and reads as composition rather than as content that ran out. */
+.block-container:has(.ar-gate) {
+  max-width: 320px;
+  padding-top: 0;
+  min-height: 100svh;
+  display: flex; flex-direction: column; justify-content: center;
+  /* Above dead centre by a little. An object centred exactly looks low,
+     because the eye reads the optical centre as higher than the
+     geometric one. */
+  padding-bottom: 9vh; }
+/* Streamlit's vertical block grows to fill its parent, so centring the
+   container alone moved nothing: the child filled the height and its
+   own content stayed at the top of it. Measured - container flex,
+   justify-content centre, height 982, and the gate still painting at
+   the top. The child has to stop growing before the centring means
+   anything. */
+.block-container:has(.ar-gate) > div,
+.block-container:has(.ar-gate) [data-testid="stVerticalBlock"] {
+  flex: 0 0 auto; }
 .ar-gate { text-align: center; margin-bottom: 20px; }
 .ar-gate .brand i {
   width: 22px; height: 22px; border-radius: var(--shell-r-sm);
   display: inline-block;
   background: var(--shell-ink); margin-bottom: 18px; }
+/* The name, in the voice the rest of the product now speaks in. */
 .ar-gate h1 {
-  font-family: var(--sans) !important; font-size: 17px !important;
-  font-weight: 600 !important; letter-spacing: -.02em !important;
-  color: var(--shell-ink); margin: 0 !important; }
+  font-family: var(--shell-display) !important; font-size: 32px !important;
+  font-weight: 300 !important; letter-spacing: -.02em !important;
+  line-height: 1.12 !important;
+  color: var(--shell-ink); margin: 0 !important;
+  font-optical-sizing: auto; font-synthesis-weight: none; }
 .ar-gate p {
-  font-size: 12.5px; color: var(--shell-mute); margin: 5px 0 0; }
+  font-size: 12.5px; color: var(--shell-mute); margin: 7px 0 0; }
 .block-container:has(.ar-gate) [data-testid="stForm"] {
   border: 0; padding: 0; }
 /* Streamlit's own `label_visibility="collapsed"` hides this, and it

@@ -141,6 +141,23 @@ def test_no_shell_colour_is_the_indigo_every_generator_reaches_for():
         )
 
 
+def test_the_first_screen_speaks_in_the_products_voice():
+    """The gate is the first thing anyone sees and was the last screen
+    still set in the old voice - the product's name in the sans at 17px
+    semibold, which is the size of a form label, not an introduction.
+
+    Centred, and that is right here: the gate holds one object and has
+    nothing to align against. Home was wrong because one centred line
+    sat above a column of left-aligned content.
+    """
+    rule = re.search(r"\.ar-gate h1 \{([^}]*)\}", theme.stylesheet())
+    assert rule, "the gate's title has no rule"
+    body = rule.group(1)
+    assert "--shell-display" in body, "the gate is not in the display face"
+    weight = re.search(r"font-weight:\s*(\d+)", body)
+    assert weight and int(weight.group(1)) <= 300
+
+
 def test_the_product_tells_the_browser_it_has_one_light_palette():
     """Without `color-scheme`, the user agent paints its own ground from
     the operating system's preference before any stylesheet arrives. A
