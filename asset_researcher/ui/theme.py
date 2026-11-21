@@ -735,6 +735,10 @@ button[data-testid="stExpandSidebarButton"]:hover,
      hairline measures 1.27:1 on white, which is right for a card and
      wrong for an input. This is 3.27:1. */
   --shell-field-line: #8b8e98;
+  /* The one focus colour, declared once. 8.2:1 on the page and 4.4:1
+     on the bypass link's near-black pill, so it is visible wherever a
+     ring is drawn. */
+  --shell-focus: #4f46e5;
   --shell-sink: #fbfbfc;      /* table head */
   --shell-r: 7px;
   --shell-r-lg: 10px;
@@ -952,7 +956,7 @@ table.ar-list th.num, table.ar-list td.num {
   background: #f7f8f9; border-color: #d6d9df; color: var(--shell-ink); }
 .stButton > button:focus-visible, .stDownloadButton > button:focus-visible,
 .stFormSubmitButton > button:focus-visible {
-  outline: 2px solid #4f46e5; outline-offset: 2px; }
+  outline: 2px solid var(--shell-focus); outline-offset: 2px; }
 
 /* A row of buttons shares one row and splits it evenly. */
 [data-testid="stHorizontalBlock"] { gap: 10px; }
@@ -980,8 +984,15 @@ section:focus-visible, div[class*="block-container"]:focus-visible {
    unaffected. */
 .ar-skip, .ar-skip:visited, .ar-skip:hover, .ar-skip:active {
   color: var(--paper) !important; text-decoration: none !important; }
+/* The ring draws OUTSIDE the link's dark pill, on the page, so the page
+   is what it has to be seen against. It was `var(--paper)` - #faf8f3,
+   the ground of the editorial world this shell replaced - which
+   measures 1.04:1 on the new #fcfcfd page: invisible, on the first
+   control a keyboard user reaches in the whole product. The focus
+   colour every other control uses is visible against both the near-
+   black pill and the near-white page. */
 .ar-skip:focus-visible {
-  outline: 2px solid var(--paper) !important; outline-offset: 2px; }
+  outline: 2px solid var(--shell-focus) !important; outline-offset: 2px; }
 
 /* The earlier rule here was `section:focus-visible`, (0,1,1), which loses
    to Streamlit's emotion rule setting `outline: none`. Only the
@@ -1078,8 +1089,8 @@ hr { border-color: var(--rule); margin: var(--s5) 0; }
 /* The ring goes on the root, which is where the visible border is. */
 [data-testid="stTextInputRootElement"]:focus-within,
 [data-testid="stTextAreaRootElement"]:focus-within {
-  border-color: #4f46e5 !important;
-  outline: 2px solid #4f46e5; outline-offset: 1px; }
+  border-color: var(--shell-focus) !important;
+  outline: 2px solid var(--shell-focus); outline-offset: 1px; }
 
 /* The reveal toggle is a second tab stop inside the field's own box, so
    the field's :focus-within ring sits in the same place and does not
@@ -1087,7 +1098,7 @@ hr { border-color: var(--rule); margin: var(--s5) 0; }
 [data-testid="stTextInputRootElement"] button {
   background: transparent; border: 0; color: var(--shell-mute); }
 [data-testid="stTextInputRootElement"] button:focus-visible {
-  outline: 2px solid #4f46e5; outline-offset: -2px; border-radius: 4px; }
+  outline: 2px solid var(--shell-focus); outline-offset: -2px; border-radius: 4px; }
 
 /* A pull quote in the written guide, set as print sets one. */
 .ar-prose blockquote { margin: var(--s4) 0; padding-left: var(--s4);

@@ -84,3 +84,40 @@ def test_the_divergence_colours_pass_on_their_own_fills():
         assert measured >= AA_NORMAL, (
             f"{label} measures {measured:.2f}:1 on its own fill"
         )
+
+
+def _resolve(value: str) -> str:
+    """Turn `var(--token)` into the hex the stylesheet declares for it."""
+    value = value.strip()
+    if not value.startswith("var("):
+        return value
+    name = value[4:].split(")")[0].strip().lstrip("-")
+    return _token(name)
+
+
+def test_the_bypass_link_focus_ring_is_visible_against_the_page():
+    """It was not. The ring was `var(--paper)` - #faf8f3, the ground of
+    the editorial world this shell replaced - which measures about
+    1.01:1 against the new #fcfcfd page. The ring draws OUTSIDE the
+    link's dark pill, on the page, so the page is what it has to be seen
+    against, and this is the first control a keyboard user reaches in
+    the entire product.
+
+    SC 1.4.11 wants 3:1 for a focus indicator.
+    """
+    css = theme.stylesheet()
+    rule = re.search(
+        r"\.ar-skip:focus-visible\s*\{[^}]*outline:\s*[\d.]+px\s+solid\s+"
+        r"([^;!}]+)",
+        css,
+    )
+    assert rule, "the bypass link has no focus-visible outline rule"
+
+    ring = _resolve(rule.group(1))
+    page = _token("shell-bg")
+    measured = contrast(ring, page)
+    assert measured >= 3.0, (
+        f"the bypass link's focus ring is {ring} on {page}, which "
+        f"measures {measured:.2f}:1 - below the 3:1 floor for a focus "
+        f"indicator, and it is the first thing a keyboard user lands on"
+    )
