@@ -377,7 +377,18 @@ table.ar-table thead th, .ar-status .tag, .ar-finding-grid .lbl,
 .ar-sec { display: grid; grid-template-columns: var(--rail) minmax(0, 1fr);
   column-gap: var(--s5); align-items: baseline;
   margin: var(--s8) 0 var(--s5);
-  scroll-margin-top: calc(var(--nav-h) + var(--s3)); }
+  /* What a jump has to clear.
+     Read on its own, that is the note's own sticky section bar. Read
+     in the application, the note is a full-height frame inside a page
+     whose top bar is FIXED - the frame does not scroll, the page does,
+     and the bar is 56px of the page the frame knows nothing about. So
+     a section landed under it, or just above the top of the window,
+     and a reader arrived in the middle of a paragraph with no idea
+     whether the heading was above or below them.
+     One figure clears both, and the extra air is not waste: a heading
+     pinned to the very top of a window reads as a page that was cut
+     off there. */
+  scroll-margin-top: calc(var(--nav-h) + 72px); }
 .ar-sec-label { color: var(--ink); }
 .ar-sec-body { display: flex; align-items: center; gap: var(--s3); }
 .ar-sec-rule { flex: 1; height: 1px;
@@ -662,6 +673,44 @@ table.ar-table tbody tr.subject td.nm {
 .ar-nav a:hover { color: var(--ink); border-bottom-color: var(--accent); }
 /* The section the reader jumped to stays marked while they read it. */
 .ar-sec:target .ar-sec-label { color: var(--accent); }
+
+/* AND SAYS SO ON ARRIVAL.
+   A jump down this document can move thirty thousand pixels in one
+   frame. The reader has no sense of travel and no way to tell whether
+   the thing they asked for is the line above them or the line below,
+   so the destination marks itself for a moment and then stops - the
+   same two seconds a desktop search gives a result it has just
+   scrolled to.
+   `:target` cannot do this: the handler prevents the navigation, so
+   the fragment never changes and the pseudo-class never matches. The
+   class is added by the same handler that does the scrolling.
+   It is the accent's wash, which is the only tint in the document, and
+   it leaves nothing behind - no border, no persistent fill, nothing to
+   mistake for a state the section is in. */
+@keyframes ar-hit {
+  from { background: var(--accent-soft); }
+  60%  { background: var(--accent-soft); }
+  to   { background: transparent; }
+}
+@keyframes ar-hit-edge {
+  from { box-shadow: -10px 0 0 0 var(--accent-soft),
+                      10px 0 0 0 var(--accent-soft); }
+  60%  { box-shadow: -10px 0 0 0 var(--accent-soft),
+                      10px 0 0 0 var(--accent-soft); }
+  to   { box-shadow: -10px 0 0 0 transparent,
+                      10px 0 0 0 transparent; }
+}
+/* The wash runs past the text on both sides, so it reads as a band
+   across the column rather than as a highlighter on the words. */
+.ar-hit { border-radius: 2px;
+  animation: ar-hit 2.4s var(--ease) both,
+             ar-hit-edge 2.4s var(--ease) both; }
+/* A reader who has asked not to be moved is not asking to be left
+   without the cue, so the wash still appears - it simply does not
+   fade. */
+@media (prefers-reduced-motion: reduce) {
+  .ar-hit { animation: none; background: var(--accent-soft); }
+}
 
 /* -------------------------------------------------------------- charts */
 
@@ -979,9 +1028,30 @@ button[data-testid="stExpandSidebarButton"]:hover,
 .block-container {
   max-width: var(--shell-col);
   /* The bar is out of the flow now, so the column has to leave its
-     height plus the page's own top space. */
-  padding: 88px var(--shell-gut) 64px;
+     height plus the page's own top space: 56px of bar and 56px of air.
+     That arithmetic only holds because of the rule below it. */
+  padding: 112px var(--shell-gut) 64px;
   margin-inline: auto; }
+
+/* AN ELEMENT THAT PAINTS NOTHING STILL TOOK 16 PIXELS.
+   Streamlit's vertical block is a flex column with `gap: 16px` between
+   every child, and a child that renders nothing is still a child. Five
+   of them open this page - the stylesheet, two zero-height bridge
+   frames, the bypass link and the fixed top bar - so 80px of invisible
+   stack sat between the bar and the first word on the screen, measured
+   at 170px from the top of the window for a line that should start at
+   112. It looked like a spacing decision and was an accounting error.
+   The count differs per screen, which is why no single padding figure
+   ever fixed it: the form screen carries a different set.
+   Each kind cancels its own gap. Named rather than detected, because
+   CSS cannot ask how tall something rendered - but every one of them
+   is something this application emits, so the list is ours to keep. */
+[data-testid="stElementContainer"][height="0px"],
+[data-testid="stElementContainer"]:has(> [data-testid="stMarkdown"] style),
+[data-testid="stElementContainer"]:has(.ar-topbar),
+[data-testid="stElementContainer"]:has(.ar-skip),
+[data-testid="stElementContainer"]:has(span[role="group"][tabindex="-1"]) {
+  margin-bottom: -16px; }
 
 /* The report view needs every pixel a sixteen-column table asks for. */
 .block-container:has(.ar-report-view) { max-width: 1280px; }
@@ -1116,6 +1186,12 @@ button[data-testid="stExpandSidebarButton"]:hover,
    sentence and a different one for the rest of the page. It now shares
    the column's edge with everything under it. */
 .ar-head.ar-open { margin-top: 0; margin-bottom: 8px; }
+/* And so is the form screen's title, for the same reason: 40px of
+   SECTION rhythm above the first thing on a page separates it from a
+   section that is not there, and left this screen starting 96px below
+   the bar where home starts 58px below it. Two screens of one product
+   should begin at the same height. */
+.ar-head.ar-form-head { margin-top: 0; }
 /* The single-report screen's title line: the document's name, and the
    marker that says whether it shipped with the tool. Baseline-aligned
    rather than stacked, because they are one statement. */
@@ -1552,7 +1628,15 @@ ol.ar-steps > li.ar-step + li.ar-step { padding-left: 20px; }
    vertical centre now, so the space above and below is the same space
    and reads as composition rather than as content that ran out. */
 .block-container:has(.ar-gate) {
-  max-width: 320px;
+  /* The PAGE is the page, and the gate is an object on it.
+     Capping the container at 320px capped the whole screen: the
+     chassis rails came in to hug the form, and the first thing a
+     stranger saw was a phone-width strip of product standing in the
+     middle of a desktop window. It is the same fault the generate
+     screen had, and it has the same answer - the page keeps the
+     column it has everywhere else, and the measure is capped inside
+     it. */
+  max-width: var(--shell-col);
   padding-top: 0;
   min-height: 100svh;
   display: flex; flex-direction: column;
@@ -1578,7 +1662,10 @@ ol.ar-steps > li.ar-step + li.ar-step { padding-left: 20px; }
    anything. */
 .block-container:has(.ar-gate) > div,
 .block-container:has(.ar-gate) [data-testid="stVerticalBlock"] {
-  flex: 0 0 auto; }
+  flex: 0 0 auto;
+  /* The measure, centred in the column. A passphrase field is one
+     short string; a field stretched to 1120px invites a sentence. */
+  width: 100%; max-width: 320px; margin-inline: auto; }
 .ar-gate { text-align: center; margin-bottom: 20px; }
 .ar-gate .brand i {
   width: 22px; height: 22px; border-radius: var(--shell-r-sm);

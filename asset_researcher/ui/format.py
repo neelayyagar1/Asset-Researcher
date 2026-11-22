@@ -13,6 +13,7 @@ never reported.
 from __future__ import annotations
 
 import math
+import re
 
 NM = "NM"  # a ratio whose denominator makes it meaningless
 ND = "n.d."  # not disclosed, or not tagged
@@ -72,3 +73,32 @@ def scaled_usd(value: float | None) -> str:
     else:
         rendered = f"${magnitude:,.0f}"
     return f"({rendered})" if value < 0 else rendered
+
+
+# ------------------------------------------------------------------ dates
+
+_ISO_DAY = re.compile(r"\A(\d{4})-(\d{2})-(\d{2})\Z")
+_MONTHS = (
+    "Jan", "Feb", "Mar", "Apr", "May", "Jun",
+    "Jul", "Aug", "Sep", "Oct", "Nov", "Dec",
+)
+
+
+def filed_date(value: str) -> str:
+    """A filing date as a reader in New York writes one.
+
+    ISO is the right format for a key, a filename and a sort, and this
+    product uses it for all three. It is the wrong format for a line of
+    prose beside a company's name: "Filed 2026-08-05" is a record
+    locator, and the chip it sits in is read as a sentence.
+
+    Anything that is not a plain ISO day comes back untouched, because
+    a date this cannot parse is a date it has no business rewriting.
+    """
+    match = _ISO_DAY.match(value.strip())
+    if not match:
+        return value
+    year, month, day = (int(part) for part in match.groups())
+    if not 1 <= month <= 12:
+        return value
+    return f"{_MONTHS[month - 1]} {day}, {year}"

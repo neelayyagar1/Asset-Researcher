@@ -62,9 +62,9 @@ _CHART = 620
 # Resolving the target by id and scrolling to it is correct in both
 # cases and depends on no base URL at all. The href stays, so the links
 # still work with script disabled and still say where they go.
-_JUMP_SCRIPT = """<script>
-(function () {
-  document.addEventListener('click', function (event) {
+# The handler as every note built before this carries it, kept here so
+# `frame.repair` can replace it in the six that are already sealed.
+OLD_CLICK = """  document.addEventListener('click', function (event) {
     var link = event.target.closest('nav.ar-nav a[href^="#"]');
     if (!link) return;
     var target = document.getElementById(link.getAttribute('href').slice(1));
@@ -75,7 +75,49 @@ _JUMP_SCRIPT = """<script>
     // the section the reader just jumped to rather than from the bar.
     target.setAttribute('tabindex', '-1');
     target.focus({ preventScroll: true });
-  });
+  });"""
+
+# EVERY fragment link in the note, not only the ones in the section bar.
+#
+# Scoping the handler to `nav.ar-nav` left the rest of the document's
+# own links resolving the broken way, and one of them is in the
+# masthead: the "Filed 2026-08-05" chip points at `#s-provenance`.
+# Clicking it navigated the FRAME to the application's own URL, so the
+# whole site - top bar, section index, the lot - rendered a second time
+# inside the box where the note is supposed to be. The cause is the same
+# base-URL inheritance described above; only the selector decided which
+# links it still reached.
+#
+# The flash is the other half of landing somewhere. A jump that moves
+# 30,000px in one frame gives a reader no sense of where they arrived or
+# which direction they came from, and `:target` cannot mark it because
+# the default navigation is prevented. So the destination says so
+# itself, for two seconds, and then stops.
+NEW_CLICK = """  function arFlash(target) {
+    target.classList.remove('ar-hit');
+    void target.offsetWidth;
+    target.classList.add('ar-hit');
+    window.setTimeout(function () {
+      target.classList.remove('ar-hit');
+    }, 2400);
+  }
+  document.addEventListener('click', function (event) {
+    var link = event.target.closest('a[href^="#"]');
+    if (!link) return;
+    var target = document.getElementById(link.getAttribute('href').slice(1));
+    if (!target) return;
+    event.preventDefault();
+    target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    arFlash(target);
+    // Moves keyboard focus with the view, so the next Tab continues from
+    // the section the reader just jumped to rather than from the bar.
+    target.setAttribute('tabindex', '-1');
+    target.focus({ preventScroll: true });
+  });"""
+
+_JUMP_SCRIPT = """<script>
+(function () {
+__CLICK__
 
   // A note runs to about 36,000px and was shown in a 2,000px frame:
   // one eighteenth of the document at a time, through a scrollbar
@@ -142,7 +184,7 @@ function fitFrame() {
   else { window.addEventListener('load', arFit); }
   window.addEventListener('resize', arFit);
 })();
-</script>"""
+</script>""".replace("__CLICK__", NEW_CLICK)
 
 
 def report_to_html(report: Report, notice: str = "") -> str:

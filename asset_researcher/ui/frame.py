@@ -9,7 +9,14 @@ own frame, because the parent cannot pass either through
 
 from __future__ import annotations
 
-from asset_researcher.ui.export import _JUMP_SCRIPT
+import re
+
+from asset_researcher.ui import format as fmt
+from asset_researcher.ui.export import NEW_CLICK, OLD_CLICK, _JUMP_SCRIPT
+
+# Only inside a chip's own text, so nothing in the note's prose or in
+# any table of filing dates is touched.
+_CHIP_DATE = re.compile(r">Filed (\d{4}-\d{2}-\d{2})<")
 
 _NAME_FRAME = r"""<script>
 (function arNameFrame() {
@@ -71,9 +78,25 @@ def repair(note_html: str) -> str:
     comes back untouched, so this costs one failed substring search and
     disappears on its own once the six are next rebuilt.
     """
-    if _BROKEN_ENTRY not in note_html:
-        return note_html
-    return note_html.replace(_BROKEN_ENTRY, _FIXED_ENTRY)
+    if _BROKEN_ENTRY in note_html:
+        note_html = note_html.replace(_BROKEN_ENTRY, _FIXED_ENTRY)
+    # The second one, for the same reason: a sealed note's click handler
+    # reaches only the section bar, so the masthead's own chips still
+    # resolve against the parent page and load the whole application
+    # into the frame. Replaced here rather than rebuilt, exactly as
+    # above.
+    if OLD_CLICK in note_html:
+        note_html = note_html.replace(OLD_CLICK, NEW_CLICK)
+    # And the filing date in the masthead chip, which the six carry as
+    # the ISO day the renderer wrote that month. ISO is right for a key
+    # and wrong for a line of prose beside a company's name, and the
+    # index beside these notes now prints the long form; two spellings
+    # of one filing date make a reader check whether they are looking
+    # at the same filing.
+    note_html = _CHIP_DATE.sub(
+        lambda m: f">Filed {fmt.filed_date(m.group(1))}<", note_html
+    )
+    return note_html
 
 
 def framed(note_html: str) -> str:

@@ -137,7 +137,7 @@ def test_model_and_filing_text_cannot_reach_the_export_as_markup(report):
     # the one known script through. A new script appearing here fails
     # this test, which is the point.
     assert html.count("<script>") == 1
-    assert "nav.ar-nav a" in html
+    assert 'closest(\'a[href^="#"]\')' in html
 
 
 def test_an_absent_dcf_is_stated_rather_than_left_blank(report):

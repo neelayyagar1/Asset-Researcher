@@ -299,6 +299,59 @@ index worth copying — OpenAI, Anthropic, Runway, Cartesia — renders
 rows on the page with one hairline between them, and that is what this
 does now.
 
+**What the index says about a report.** Six rows that each said the
+same thing is what showed the fault. The Company column carried the
+note's own opening paragraph, which is a template — *"At N times free
+cash flow the price requires X% annual growth"* — so a column of six
+read as one statement repeated, and the question an index of already-
+read reports exists to answer, *which of these was the one about the
+deleveraging*, was the one it could not answer. It carries the variant
+perception now: the sentence a note writes about this company and no
+other, lifted verbatim rather than summarised, because a sentence
+written in the index would be a second account of what the report
+says.
+
+Beside it, a column headed **Headline** — a word that names a
+position on a page rather than anything in it — carried the
+price-implied growth rate on its own. On its own it cannot be judged:
+18.7% is alarming or unremarkable entirely according to what the
+company has actually done. It is **Priced for** now and shows the
+pair, *18.7% against 11.8% filed*. Solving a discounted cash flow
+backwards is the note's stated primary output and a standard way to
+read a multiple without asserting a target; against the compound the
+filings themselves record, it is a judgement a reader makes in one
+glance. Both figures are filed. Neither is an opinion.
+
+**Eighty pixels of nothing.** The gap between the top bar and the
+first word on the page looked like a spacing decision and was an
+accounting error. Streamlit's vertical block is a flex column with a
+16px gap between every child, and a child that paints nothing is still
+a child: the stylesheet, two zero-height bridge frames, the bypass
+link and the fixed bar are five of them, so the opening line started
+at 170px for a page whose padding said 112. The count differs per
+screen, which is why no single padding figure ever fixed it. Each kind
+cancels its own gap now, and the bar-to-text distance is the same 58px
+on home and on the generate screen.
+
+**A link that loaded the whole site into the report.** A note shown in
+the app is the `srcdoc` of an iframe, and a `srcdoc` document inherits
+its base URL from the parent page — so `#s-provenance` resolves
+against the *application's* URL. That was known and fixed once, for
+the section bar; the fix was scoped to `nav.ar-nav` and every other
+fragment link in the document still carried it. Clicking **Filed Aug
+5, 2026** in the masthead navigated the frame to the app, which
+rendered the entire site, top bar and all, inside the box where the
+note belongs. The handler takes every fragment link now.
+
+And a jump says where it landed. Thirty thousand pixels in one frame
+leaves a reader with no sense of travel and no way to tell whether the
+heading they asked for is above them or below, so the destination
+washes the accent across itself for two seconds and then stops —
+`:target` cannot do it, because preventing the navigation means the
+fragment never changes. Sections also clear 113px now rather than 53:
+the note is a full-height frame inside a page whose 56px bar is fixed,
+and the document it is scrolling knows nothing about that bar.
+
 **The rule everything rests on:** one column, declared once, inherited
 by everything. No descendant sets its own width, and no width is
 expressed in `ch`, because a `ch` resolves against a proportional face
@@ -389,7 +442,7 @@ ask.
 
 ## The suite
 
-848 tests, no network, about a minute. Every fix below was
+867 tests, no network, about a minute. Every fix below was
 written as a failing test first, and the failure was watched before the
 fix was written.
 

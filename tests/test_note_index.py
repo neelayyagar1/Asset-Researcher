@@ -70,7 +70,7 @@ def test_a_note_missing_a_field_leaves_it_empty():
     """Not a zero, not a dash, not a borrowed figure from elsewhere."""
     out = note_index.summarise("<html><body>nothing here</body></html>")
     assert out == {"price": "", "filed": "", "cited": "", "metric": "",
-                   "value": "", "takeaway": ""}
+                   "value": "", "takeaway": "", "record": ""}
 
 
 def test_markup_inside_a_value_does_not_reach_the_cell():
@@ -91,5 +91,13 @@ def test_every_shipped_note_fills_every_column(path):
     the documents it will actually meet is a parser that silently
     empties the table."""
     out = note_index.summarise(path.read_text(encoding="utf-8"))
-    missing = [k for k, v in out.items() if not v]
+    # `record` is the one field a note may honestly not have. It is the
+    # filed free cash flow compound, printed under the lead statistic,
+    # and a filer whose lead statistic is a multiple rather than a
+    # growth rate - the REIT, whose note leads on price to an FFO proxy
+    # - has no such figure. The cell falls back to naming the multiple,
+    # which is checked in test_index_rows. Every other column is a
+    # column every note must fill.
+    required = [k for k in out if k != "record"]
+    missing = [k for k in required if not out[k]]
     assert not missing, f"{path.stem} gave nothing for {missing}"

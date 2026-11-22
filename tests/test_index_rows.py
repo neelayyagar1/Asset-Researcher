@@ -206,7 +206,7 @@ WIDE = [
 def test_the_index_carries_the_columns_the_notes_support():
     html = ui.report_rows(WIDE, token="t")
     for header in ("Ticker", "Company, and what the report found", "Price",
-                   "Headline", "Filed", "Cited"):
+                   "Priced for", "Filed", "Cited"):
         assert f">{header}<" in html, header
     # FCF yield and the filed CAGR were columns for one round. They are
     # comparable and they are filed, and they are still facts about the
@@ -221,6 +221,11 @@ def test_the_index_carries_the_columns_the_notes_support():
     # question are one cell now, so the word should be gone.
     assert ">Value<" not in html
     assert ">Headline metric<" not in html
+    # "Headline" named the column's position on the page rather than
+    # anything in it, and under it sat the price-implied growth rate on
+    # its own, which cannot be judged on its own: 18.7% is alarming or
+    # unremarkable entirely according to what the company has done.
+    assert ">Headline<" not in html
 
 
 def test_each_row_has_a_cell_for_every_header():
@@ -385,7 +390,7 @@ def test_the_figures_are_still_readable_to_a_screen_reader():
     no text, and the cell's text sits beside it in the open."""
     html = ui.report_rows(WIDE, token="t")
     row = html[html.index("<tr><td"):]
-    for figure in ("$301.71", "6.8%", "2026-08-05", "113/113",
+    for figure in ("$301.71", "6.8%", "Aug 5, 2026", "113/113",
                    "Automatic Data Processing"):
         # The LAST occurrence: the company name also appears inside
         # the lead anchor's aria-label, which is the one place it is

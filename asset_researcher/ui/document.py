@@ -116,7 +116,9 @@ def provenance_items(report: Report) -> list[tuple[str, str]]:
     if implied is not None and implied.caveat and implied.model_vs_market:
         items.append((f"Model {implied.model_vs_market:+.0%}", "warn"))
     if report.bundle.filing_dates.get("10-K"):
-        items.append((f"Filed {report.bundle.filing_dates['10-K']}", ""))
+        items.append(
+            (f"Filed {fmt.filed_date(report.bundle.filing_dates['10-K'])}", "")
+        )
     return items
 
 

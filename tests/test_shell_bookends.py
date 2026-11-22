@@ -75,7 +75,7 @@ def test_both_bands_are_ink_and_reach_the_window_edge():
     )
 
     # And the column leaves room for a bar that no longer takes any.
-    assert "padding: 88px" in _rule(".block-container"), (
+    assert "padding: 112px" in _rule(".block-container"), (
         "the fixed bar will sit on top of the first thing on the page"
     )
 

@@ -26,6 +26,7 @@ from dataclasses import dataclass
 from html import escape
 from typing import Callable, Iterable, Sequence
 
+from asset_researcher.ui import format as fmt
 from asset_researcher.ui import theme
 
 _WS_BETWEEN_TAGS = re.compile(r">\s+<")
@@ -1210,13 +1211,13 @@ def report_rows(rows, token: str = "", scope: str = "") -> str:
     # the document, not a name the table itself carries.
     header = (
         '<caption class="ar-sr">Reports, six columns: ticker, company '
-        "with the report's opening finding, traded price, the headline "
-        "figure, filing date and citation coverage. Each row opens its "
-        "report.</caption>"
+        "with what the report found, traded price, the growth the price "
+        "requires against the growth the filings record, filing date and "
+        "citation coverage. Each row opens its report.</caption>"
         '<thead><tr><th scope="col">Ticker</th>'
         '<th scope="col">Company, and what the report found</th>'
         '<th scope="col" class="num">Price</th>'
-        '<th scope="col" class="num">Headline</th>'
+        '<th scope="col" class="num">Priced for</th>'
         '<th scope="col" class="num">Filed</th>'
         '<th scope="col" class="num">Cited</th></tr></thead>'
     )
@@ -1246,7 +1247,34 @@ def report_rows(rows, token: str = "", scope: str = "") -> str:
         # scanned; the question it answers sits under it.
         metric_raw = r.get("metric") or ""
         value_raw = r.get("value") or ""
-        if value_raw and metric_raw:
+        record_raw = r.get("record") or ""
+        if value_raw and record_raw:
+            # The pair, not the number.
+            #
+            # This column was headed "Headline", which is not a unit, a
+            # question or a quantity - it named the column's position on
+            # the page rather than anything in it. Under it sat the
+            # price-implied growth rate on its own, and on its own it
+            # cannot be judged: 18.7% is alarming or unremarkable
+            # entirely according to what the company has actually done,
+            # and the index did not say.
+            #
+            # Solving a discounted cash flow backwards - what growth does
+            # today's price require - is the note's stated primary
+            # output and a standard way to read a multiple without
+            # asserting a target. Set against the compound growth the
+            # filings themselves record, it becomes a judgement a reader
+            # makes in one glance rather than a figure they have to carry
+            # to another screen. Both numbers are filed; neither is an
+            # opinion.
+            finding = (
+                f'<b>{_text(value_raw)}</b>'
+                f'<span>against {_text(record_raw)} filed</span>'
+            )
+        elif value_raw and metric_raw:
+            # A note with no comparable record - a REIT whose lead
+            # statistic is a multiple rather than a growth rate - keeps
+            # the figure and says what it is.
             finding = (
                 f'<b>{_text(value_raw)}</b>'
                 f'<span>{_text(metric_raw)}</span>'
@@ -1259,16 +1287,31 @@ def report_rows(rows, token: str = "", scope: str = "") -> str:
             # this index must not do.
             finding = "&mdash;"
         price = cell("price")
-        filed = cell("filed")
+        # The same date the note's own chip now prints. One format for
+        # one fact: an index that writes it differently from the
+        # document it points at makes a reader check whether they are
+        # looking at the same filing.
+        filed_raw = r.get("filed") or ""
+        filed = _text(fmt.filed_date(filed_raw)) if filed_raw else "&mdash;"
         cited = cell("cited")
-        # The company, and under it the report's own opening sentence.
+        # The company, and under it what this report alone found.
         #
         # An index of reports a reader has already read is not a screen
         # of companies: he is not choosing a name, he is trying to
-        # remember which report this was. Two ratios cannot tell him.
-        # The note's first paragraph can, because it was written to be
-        # the answer - the multiple, what the price requires, and what
-        # the record actually did, in two sentences.
+        # remember which report this was.
+        #
+        # It carried the note's opening paragraph for a while, which was
+        # better than two ratios and still wrong, and an index of six is
+        # what showed it: that paragraph is the same sentence in five of
+        # them, a template with two numbers in it. The column read as
+        # one statement repeated six times.
+        #
+        # It now carries the variant perception, which is the sentence a
+        # note writes about this company and no other - the deleveraging
+        # that is real while the capital relief is not, the
+        # cost-of-capital advantage eroding at the margin. That is also
+        # the product's own argument rather than a restatement of its
+        # arithmetic.
         #
         # Verbatim, never summarised here. A sentence written in this
         # module would be a second account of what the report says.
