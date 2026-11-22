@@ -1044,7 +1044,35 @@ button[data-testid="stExpandSidebarButton"]:hover,
      height plus the page's own top space: 56px of bar and 56px of air.
      That arithmetic only holds because of the rule below it. */
   padding: 112px var(--shell-gut) 64px;
-  margin-inline: auto; }
+  margin-inline: auto;
+  /* THE PAGE IS THE WINDOW, even when the content is shorter than it.
+     The closing band is the page's bottom edge, and on a short screen
+     - the generate form is the only one - it sat wherever the content
+     happened to stop, with a field of marble below it that belonged
+     to nothing. A band floating in the middle of a window does not
+     read as an ending; it reads as a mistake, which is what it was.
+     So the column is at least as tall as the window and the band is
+     pushed to the foot of it by the rule below. On a long screen the
+     minimum stops applying and nothing moves.
+     `svh` rather than `vh`, so a phone's collapsing address bar does
+     not make the page 60px taller than the window it is in. */
+  min-height: 100svh;
+  display: flex; flex-direction: column; }
+/* Streamlit's vertical block is the column's only child, and it has to
+   grow before anything inside it can be pushed anywhere. */
+.block-container > [data-testid="stVerticalBlock"] { flex: 1 1 auto; }
+/* A screen that ends on the band has no space below it to give. */
+.block-container:has(.ar-close) { padding-bottom: 0; }
+/* Streamlit's markdown wrapper carries `margin-bottom: -1rem`, which is
+   its own way of closing the gap under a paragraph. Under the band that
+   is 16px of the band hanging below the box that holds it, and with the
+   column sized to the window exactly, 16px is the difference between a
+   page that fits and a page with a scrollbar. */
+[data-testid="stMarkdownContainer"]:has(> .ar-close) { margin-bottom: 0; }
+/* The band, at the foot of whichever is taller - the content or the
+   window. `auto` collapses to nothing once the page overflows, so this
+   is one rule for both cases rather than a height query. */
+[data-testid="stVerticalBlock"] > div:has(.ar-close) { margin-top: auto; }
 
 /* AN ELEMENT THAT PAINTS NOTHING STILL TOOK 16 PIXELS.
    Streamlit's vertical block is a flex column with `gap: 16px` between
@@ -1161,7 +1189,15 @@ button[data-testid="stExpandSidebarButton"]:hover,
    out into its own bottom padding. */
 .ar-close {
   display: flex; align-items: flex-start; gap: 48px;
-  margin: 72px calc(50% - 50vw) -64px;
+  /* No negative bottom margin. It used to pull itself down over the
+     column's 64px bottom padding, which is a subtraction that has to
+     match a number declared somewhere else - and it did not quite:
+     the band overhung its own wrapper by 80, the padding absorbed 64,
+     and the remaining 16 gave a page that fits the window a scrollbar
+     anyway. The column drops its bottom padding when it carries a
+     band instead, because a band IS the bottom of the page and
+     nothing needs air underneath it. */
+  margin: 72px calc(50% - 50vw) 0;
   padding: 40px calc(50vw - 50% + var(--shell-gut)) 44px;
   background: var(--shell-ink); color: rgba(255, 255, 255, .62);
   border-top: .5px solid rgba(255, 255, 255, .22); }

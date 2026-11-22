@@ -452,7 +452,7 @@ ask.
 
 ## The suite
 
-871 tests, no network, about a minute. Every fix below was
+874 tests, no network, about a minute. Every fix below was
 written as a failing test first, and the failure was watched before the
 fix was written.
 
@@ -636,6 +636,32 @@ uses to say *here*. Ink measures 14.6:1 on it, so the words the reader
 came for stay readable for the whole of the wash. Scoped to the wash
 alone: a peer table's subject row and a hovered link are states rather
 than events and keep the accent.
+
+**Browser Back worked on every screen but one.** The app gives each
+screen its own history entry so Back means what a reader expects, and a
+listener turns that into a reload, because a history change never
+reaches the Streamlit server. The listener was bound to the top window
+— correct on a directly served app, wrong on Streamlit Cloud, where the
+app runs in an iframe. A history entry belongs to the window that
+pushed it, so the entries this app writes are the *iframe's* and
+popstate fires there. The screens reached by a real link kept working,
+because a link is a top-level navigation the browser handles by itself,
+which is exactly why it read as "only the generate screen is broken".
+It listens on both windows now, one flag each so a single Back cannot
+reload twice.
+
+**The band floated in the middle of a short window.** The generate form
+is the one screen whose content is shorter than the window, and the
+band sat wherever the form happened to stop with a field of marble
+below it — which does not read as an ending, it reads as a mistake. The
+column is at least as tall as the window now and the band is pushed to
+the foot of it, which costs nothing on a long screen because the
+minimum stops applying. Two things were also hanging 16px below it: the
+band's own negative bottom margin, a subtraction that had to match a
+padding declared elsewhere and did not, and Streamlit's markdown
+wrapper, which carries `margin-bottom: -1rem` of its own. Sixteen
+pixels is the difference between a page that fits the window and a page
+with a scrollbar on it.
 
 ### Examined and deliberately not changed
 

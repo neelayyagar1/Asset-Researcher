@@ -358,3 +358,61 @@ def test_a_negative_filed_record_survives_into_the_index():
              slug="lumn", sid="s1")
     ])
     assert row["record"] in html
+
+
+def test_the_page_is_at_least_as_tall_as_the_window():
+    """The band is the page's bottom edge, and on the one screen whose
+    content is shorter than the window it sat wherever the form
+    happened to stop, with a field of marble under it. The column is
+    sized to the window and the band is pushed to the foot of it."""
+    sheet = theme.stylesheet()
+    column = _rule(".block-container", sheet)
+    assert "min-height: 100svh" in column
+    assert "flex-direction: column" in column
+    assert "flex: 1 1 auto" in _rule(
+        '.block-container > [data-testid="stVerticalBlock"]', sheet
+    )
+    assert "margin-top: auto" in _rule(
+        '[data-testid="stVerticalBlock"] > div:has(.ar-close)', sheet
+    )
+
+
+def test_nothing_hangs_below_the_band():
+    """Sixteen pixels is the difference between a page that fits the
+    window and a page with a scrollbar on it, and two separate things
+    were hanging that far below the column: the band's own negative
+    bottom margin, which had to match a padding declared elsewhere and
+    did not, and Streamlit's markdown wrapper, which carries
+    `margin-bottom: -1rem` of its own."""
+    sheet = theme.stylesheet()
+    assert "margin: 72px calc(50% - 50vw) 0;" in sheet
+    assert "-64px" not in _rule(".ar-close", sheet)
+    assert "padding-bottom: 0" in _rule(
+        ".block-container:has(.ar-close)", sheet
+    )
+    assert "margin-bottom: 0" in _rule(
+        '[data-testid="stMarkdownContainer"]:has(> .ar-close)', sheet
+    )
+
+
+def test_back_listens_on_the_window_that_owns_the_history_entry():
+    """A history entry belongs to the window that pushed it. On
+    Streamlit Cloud the app is an iframe, so the entries this app
+    writes are the iframe's and popstate fires there - not on the top
+    window the earlier fix listened to. The screens reached by a real
+    link kept working, because a link is a top-level navigation the
+    browser handles itself, which is why this read as "only the
+    generate screen is broken"."""
+    import pathlib
+
+    app = (pathlib.Path(__file__).resolve().parents[1] / "app.py").read_text(
+        encoding="utf-8"
+    )
+    bridge = app[app.index("def _back_bridge"):]
+    bridge = bridge[: bridge.index("def _drop_nav")]
+    assert "var hosts = [];" in bridge
+    assert "hosts.push(window.top)" in bridge
+    assert "hosts.push(window.parent)" in bridge
+    # One flag per window, or one Back reloads twice and asks twice.
+    assert "if (w.__arBack) return;" in bridge
+    assert "w.addEventListener('popstate', onPop);" in bridge

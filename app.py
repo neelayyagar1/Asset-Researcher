@@ -649,13 +649,27 @@ def _back_bridge() -> None:
           //
           // Both frames are same-origin. Reaching across origins throws,
           // so the reach is guarded and falls back to the parent.
-          var host;
+          //
+          // And BOTH of them, not whichever one looks like the owner.
+          // A history entry belongs to the window that created it. On
+          // Streamlit Cloud the app runs in an iframe, so the entries
+          // this app pushes - one per screen, which is what gives Back
+          // a screen to go back to - are the IFRAME's. Back traverses
+          // the joint session history and fires popstate on the window
+          // that owns the entry, so listening only on the top window
+          // heard nothing: the address bar went back and the page
+          // stayed where it was. The screens reached by a real link
+          // kept working, because a link is a top-level navigation and
+          // the browser handles that itself - which is why this looked
+          // like "only the generate screen is broken".
+          var hosts = [];
           try {
-            host = window.top && window.top.location ? window.top
-                                                     : window.parent;
-          } catch (e) {
-            host = window.parent;
+            if (window.top && window.top.location) hosts.push(window.top);
+          } catch (e) {}
+          if (window.parent && hosts.indexOf(window.parent) === -1) {
+            hosts.push(window.parent);
           }
+          var host = hosts[0] || window.parent;
           // The app's own window, which is where the report lives.
           // On Streamlit Cloud these are two different windows: the top
           // window holds the Cloud chrome and the address bar, the app
@@ -675,9 +689,8 @@ def _back_bridge() -> None:
             }
           } catch (e) {}
           var appWindow = window.parent || host;
-          if (!host || host.__arBack) return;
-          host.__arBack = true;
-          host.addEventListener('popstate', function () {
+          if (!hosts.length) return;
+          var onPop = function () {
             // A reload is the only way to follow Back, and a reload
             // ends the Streamlit session - which takes the LIVE report
             // with it. That used to mean losing the work, and the guard
@@ -706,6 +719,13 @@ def _back_bridge() -> None:
               return;
             }
             host.location.reload();
+          };
+          hosts.forEach(function (w) {
+            // One flag per window: a second install on the same window
+            // would reload twice and ask twice.
+            if (w.__arBack) return;
+            w.__arBack = true;
+            w.addEventListener('popstate', onPop);
           });
         })();
         </script>""",
