@@ -195,7 +195,9 @@ WIDE = [
         "ticker": "ADP", "company": "Automatic Data Processing",
         "metric": "Price implies FCF growth", "value": "6.8%",
         "price": "$301.71", "filed": "2026-08-05", "cited": "113/113",
-        "yield": "4.4%", "cagr": "12.5%",
+        "takeaway": "At 23 times free cash flow the price requires 6.8% "
+                    "annual growth. The filed record compounded at 12.5% "
+                    "over 5 years.",
         "slug": "adp",
     },
 ]
@@ -203,9 +205,16 @@ WIDE = [
 
 def test_the_index_carries_the_columns_the_notes_support():
     html = ui.report_rows(WIDE, token="t")
-    for header in ("Ticker", "Company", "Price", "FCF yield", "FCF CAGR",
-                   "Headline finding", "Filed", "Cited"):
+    for header in ("Ticker", "Company, and what the report found", "Price",
+                   "Headline", "Filed", "Cited"):
         assert f">{header}<" in html, header
+    # FCF yield and the filed CAGR were columns for one round. They are
+    # comparable and they are filed, and they are still facts about the
+    # COMPANY - and a reader standing in front of an index of reports
+    # he has already read is not choosing a name, he is trying to
+    # remember which report this was.
+    assert ">FCF yield<" not in html
+    assert ">FCF CAGR<" not in html
     # "Value" was a header over a column whose unit changed per row -
     # 6.8% is a growth rate and 15.3x a multiple - with the only thing
     # that told them apart in the cell beside it. The figure and its
@@ -301,7 +310,7 @@ def test_a_row_is_one_stop_in_the_tab_order_not_seven():
     links-list showing forty-eight entries for six destinations."""
     html = ui.report_rows(WIDE, token="t")
     anchors = re.findall(r"<a [^>]*>", html)
-    assert len(anchors) == 8, "the row is no longer eight cells"
+    assert len(anchors) == 6, "the row is no longer six cells"
     focusable = [a for a in anchors if 'tabindex="-1"' not in a]
     assert len(focusable) == 1, (
         f"{len(focusable)} of the row's anchors are in the tab order"
@@ -484,7 +493,7 @@ def test_the_index_declares_its_header_row_as_a_header():
     ])
     assert "<thead>" in html and "</thead>" in html
     assert "<tbody>" in html and "</tbody>" in html
-    assert html.count('scope="col"') == 8, (
+    assert html.count('scope="col"') == 6, (
         "every column header should declare its scope"
     )
     # The header must be inside thead, not loose in the table.
@@ -498,3 +507,34 @@ def test_the_index_names_itself_for_a_screen_reader():
 
     html = ui.report_rows([{"ticker": "ADP", "company": "ADP", "slug": "adp"}])
     assert "<caption" in html
+
+
+def test_the_index_carries_the_report_s_own_opening_sentence():
+    """What the row is FOR.
+
+    A reader standing in front of an index of reports he has already
+    read is not choosing a company, he is trying to remember which
+    report this was - and two ratios cannot tell him that, because they
+    are facts about the company rather than about the report. The
+    note's own first paragraph can: the multiple, what the price
+    requires, and what the record actually did, in two sentences it
+    wrote itself.
+    """
+    html = ui.report_rows(WIDE, token="t")
+    assert "At 23 times free cash flow" in html
+    # Under the company name, in the same cell, not in a column of its
+    # own - a line of prose running 500px between two figure columns is
+    # skipped rather than read.
+    said = html[html.index('class="co said"'):][:700]
+    assert "<b>Automatic Data Processing</b>" in said
+    assert "<span>At 23 times" in said
+
+
+def test_a_note_with_no_opening_sentence_prints_the_name_alone():
+    """Not an empty bold tag, not a dash under the name, and above all
+    not a sentence borrowed from the row above it."""
+    bare = dict(WIDE[0], takeaway="")
+    html = ui.report_rows([bare], token="t")
+    said = html[html.index('class="co said"'):][:400]
+    assert "<b>" not in said and "<span>" not in said
+    assert "Automatic Data Processing" in said

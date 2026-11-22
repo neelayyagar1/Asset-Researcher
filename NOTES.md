@@ -248,13 +248,27 @@ chrome). Neither palette nor typeface was reused. What was carried is
 the convention inversion and the hairline-over-chrome discipline. The
 result must not be mistakable for either site, and is not.
 
-**Why the shell is COLD and the note stays warm.** This is the one
-decision the whole thing hangs on. The ground is a cold marble
-`#f4f6f9`; the note keeps its warm paper `#faf8f3`. They are
-deliberately different surfaces, so the moment a note opens, a reader
-can feel they have moved from the chrome into the document. The shell
-is the frame; the note is the object. Two centred axes on one screen
-was the old fault, and two *surfaces* with one axis each is the fix.
+**Why the shell and the note now stand on ONE ground.** They used to
+be two. The shell was a cold marble `#f4f6f9` and the note kept a warm
+paper `#faf8f3`, deliberately, so that the moment a note opened a
+reader could feel they had moved from the chrome into the document.
+
+The intent was right and the result was wrong. On screen it is an
+eggshell rectangle sitting inside a grey page: two neutrals a few
+points apart in value and clearly not the same colour, which is the
+one relationship between two near-whites that always reads as a
+mistake rather than as a decision. The distinction it bought was real
+and small; the cost was on every screen that shows a note.
+
+So there is one ground, `#f4f6f9`, and the note's neutrals are cooled
+to sit on it — ink 16.70, soft 9.59, muted 5.08, which is the warm
+muted tone's ratio exactly, so no rank moved. What carries the move
+from chrome into document is what should have been carrying it all
+along: the serif, the measure, the 9rem rail, the hairlines, and the
+two ink bands that bound the shell and never appear inside a note.
+
+The shell is still the frame and the note is still the object. They
+are no longer two colours of white.
 
 **One accent, `#1b3a8f`, and almost nowhere.** It is on the divergence
 count and on links, and on nothing else. An accent that appears twice
@@ -323,7 +337,7 @@ invisible to whoever wrote it and the only thing the reader sees.
 
 ## Why the note keeps its own look
 
-The research note was left unrestyled: warm paper, a serif display
+The research note was left unrestyled in that pass: its own serif
 face, a 9rem left rail, square corners. It is a document, and a
 document wants a second axis to scan down. The shell is chrome around
 it. The two are stated as different surfaces in `DESIGN.md` rather than
@@ -375,7 +389,7 @@ ask.
 
 ## The suite
 
-843 tests, no network, about a minute. Every fix below was
+848 tests, no network, about a minute. Every fix below was
 written as a failing test first, and the failure was watched before the
 fix was written.
 

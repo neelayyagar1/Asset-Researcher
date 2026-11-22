@@ -1209,16 +1209,14 @@ def report_rows(rows, token: str = "", scope: str = "") -> str:
     # The caption names the table. The heading above it is a sibling in
     # the document, not a name the table itself carries.
     header = (
-        '<caption class="ar-sr">Reports, eight columns: ticker, company, '
-        "traded price, free cash flow yield, filed free cash flow growth "
-        "rate, the report's headline finding, filing date and citation "
-        "coverage. Each row opens its report.</caption>"
+        '<caption class="ar-sr">Reports, six columns: ticker, company '
+        "with the report's opening finding, traded price, the headline "
+        "figure, filing date and citation coverage. Each row opens its "
+        "report.</caption>"
         '<thead><tr><th scope="col">Ticker</th>'
-        '<th scope="col">Company</th>'
+        '<th scope="col">Company, and what the report found</th>'
         '<th scope="col" class="num">Price</th>'
-        '<th scope="col" class="num">FCF yield</th>'
-        '<th scope="col" class="num">FCF CAGR</th>'
-        '<th scope="col">Headline finding</th>'
+        '<th scope="col" class="num">Headline</th>'
         '<th scope="col" class="num">Filed</th>'
         '<th scope="col" class="num">Cited</th></tr></thead>'
     )
@@ -1263,8 +1261,23 @@ def report_rows(rows, token: str = "", scope: str = "") -> str:
         price = cell("price")
         filed = cell("filed")
         cited = cell("cited")
-        fcf_yield = cell("yield")
-        fcf_cagr = cell("cagr")
+        # The company, and under it the report's own opening sentence.
+        #
+        # An index of reports a reader has already read is not a screen
+        # of companies: he is not choosing a name, he is trying to
+        # remember which report this was. Two ratios cannot tell him.
+        # The note's first paragraph can, because it was written to be
+        # the answer - the multiple, what the price requires, and what
+        # the record actually did, in two sentences.
+        #
+        # Verbatim, never summarised here. A sentence written in this
+        # module would be a second account of what the report says.
+        said = r.get("takeaway") or ""
+        company = _text(r["company"])
+        if said:
+            company = (
+                f"<b>{company}</b><span>{_text(said)}</span>"
+            )
         # The anchor is repeated into every cell rather than wrapping
         # the row. A link cannot wrap table cells - `<a>` is not valid
         # between `<tr>` and `<td>`, and a browser hoists it out of the
@@ -1318,10 +1331,8 @@ def report_rows(rows, token: str = "", scope: str = "") -> str:
         )
         body.append(
             f'<tr><td class="tk">{lead_link}{_text(r["ticker"])}</td>'
-            f'<td class="co">{link}{_text(r["company"])}</td>'
+            f'<td class="co said">{link}{company}</td>'
             f'<td class="num">{link}{price}</td>'
-            f'<td class="num">{link}{fcf_yield}</td>'
-            f'<td class="num">{link}{fcf_cagr}</td>'
             f'<td class="co find">{link}{finding}</td>'
             f'<td class="num dim">{link}{filed}</td>'
             f'<td class="num dim">{link}{cited}</td></tr>'

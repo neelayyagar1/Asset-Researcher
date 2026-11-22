@@ -173,11 +173,11 @@ def test_the_reports_table_sheds_the_right_columns_on_a_phone():
     # in three different units, with nothing left to say which was
     # which.
     assert "Ticker" not in hidden
-    assert "Company" not in hidden
-    assert "Headline finding" not in hidden
+    assert "Company, and what the report found" not in hidden
+    assert "Headline" not in hidden
     # Context the note itself carries, and four numeric columns that
     # would put a horizontal scrollbar on a 375px screen.
-    for context in ("Price", "FCF yield", "FCF CAGR", "Filed", "Cited"):
+    for context in ("Price", "Filed", "Cited"):
         assert context in hidden, f"{context} still shown at 375px"
 
 

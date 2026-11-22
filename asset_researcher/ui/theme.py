@@ -47,13 +47,33 @@ from __future__ import annotations
 # Read by the SVG charts as well as the stylesheet, so a chart can never
 # drift out of step with the page it sits on.
 
-INK = "#17150f"  # warm near-black, body text
-INK_SOFT = "#403c33"  # secondary prose
-INK_MUTED = "#6f6a5c"  # labels, captions, axis text
-PAPER = "#faf8f3"  # page
+# ONE GROUND, shared with the shell.
+#
+# The note used to be warm - #faf8f3 paper, a warm near-black and warm
+# hairlines - against the shell's cold #f4f6f9, deliberately, so that a
+# reader felt the move from chrome into document. On screen that reads
+# as an eggshell rectangle sitting inside a grey page: two whites that
+# are nearly the same value and clearly not the same colour, which is
+# the one relationship between two neutrals that always looks like a
+# mistake rather than a decision. The distinction it was buying was
+# real and small; the cost was on every screen.
+#
+# So the document takes the shell's ground and its neutrals are cooled
+# to match. The move from chrome into document is still carried, by the
+# things that actually carry it: the serif, the measure, the rules, the
+# rail, and the ink bands that bound the shell and never appear inside
+# a note.
+#
+# Ratios on the new ground, measured rather than assumed: ink 16.70,
+# ink-soft 9.59, ink-muted 5.08 - which is the warm muted tone's 5.08
+# exactly, so no rank moved. The accent is unchanged at 9.47.
+INK = "#15161a"  # cool near-black, body text
+INK_SOFT = "#3d4047"  # secondary prose
+INK_MUTED = "#656973"  # labels, captions, axis text
+PAPER = "#f4f6f9"  # page, the same ground the shell stands on
 SURFACE = "#ffffff"  # tables and panels that sit on the page
-RULE = "#ded9cc"  # hairline, structural
-RULE_SOFT = "#ece8dd"  # hairline, within a table
+RULE = "#dfe2e8"  # hairline, structural
+RULE_SOFT = "#eceef1"  # hairline, within a table
 
 ACCENT = "#1d5a86"  # slate: the subject, this analysis
 ACCENT_SOFT = "#e9eef3"
@@ -86,9 +106,10 @@ FONT_MONO = "'Spline Sans Mono', ui-monospace, Menlo, monospace"
 # whole point: a serif at 600 is what every competitor already does.
 FONT_SHELL_DISPLAY = "'Newsreader', 'Faustina', Georgia, serif"
 
-# A cold ground, so the note's warm paper reads as a different surface the
-# moment it opens. The previous shell sat at #fcfcfd, which is neutral to
-# the point of being nothing; this commits.
+# The page. The note stands on this same ground - see the note's own
+# palette above for why the two stopped being different colours. The
+# shell before this sat at #fcfcfd, which is neutral to the point of
+# being nothing.
 SHELL_BG = "#f4f6f9"  # marble, the page
 SHELL_PANEL = "#ffffff"  # a panel lifted off it
 
@@ -819,6 +840,16 @@ header[data-testid="stHeader"] { background: transparent; }
    A footer is the right element for a page's ending, so the answer is
    to narrow the rule rather than to downgrade the landmark to a div. */
 #MainMenu, footer:not(.ar-close) { display: none !important; }
+/* And Streamlit's own toolbar, which sits in a 60px absolute strip at
+   the very top - exactly where the bar now is. Left visible it puts
+   the framework's Deploy button and status pill on top of this
+   product's own masthead, which is both the wrong thing to see first
+   and the wrong thing to see at all on a credibility artifact. The
+   run status it carries is already announced by the workspace's own
+   live region during a generation, which is the only time it says
+   anything. */
+[data-testid="stToolbar"] { display: none !important; }
+[data-testid="stHeader"] { background: transparent; height: 0; }
 
 /* Streamlit appends an anchor to every heading it renders, shown on hover.
    On a heading inside our own markup it points at a fragment that does not
@@ -947,18 +978,27 @@ button[data-testid="stExpandSidebarButton"]:hover,
 
 .block-container {
   max-width: var(--shell-col);
-  padding: 26px var(--shell-gut) 64px;
+  /* The bar is out of the flow now, so the column has to leave its
+     height plus the page's own top space. */
+  padding: 88px var(--shell-gut) 64px;
   margin-inline: auto; }
 
 /* The report view needs every pixel a sixteen-column table asks for. */
 .block-container:has(.ar-report-view) { max-width: 1280px; }
 
-/* A form gets a narrower column, because a text field stretched to the
-   full page is unpleasant to type into and a label sitting a thousand
-   pixels from its input is hard to associate with it. This narrows the
-   ONE column rather than adding a second width inside it: every element
-   on the screen still shares one set of edges. */
-.block-container:has(.ar-form-head) { max-width: 760px; }
+/* A form gets a narrower MEASURE, not a narrower page.
+   A text field stretched across 1120px is unpleasant to type into and
+   a label a thousand pixels from its input is hard to associate with
+   it, so the fields are capped. But capping the container capped the
+   page: the rails came in to hug the form, the screen sat as a narrow
+   strip in the middle of the window with 340px of nothing on either
+   side, and it was the one screen whose edges did not match the rest
+   of the product.
+   The page keeps its width and its rails. The fields are capped inside
+   it and sit on the column's own left edge, so the screen still has
+   one set of edges - which is what the rule was always for. */
+.block-container:has(.ar-form-head) > [data-testid="stVerticalBlock"] {
+  max-width: 760px; }
 
 /* ----------------------------------------------------- shell furniture */
 
@@ -972,6 +1012,20 @@ button[data-testid="stExpandSidebarButton"]:hover,
 .ar-topbar {
   display: flex; align-items: center; gap: 24px;
   height: 56px;
+  /* FIXED to the window, not written into the page's flow.
+     It sat 64px below the top with marble above it, and the cause was
+     not a margin: Streamlit's vertical block puts a 16px flex gap
+     between every element it owns, and the zero-height bridge frames -
+     the Back guard, the index cleanup - are elements. Three of those
+     gaps plus the column's own 26px of padding is the band of page
+     that was showing above the bar. A negative margin tuned to that
+     number would be tuned to how many bridges a given screen happens
+     to render, which is different on four of them.
+     Fixing it to the viewport removes the question. It also answers
+     something the report screen needed anyway: that page runs to
+     39,000px, and chrome that scrolls away at 600px is chrome a reader
+     has for one and a half per cent of the document. */
+  position: fixed; top: 0; left: 0; right: 0; z-index: 60;
   /* FULL BLEED, past the column's own edges.
      The band is the window's frame, not the column's: a dark strip
      that stops where the text column stops reads as a wide heading
@@ -981,7 +1035,7 @@ button[data-testid="stExpandSidebarButton"]:hover,
      aligns with everything below it. Measured for overflow afterwards,
      because `50vw` includes the scrollbar's width and this is the
      usual way a page acquires a horizontal one. */
-  margin: -26px calc(50% - 50vw) 32px;
+  margin: 0;
   padding: 0 calc(50vw - 50% + var(--shell-gut));
   background: var(--shell-ink);
   color: var(--shell-on-ink);
@@ -1333,6 +1387,18 @@ a.ar-row-link:focus-visible { outline: none; }
   a.ar-row-link:focus-visible {
     outline: 3px solid Highlight; outline-offset: -3px; }
 }
+/* The company, and under it the report's own opening sentence. The
+   name leads at the table's own weight; the sentence sits under it a
+   step back and at a reading measure, because it is prose in a table
+   and a line of prose running 500px wide between two figures is not
+   read, it is skipped. */
+table.ar-list td.said { width: 46%; }
+table.ar-list td.said b {
+  display: block; font-weight: 500; color: var(--shell-soft); }
+table.ar-list td.said span {
+  display: block; margin-top: 3px; max-width: 460px;
+  font-size: 12px; line-height: 1.45; color: var(--shell-mute); }
+
 /* The headline finding: a figure and the question it answers, in one
    cell. The figure leads because it is what gets scanned; the label
    under it is what makes the figure mean anything, and it is set small
@@ -1919,7 +1985,11 @@ table.ar-list th.num { font-family: var(--sans); letter-spacing: .03em; }
 
 @media (max-width: 700px) {
   .ar-topbar { gap: 14px; height: auto; padding-block: 10px;
-    margin-bottom: 18px; }
+    margin-bottom: 0; }
+  /* The desktop column leaves 88px for a 56px bar and the page's own
+     breathing room. On a 375px screen that reads as a hole above the
+     first line, because there is a third of the width to fill it. */
+  .block-container { padding-top: 72px; }
   .ar-topbar .brand { white-space: nowrap; }
 
   /* The closing band is a row of two: the mark, then the text. At
@@ -1943,23 +2013,23 @@ table.ar-list th.num { font-family: var(--sans); letter-spacing: .03em; }
      column was clipped and the right edge was cut off. A table a
      reader cannot read is worse than four columns fewer.
 
-     Ticker, Company and the headline finding survive - and the
-     finding is now one cell carrying both its figure and its label,
-     so the phone keeps the whole statement rather than half of it.
-     Price, the two filed ratios, Filed and Cited go: they are context
-     the note itself carries, and five numeric columns on a 375px
-     screen is a horizontal scrollbar.
+     Ticker, the company with its report's opening sentence, and the
+     headline figure survive - which is the whole of what a reader on
+     a phone is here for: which report this is and what it said.
+     Price, Filed and Cited go; they are context the note carries, and
+     three more numeric columns on a 375px screen is a horizontal
+     scrollbar.
 
      Pinned by NAME in the suite rather than by index. This rule has
      been wrong twice from counting children - once when the metric
      label moved, once when the table widened - and it is wrong
      silently, on the one screen nobody opens while working. */
   table.ar-list th:nth-child(3), table.ar-list td:nth-child(3),
-  table.ar-list th:nth-child(4), table.ar-list td:nth-child(4),
   table.ar-list th:nth-child(5), table.ar-list td:nth-child(5),
-  table.ar-list th:nth-child(7), table.ar-list td:nth-child(7),
-  table.ar-list th:nth-child(8), table.ar-list td:nth-child(8) {
+  table.ar-list th:nth-child(6), table.ar-list td:nth-child(6) {
     display: none; }
+  table.ar-list td.said { width: auto; }
+  table.ar-list td.said span { max-width: none; }
 
   /* And the four steps go back to a stack: four columns of prose on a
      375px screen is one word per line. */

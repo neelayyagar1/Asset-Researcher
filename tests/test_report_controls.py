@@ -139,7 +139,18 @@ def test_the_report_index_bar_does_not_outlive_its_report():
     sitting under Get started on the home screen, linking into a
     document no longer on the page."""
     assert "def _drop_nav(" in APP
-    assert "ar-shell-nav" in APP[APP.index("def _drop_nav("):][:1600]
+    # And the other half of the same defect: `fitFrame` sizes the note
+    # frame's WRAPPER, Streamlit recycles that div for whatever lands
+    # in the same position next, and the inline height goes with it.
+    # Measured one click after a report: a container still 37,369px
+    # tall, so home's index and closing band rendered correctly 37,000
+    # pixels below the fold. The page looked like it had stopped
+    # halfway and a reload fixed it, because a reload rebuilds the DOM.
+    cleanup = APP[APP.index("def _drop_nav("):][:3200]
+    assert "parseFloat(el.style.height) > 1200" in cleanup, (
+        "nothing clears the height a note leaves on a recycled container"
+    )
+    assert "ar-shell-nav" in APP[APP.index("def _drop_nav("):][:3200]
     call = APP.index('if st.session_state.get("view") != "samples":')
     assert "_drop_nav()" in APP[call : call + 200], (
         "the cleanup is defined but not called on the screens with no note"

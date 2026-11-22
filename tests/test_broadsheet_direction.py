@@ -76,20 +76,37 @@ def test_the_display_serif_is_held_at_a_light_weight():
     assert int(weight.group(1)) <= 300
 
 
-def test_the_shell_ground_is_colder_than_the_document_paper():
-    """The shell is cold so the note's warm paper reads as another surface.
-    Compared on the blue channel, which is what warmth costs."""
+def test_the_shell_and_the_document_stand_on_one_ground():
+    """They used to be two.
 
-    def blue(hex_colour: str) -> int:
-        return int(hex_colour.lstrip("#")[4:6], 16)
+    The note was warm - #faf8f3 paper, a warm near-black, warm
+    hairlines - against the shell's cold #f4f6f9, so that a reader felt
+    the move from chrome into document. The intent was right and the
+    result was an eggshell rectangle sitting inside a grey page: two
+    neutrals a few points apart in value and clearly not the same
+    colour, which is the one relationship between two near-whites that
+    always reads as a mistake rather than as a decision.
 
-    def red(hex_colour: str) -> int:
-        return int(hex_colour.lstrip("#")[0:2], 16)
+    So there is one ground. What carries the move into the document is
+    what should have been carrying it anyway - the serif, the measure,
+    the rail, the rules, and the two ink bands that bound the shell and
+    never appear inside a note.
+    """
+    assert theme.PAPER == theme.SHELL_BG, (
+        f"the note stands on {theme.PAPER} and the shell on "
+        f"{theme.SHELL_BG}; two near-whites read as a mistake"
+    )
 
-    shell = theme.SHELL_BG
-    paper = theme.PAPER
-    assert blue(shell) >= red(shell), "the shell ground is warm, not cold"
-    assert red(paper) >= blue(paper), "the document paper is no longer warm"
+    def channels(hex_colour: str) -> tuple[int, int, int]:
+        raw = hex_colour.lstrip("#")
+        return tuple(int(raw[i:i + 2], 16) for i in (0, 2, 4))
+
+    # And the document's neutrals are cooled to sit on it. A warm
+    # near-black and warm hairlines on a cold ground is the same
+    # mismatch moved from the fill to the ink.
+    for name in ("INK", "INK_SOFT", "INK_MUTED", "RULE", "RULE_SOFT"):
+        r, _g, b = channels(getattr(theme, name))
+        assert b >= r, f"{name} is still a warm tone on a cold ground"
 
 
 def test_the_accent_is_declared_once():

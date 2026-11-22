@@ -43,25 +43,28 @@ _LEAD = re.compile(
     re.S,
 )
 
-_YIELD = re.compile(_STAT.format(label="Free cash flow yield"), re.S)
-_CAGR = re.compile(_STAT.format(label="Filed free cash flow CAGR"), re.S)
+# The note's own opening paragraph, which is its thesis.
+#
+# The index carried free cash flow yield and the filed CAGR for a
+# while. They were comparable and they were filed, and they were still
+# the wrong two columns: they are facts about the COMPANY, and a reader
+# standing in front of an index of reports he has already read wants
+# the report. What was this one about. What did it find.
+#
+# The note already answers that in its first paragraph, in two
+# sentences it wrote itself - "At 23 times free cash flow the price
+# requires 6.8% annual growth. The filed record compounded at 12.5%
+# over 5 years." That sentence contains the multiple and the growth
+# rate, so it subsumes both columns it replaces, and it reads as the
+# thing it is rather than as two ratios a reader has to recombine.
+#
+# Lifted verbatim rather than summarised. A second sentence written
+# here would be a second source of truth about what the report says,
+# which is the exact fault that once put two free cash flow series in
+# one note.
+_TAKEAWAY = re.compile(r'<div class="ar-summary">\s*<p>(.*?)</p>', re.S)
 
-# Two FILED figures, carried out of every note into the index.
-#
-# The index used to list the note's LEAD statistic - a label in one
-# column and its number in the next, under a header reading "Value".
-# That header is unreadable on its own, because what the number means
-# changes per row: 6.8% is a growth rate the price requires and 15.3x
-# is a multiple, and the only thing that distinguished them lived in
-# the column beside it. A column header has to be true of its column.
-#
-# These two are not. Free cash flow yield and the filed free cash flow
-# CAGR mean the same thing in every row, come straight out of the
-# filings rather than out of a model, and are the pair a reader
-# actually compares across names: what the cash costs today, and what
-# the cash has done. Every one of the six notes carries both, checked
-# rather than assumed.
-FIELDS = ("price", "filed", "cited", "metric", "value", "yield", "cagr")
+FIELDS = ("price", "filed", "cited", "metric", "value", "takeaway")
 
 
 def _plain(fragment: str) -> str:
@@ -97,11 +100,8 @@ def summarise(html: str) -> dict[str, str]:
         out["metric"] = _plain(lead.group(1))
         out["value"] = _plain(lead.group(2))
 
-    fcf = _YIELD.search(text)
-    if fcf:
-        out["yield"] = _plain(fcf.group(1))
-    cagr = _CAGR.search(text)
-    if cagr:
-        out["cagr"] = _plain(cagr.group(1))
+    said = _TAKEAWAY.search(text)
+    if said:
+        out["takeaway"] = _plain(said.group(1))
 
     return out

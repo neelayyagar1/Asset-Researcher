@@ -32,13 +32,13 @@ colors:
   # at all before this direction.
   shell-accent: "#1b3a8f"
   code-fill: "#f4f5f7"
-  ink: "#17150f"
-  ink-soft: "#403c33"
-  ink-muted: "#6f6a5c"
-  paper: "#faf8f3"
+  ink: "#15161a"
+  ink-soft: "#3d4047"
+  ink-muted: "#656973"
+  paper: "#f4f6f9"
   surface: "#ffffff"
-  rule: "#ded9cc"
-  rule-soft: "#ece8dd"
+  rule: "#dfe2e8"
+  rule-soft: "#eceef1"
   accent: "#1d5a86"
   accent-soft: "#e9eef3"
   accent-2: "#a8481f"
@@ -361,8 +361,8 @@ components:
 **Creative North Star: "The Broadsheet Around the Document"**
 
 This product ships two surfaces, and the whole system is the relationship
-between them. The **research note** is the object the product makes: warm paper
-(`paper`), a Faustina masthead, a 9rem left rail, square corners, hairlines, and
+between them. The **research note** is the object the product makes: a Faustina
+masthead, a 9rem left rail, square corners, hairlines, and
 colour used only as an index. The **application shell** is the frame that makes
 and lists those notes. Both live in one stylesheet,
 `asset_researcher/ui/theme.py`: `_DOCUMENT_CSS` is the note and travels with the
@@ -386,11 +386,24 @@ the product makes. Derived from Public and Wealthsimple as Refero references, by
 carrying the convention inversion and the hairline-over-chrome discipline, and
 neither palette nor typeface.
 
-**The two surfaces are deliberately opposed in temperature.** The shell ground is
-a cold marble `#f4f6f9`; the note keeps its warm paper `#faf8f3`. A reader should
-feel the move from chrome into document the moment a note opens. That opposition
-is load-bearing, and it is why `--paper` and `--ink` appearing anywhere in the
-shell is a defect rather than a shortcut - it has been found and fixed three
+**The two surfaces share ONE ground.** They were opposed in temperature for a
+while - a cold marble `#f4f6f9` shell against a warm `#faf8f3` note - so that a
+reader would feel the move from chrome into document the moment a note opened.
+On screen that is an eggshell rectangle inside a grey page: two neutrals a few
+points apart in value and clearly not the same colour, which always reads as a
+mismatch rather than as a decision. The note now stands on `#f4f6f9` with its
+neutrals cooled to match (ink 16.70, soft 9.59, muted 5.08 - the warm muted
+tone's ratio exactly, so no rank moved).
+
+The move from chrome into document is carried by the serif, the measure, the
+9rem rail, the hairlines and the two ink bands that bound the shell and never
+appear inside a note.
+
+Keeping `--paper` and `--ink` out of the shell is STILL a rule, and it is still
+worth enforcing even though the two grounds now agree: they are separate
+palettes that happen to share a value, the note's travels with the exported
+file and the shell's does not, and a shell rule reading a document token is how
+a change to one silently restyles the other. It has been found and fixed three
 times (on `html`/`body`, on the bypass link, and on the status block).
 
 **There is ONE light palette and no dark mode.** A dark scheme shipped once and
@@ -408,9 +421,10 @@ stylesheet and fails the build if any text tone drops below 4.5:1 on any ground
 it renders on, or if a control boundary or the focus ring drops below 3:1.
 
 **Key Characteristics:**
-- Two documented surfaces, opposed in temperature: the note (warm paper, serif,
-  square, ruled) and the shell (cold marble, serif display over sans, hairline-
-  ruled). They share one stylesheet and the figure face, nothing else.
+- Two documented surfaces on one ground: the note (Faustina masthead, 9rem
+  rail, square, ruled) and the shell (serif display over sans, hairline-ruled,
+  bounded top and foot by ink bands). They share one stylesheet, the figure
+  face and the ground; their palettes stay separate modules.
 - ONE column in the shell, declared once on `.block-container`. No descendant
   sets its own width, and no width is expressed in `ch`.
 - The shell's display serif appears at display sizes ONLY (46/32/26px). Below
@@ -433,7 +447,8 @@ it renders on, or if a control boundary or the focus ring drops below 3:1.
 
 Two palettes with one shared discipline: colour means something or it is absent.
 The shell is a grey ramp on near-white with exactly two coloured states; the note
-is warm paper and ink with two indexing hues and three semantic signals.
+is one neutral ground and ink with two indexing hues and three semantic
+signals.
 
 ### Primary
 The shell's primary is its ink. It now also has exactly one accent, which it did
@@ -506,7 +521,7 @@ Shell ramp, in order of weight:
 
 Note ramp:
 
-- **Warm Ink** (`{colors.ink}`): body-weight emphasis, headings, numeric cells,
+- **Ink** (`{colors.ink}`): body-weight emphasis, headings, numeric cells,
   the 2px rule that opens the document, the rule above a total.
 - **Soft Ink** (`{colors.ink-soft}`): running prose and ordinary table cells.
 - **Muted Ink** (`{colors.ink-muted}`): labels, captions, notes, axis text, "NM"
@@ -729,7 +744,7 @@ export - and that is the only place they appear.
 Two answers, one per surface. The **note has no shadows at all**: `box-shadow`
 appears in `_DOCUMENT_CSS` only as `none`, stripping host defaults. Depth there
 is hairlines at two weights plus a 2px ink rule that opens a document, and tonal
-fields (white panels and slate-wash rows on warm paper). The sticky table header
+fields (white panels and slate-wash rows on the page ground). The sticky table header
 occludes by being opaque, not by lifting.
 
 The **shell is almost flat**: one ambient shadow, used on the card and the

@@ -714,19 +714,31 @@ def _back_bridge() -> None:
 
 
 def _drop_nav() -> None:
-    """Take the note's section index off the page when the note is gone.
+    """Undo what the reading screen leaves in the page behind it.
 
-    `_nav_bridge` copies the index OUT of the note's document and into
-    the shell, because the frame is sized to the whole note and nothing
-    inside it can stick to anything. That puts the element outside the
-    tree Streamlit owns - which is the whole point, and also means
-    Streamlit never takes it away. Pressing Back from a report left a
-    bar of that report's section names sitting under Get started on the
-    home screen, pointing into a document that was no longer on it.
+    Two things outlive the note, and both for the same reason: they
+    were written into the parent document from inside a frame, so they
+    are outside the tree Streamlit owns and Streamlit never takes them
+    away.
 
-    So the screens that have no note say so. Keyed on the view rather
-    than on whether a tall frame happens to be present, because the
-    frame is mounted after this runs and a check would race it.
+    THE SECTION INDEX. `_nav_bridge` copies it out of the note, because
+    the frame is sized to the whole document and nothing inside it can
+    stick to anything. Pressing Back left that report's section names
+    sitting under Get started, linking into a document no longer there.
+
+    THE NOTE'S HEIGHT. `fitFrame` sets the frame's height AND its
+    wrapper's, so the page scrolls once instead of through a nested
+    scrollbar. Streamlit then recycles that wrapper for whatever
+    element lands in the same position on the next screen - and the
+    inline height goes with it. Measured on the home screen one click
+    after a report: a `stElementContainer` still 37,369px tall, so the
+    index and the closing band rendered correctly 37,000px below the
+    fold with nothing but marble in between. The page looked like it
+    had stopped rendering halfway, and a reload fixed it because a
+    reload builds the DOM again. That is the whole of the Back defect.
+
+    Keyed on the view rather than on whether a tall frame is present,
+    because the frame mounts after this runs and a check would race it.
     """
     components.html(
         r"""<script>
@@ -734,8 +746,33 @@ def _drop_nav() -> None:
           var doc;
           try { doc = window.parent.document; } catch (e) { return; }
           if (!doc) return;
-          var nav = doc.getElementById('ar-shell-nav');
-          if (nav) nav.remove();
+
+          function clean() {
+            var nav = doc.getElementById('ar-shell-nav');
+            if (nav) nav.remove();
+
+            // Any inline height a note left behind. Only a note writes
+            // one this big - Streamlit sizes its own containers with
+            // classes, not with inline pixels - so the test is the
+            // size rather than the element, and it cannot catch a
+            // legitimately tall element on a screen that has no note.
+            var sized = doc.querySelectorAll('[style*="height"]');
+            for (var i = 0; i < sized.length; i++) {
+              var el = sized[i];
+              if (parseFloat(el.style.height) > 1200) el.style.height = '';
+            }
+          }
+
+          clean();
+          // And again after the screen settles. The rerun that brings
+          // a reader here is still writing elements when this frame
+          // first runs, so the stale wrapper can be re-created under
+          // us; three cheap passes cost nothing and close the race.
+          var n = 0;
+          var timer = setInterval(function () {
+            clean();
+            if (++n > 3) clearInterval(timer);
+          }, 220);
         })();
         </script>""",
         height=0,
@@ -1649,6 +1686,14 @@ if st.session_state["view"] != "report" or report is None:
         st.rerun()
     if run and not ticker:
         write(ui.shell_status("error", "Input", "Enter a ticker."))
+    # This screen ends too. Its two lines are the ones true HERE: what
+    # a run costs a reader in time, and what it will and will not read.
+    write(ui.closing([
+        "A run reads the company's filings from SEC EDGAR and writes "
+        "the report. It takes about five minutes and is not "
+        "interactive once it starts.",
+        "Research tooling, not investment advice.",
+    ]))
     st.stop()
 
 

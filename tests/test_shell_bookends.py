@@ -46,19 +46,48 @@ def _rule(selector: str) -> str:
 
 def test_both_bands_are_ink_and_reach_the_window_edge():
     """A dark strip that stops where the text column stops reads as a
-    wide heading inside the page. The frame belongs to the window."""
+    wide heading inside the page. The frame belongs to the window.
+
+    They reach it by different routes, because they are different
+    things. The top bar is FIXED to the viewport: it sat 64px down the
+    page with marble above it, and the cause was Streamlit's 16px flex
+    gap around each of the zero-height bridge frames - a count that
+    changes from screen to screen, so no margin could be tuned to it.
+    Out of the flow, the question does not arise, and the bar is also
+    then present on a 39,000px report rather than scrolling away in the
+    first six hundred pixels. The closing band stays in the flow, where
+    an ending belongs, and bleeds out with negative inline margins.
+    """
     for selector in (".ar-topbar", ".ar-close"):
-        body = _rule(selector)
-        assert "var(--shell-ink)" in body, f"{selector} is not ink"
-        assert "calc(50% - 50vw)" in body, (
-            f"{selector} stops at the column rather than the window"
-        )
-        # And the content inside is put back on the column's edge, or
-        # the mark would sit against the window with the type under it
-        # 160px further in.
-        assert "calc(50vw - 50% + var(--shell-gut))" in body, (
+        assert "var(--shell-ink)" in _rule(selector), f"{selector} is not ink"
+        assert "calc(50vw - 50% + var(--shell-gut))" in _rule(selector), (
             f"{selector} does not realign its contents to the column"
         )
+
+    bar = _rule(".ar-topbar")
+    assert "position: fixed" in bar and "top: 0" in bar, (
+        "the bar is back in the page's flow and will float below the top"
+    )
+    assert "left: 0" in bar and "right: 0" in bar
+
+    assert "calc(50% - 50vw)" in _rule(".ar-close"), (
+        "the closing band stops at the column rather than the window"
+    )
+
+    # And the column leaves room for a bar that no longer takes any.
+    assert "padding: 88px" in _rule(".block-container"), (
+        "the fixed bar will sit on top of the first thing on the page"
+    )
+
+
+def test_streamlit_s_own_toolbar_does_not_sit_on_the_masthead():
+    """It lives in a 60px absolute strip at the very top - exactly
+    where the bar now is - and carries the framework's Deploy button
+    and status pill. On this product that is both the wrong thing to
+    see first and the wrong thing to see at all."""
+    assert '[data-testid="stToolbar"]' in CSS
+    body = _rule('[data-testid="stToolbar"]')
+    assert "display: none" in body
 
 
 def test_a_dark_field_gets_the_pale_rule_and_not_the_neutral_one():
@@ -186,3 +215,41 @@ def test_the_closing_band_stacks_on_a_phone():
     # is a cap the phone has to drop, or it does nothing and the text
     # still cannot use the width it has.
     assert "max-width: none" in phone[phone.index(".ar-close .said"):][:120]
+
+
+def test_the_form_narrows_its_fields_and_not_the_page():
+    """A field stretched across 1120px is unpleasant to type into, so
+    the form is capped - but capping the CONTAINER capped the page: the
+    rails came in to hug the form, and the screen sat as a 760px strip
+    in the middle of the window with 340px of nothing either side. It
+    was the one screen whose edges did not match the product.
+
+    Measured after: page 1120 at left 160, fields 760 on the column's
+    own left edge.
+    """
+    assert ".block-container:has(.ar-form-head) {" not in CSS, (
+        "the form screen narrows the whole page again"
+    )
+    body = _rule('.block-container:has(.ar-form-head) > '
+                 '[data-testid="stVerticalBlock"]')
+    assert "max-width: 760px" in body
+
+
+def test_every_screen_with_a_foot_has_an_ending():
+    """The home screen and the form screen both end on the band. A
+    screen that simply stops is what produced the complaint about dead
+    space at the bottom, and the band is an ending rather than filler -
+    each one states the two things true of ITS screen."""
+    import pathlib
+
+    app = (pathlib.Path(__file__).resolve().parents[1] / "app.py").read_text(
+        encoding="utf-8"
+    )
+    assert app.count("ui.closing([") == 2, (
+        f"{app.count('ui.closing([')} screens end on the band"
+    )
+    # Not the same two lines on both, or one of them is stating
+    # something on the other screen's behalf.
+    first = app.index("ui.closing([")
+    second = app.index("ui.closing([", first + 1)
+    assert app[first:first + 400] != app[second:second + 400]

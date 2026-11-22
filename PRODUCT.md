@@ -100,8 +100,9 @@ thing being sold, a research note.
 
 *The commitments, which are not negotiable without re-deciding the world:*
 
-- One light palette. A cold near-monochrome ground, not a warm one — the
-  shell is cold so the note's warm paper reads as a different surface.
+- One light palette, and ONE ground: the shell and the note stand on the
+  same `#f4f6f9`. They were two near-whites for a while, which reads as
+  two whites that do not match rather than as two surfaces.
 - The display serif never appears above its light weight, and never below
   the display sizes. A serif at a working size is a document, not chrome.
 - One accent, used on the divergence count and on links, and nowhere else.
@@ -117,9 +118,12 @@ references. Neither palette nor typeface is reused; the traits carried are the
 convention inversion and the hairline-over-chrome discipline. The result must
 not be mistakable for either site.
 
-*Scope.* Shell only. The research note keeps its own document world — warm
-paper, its own serif, its 9rem left rail — and is not restyled. The two are
-different surfaces on purpose: the shell is chrome, the note is the document.
+*Scope.* Shell first. The research note keeps its own document world — its own
+serif, its 9rem left rail, its own measure and rules — and its structure is not
+restyled; only its ground and its neutrals were brought onto the shell's. The
+shell is still chrome and the note is still the document, and what says so is
+the typography and the rail rather than a difference of a few points of warmth
+in the fill.
 The shell's type and colour tokens are therefore shell-scoped; the document's
 tokens are untouched, so every exported file and every sealed sample stays
 exactly as built.
