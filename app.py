@@ -993,6 +993,25 @@ def _nav_bridge() -> None:
           // next rerun - so the nav rendered, looked right, and did
           // nothing when clicked, which is the worst of the three
           // possible outcomes. Parent-realm code outlives this frame.
+          // THE 113 BELOW IS THE SAME 113 THE STYLESHEET DECLARES.
+          //
+          // `.ar-sec` carries `scroll-margin-top: calc(var(--nav-h) +
+          // 72px)`, which is what a section clears when the BROWSER
+          // scrolls to it. Nothing here goes through the browser: this
+          // sets `scrollTop` by hand, so scroll-margin never applies
+          // and the figure has to be repeated. It cleared 12px, and
+          // the page's top bar is fixed and 56px tall, so every
+          // section a reader jumped to from these tabs landed under
+          // the bar with its heading hidden and the body text where
+          // the heading should have been - which is the inch.
+          //
+          // The offset was measured wrong as well. `offsetTop`
+          // resolves against the nearest positioned ancestor, which
+          // here is `.ar-page` and carries 2.4rem of its own top
+          // padding, so the error compounded. A bounding rect inside a
+          // document that cannot scroll IS its offset from the top of
+          // that document, and the scrollTop term is there for the
+          // case where it can.
           if (!win.__arNavGo) {
             var install = doc.createElement('script');
             install.textContent =
@@ -1011,17 +1030,26 @@ def _nav_bridge() -> None:
               '  if (!target) return;' +
               '  var scroller = document.querySelector("section.stMain")' +
               '    || document.scrollingElement;' +
+              '  var inside = target.getBoundingClientRect().top' +
+              '    + (inner.documentElement.scrollTop || 0);' +
               '  var top = frame.getBoundingClientRect().top' +
               '    + scroller.scrollTop' +
               '    - scroller.getBoundingClientRect().top' +
-              '    + target.offsetTop;' +
+              '    + inside;' +
               '  /* Not behaviour:"smooth". Measured on this container:' +
               '     a smooth scrollTo is a silent no-op - scrollTop stays' +
               '     where it was - while the same call without it lands' +
               '     exactly. Something in the host cancels it, and a' +
               '     navigation that does not navigate is worse than one' +
               '     that does not animate. */' +
-              '  scroller.scrollTop = top - 12;' +
+              '  scroller.scrollTop = top - 113;' +
+              '  var cls = target.classList;' +
+              '  cls.remove("ar-hit");' +
+              '  void target.offsetWidth;' +
+              '  cls.add("ar-hit");' +
+              '  window.setTimeout(function () {' +
+              '    cls.remove("ar-hit");' +
+              '  }, 2400);' +
               '};';
             doc.head.appendChild(install);
           }

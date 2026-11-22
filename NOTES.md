@@ -348,7 +348,17 @@ leaves a reader with no sense of travel and no way to tell whether the
 heading they asked for is above them or below, so the destination
 washes the accent across itself for two seconds and then stops —
 `:target` cannot do it, because preventing the navigation means the
-fragment never changes. Sections also clear 113px now rather than 53:
+fragment never changes. And the tabs above the report are not the note's own index. The note's
+is sealed inside a full-height frame, so it can stick to nothing; the
+shell copies it out and scrolls the page by hand. Setting `scrollTop`
+directly means `scroll-margin-top` never applies — the browser is not
+doing the scrolling — so the clearance has to be repeated there, and it
+was 12px against a fixed 56px bar. Every section a reader reached from
+those tabs landed with its heading hidden under the bar and its body
+text where the heading should have been. That is the inch. Both paths
+clear 113 now, and both mark where they landed.
+
+Sections also clear 113px now rather than 53:
 the note is a full-height frame inside a page whose 56px bar is fixed,
 and the document it is scrolling knows nothing about that bar.
 
@@ -442,7 +452,7 @@ ask.
 
 ## The suite
 
-867 tests, no network, about a minute. Every fix below was
+868 tests, no network, about a minute. Every fix below was
 written as a failing test first, and the failure was watched before the
 fix was written.
 

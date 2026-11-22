@@ -258,3 +258,44 @@ def test_a_generated_report_reaches_the_index_with_every_column(
     # The scope travels in the link, or the reader lands on the reading
     # screen having lost every report they generated.
     assert "sid=s1" in rendered
+
+
+# ------------------------------------------ the tabs that are NOT the note's
+
+
+def test_the_shell_tabs_clear_the_bar_the_stylesheet_clears():
+    """The section tabs a reader clicks are not the note's own.
+
+    The note's index is sealed inside a full-height frame, so it can
+    stick to nothing; the shell copies it out and scrolls the parent by
+    hand. Setting `scrollTop` directly means `scroll-margin-top` never
+    applies - the browser is not doing the scrolling - so the figure
+    has to be repeated here, and it was 12 against a fixed 56px bar.
+    Every section landed with its heading under the bar and its body
+    text where the heading should have been.
+    """
+    source = (
+        Path(__file__).resolve().parents[1] / "app.py"
+    ).read_text(encoding="utf-8")
+    nav = source[source.index("window.__arNavGo = function"):]
+    nav = nav[:nav.index("doc.head.appendChild(install)")]
+
+    assert "scroller.scrollTop = top - 113;" in nav, (
+        "the shell tabs no longer clear the fixed bar"
+    )
+    assert "top - 12" not in nav
+
+    # 113 is `--nav-h` (41) plus 72, which is what `.ar-sec` declares.
+    # The two have to agree or a link and a tab land in two places.
+    assert "calc(var(--nav-h) + 72px)" in theme.document_stylesheet()
+
+    # `offsetTop` resolves against `.ar-page`, which carries its own
+    # top padding, so the error compounded with the bar's.
+    assert "target.offsetTop" not in nav
+    assert "target.getBoundingClientRect().top" in nav
+
+    # And a tab marks where it landed, exactly as a link in the note
+    # does. One of these going through the browser and the other not is
+    # a reason for them to be two code paths, not for them to behave
+    # differently.
+    assert 'cls.add("ar-hit")' in nav
