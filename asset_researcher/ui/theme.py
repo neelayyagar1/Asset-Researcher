@@ -77,6 +77,16 @@ RULE_SOFT = "#eceef1"  # hairline, within a table
 
 ACCENT = "#1d5a86"  # slate: the subject, this analysis
 ACCENT_SOFT = "#e9eef3"
+# The arrival wash, and the one yellow in the product.
+# Not the accent's own tint: a pale slate band on a slate-accented
+# document reads as a surface the section is sitting on rather than as
+# something that just happened to it. Yellow is what every desktop
+# search uses to say "here", it belongs to no other role here, and it
+# carries no meaning of its own - which is what a cue that disappears
+# after two seconds needs. Ink measures 14.6:1 on it, so the words the
+# reader came for stay readable for the whole of the wash.
+HIT = "#fdeeb0"
+
 ACCENT_2 = "#a8481f"  # sienna: the market, the prevailing view, traded price
 # Peers and recessive marks. #b4afa1 measured 2.06:1 against the paper,
 # under the 3:1 that WCAG requires of a graphical object carrying meaning:
@@ -187,6 +197,7 @@ def _root() -> str:
         "accent": ACCENT,
         "accent-soft": ACCENT_SOFT,
         "accent-2": ACCENT_2,
+        "hit": HIT,
         "neutral": NEUTRAL,
         "negative": NEGATIVE,
         "positive": POSITIVE,
@@ -684,19 +695,21 @@ table.ar-table tbody tr.subject td.nm {
    `:target` cannot do this: the handler prevents the navigation, so
    the fragment never changes and the pseudo-class never matches. The
    class is added by the same handler that does the scrolling.
-   It is the accent's wash, which is the only tint in the document, and
-   it leaves nothing behind - no border, no persistent fill, nothing to
+   It is a yellow wash rather than the accent's own tint: the accent
+   already means "the subject" on this page, and a pale slate band
+   reads as a surface the section is sitting on rather than as
+   something that just happened to it. It leaves nothing behind - no border, no persistent fill, nothing to
    mistake for a state the section is in. */
 @keyframes ar-hit {
-  from { background: var(--accent-soft); }
-  60%  { background: var(--accent-soft); }
+  from { background: var(--hit); }
+  60%  { background: var(--hit); }
   to   { background: transparent; }
 }
 @keyframes ar-hit-edge {
-  from { box-shadow: -10px 0 0 0 var(--accent-soft),
-                      10px 0 0 0 var(--accent-soft); }
-  60%  { box-shadow: -10px 0 0 0 var(--accent-soft),
-                      10px 0 0 0 var(--accent-soft); }
+  from { box-shadow: -10px 0 0 0 var(--hit),
+                      10px 0 0 0 var(--hit); }
+  60%  { box-shadow: -10px 0 0 0 var(--hit),
+                      10px 0 0 0 var(--hit); }
   to   { box-shadow: -10px 0 0 0 transparent,
                       10px 0 0 0 transparent; }
 }
@@ -709,7 +722,7 @@ table.ar-table tbody tr.subject td.nm {
    without the cue, so the wash still appears - it simply does not
    fade. */
 @media (prefers-reduced-motion: reduce) {
-  .ar-hit { animation: none; background: var(--accent-soft); }
+  .ar-hit { animation: none; background: var(--hit); }
 }
 
 /* -------------------------------------------------------------- charts */
@@ -1066,8 +1079,21 @@ button[data-testid="stExpandSidebarButton"]:hover,
    of the product.
    The page keeps its width and its rails. The fields are capped inside
    it and sit on the column's own left edge, so the screen still has
-   one set of edges - which is what the rule was always for. */
-.block-container:has(.ar-form-head) > [data-testid="stVerticalBlock"] {
+   one set of edges - which is what the rule was always for.
+
+   Capped per CHILD rather than on the block itself, which is the
+   repair for a second fault the first version of this rule caused.
+   The closing bookend is a full-bleed band, and it reaches the
+   window's edges by margins measured in `50%` of its parent against
+   `50vw` - arithmetic that only lands centred when its parent is the
+   page column. Inside a 760px block it resolved 151px to the left:
+   measured in the running form screen, a band running from -151 to
+   1289 in a 1440 window, hanging off one edge and short of the other.
+   The fields are what need the measure; the band is the window's
+   frame and belongs to the page. So every direct child is capped
+   except the one carrying the bookend, and the block stays 1120. */
+.block-container:has(.ar-form-head) > [data-testid="stVerticalBlock"]
+  > div:not(:has(.ar-close)) {
   max-width: 760px; }
 
 /* ----------------------------------------------------- shell furniture */

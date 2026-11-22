@@ -452,7 +452,7 @@ ask.
 
 ## The suite
 
-868 tests, no network, about a minute. Every fix below was
+871 tests, no network, about a minute. Every fix below was
 written as a failing test first, and the failure was watched before the
 fix was written.
 
@@ -613,6 +613,29 @@ stopped applying, and the home table went back to overflowing a 375px
 screen — the exact defect that rule exists to prevent. The suite was
 green throughout, because every test about it asked whether the text
 was in the stylesheet, and it was, inside the wreckage.
+
+**The closing band, 151px off centre on one screen.** The band reaches
+the window's edges by margins measured in `50%` of its parent against
+`50vw`, which lands centred only when its parent is the page column.
+The form screen caps its fields to a 760px measure, and the cap was
+written on the block that also holds the band — so on that one screen
+the arithmetic resolved against 760 instead of 1120 and the band ran
+from −151 to 1289 in a 1440 window: off the left edge, short of the
+right, with the page's own ground showing under it. Measured in the
+running app rather than inferred. The measure is applied per child
+now, and the child carrying the band is excluded.
+
+**The arrival wash was the accent's own tint.** A jump marks its
+destination for two and a half seconds, the way a desktop search marks
+a result it has just scrolled to. It did that in the accent's wash —
+and the accent means "the subject" everywhere else in the document, so
+a pale slate band read as a surface the section was sitting on rather
+than as something that had just happened to it. It is yellow now,
+which belongs to no other role here and is what every find-on-page
+uses to say *here*. Ink measures 14.6:1 on it, so the words the reader
+came for stay readable for the whole of the wash. Scoped to the wash
+alone: a peer table's subject row and a hovered link are states rather
+than events and keep the accent.
 
 ### Examined and deliberately not changed
 

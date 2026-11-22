@@ -86,7 +86,7 @@ def test_reduced_motion_keeps_the_cue_and_drops_the_fade():
     sheet = theme.document_stylesheet()
     block = sheet[sheet.index("prefers-reduced-motion: reduce) {\n  .ar-hit"):]
     assert "animation: none" in block[:200]
-    assert "background: var(--accent-soft)" in block[:200]
+    assert "background: var(--hit)" in block[:200]
 
 
 # ------------------------------------------------------- the sealed notes
@@ -299,3 +299,62 @@ def test_the_shell_tabs_clear_the_bar_the_stylesheet_clears():
     # a reason for them to be two code paths, not for them to behave
     # differently.
     assert 'cls.add("ar-hit")' in nav
+
+
+def test_the_arrival_wash_is_yellow_and_only_the_arrival_wash():
+    """The owner asked for yellow, which is also the right answer: the
+    accent means "the subject" throughout this document, so a pale
+    slate band read as a surface the section sits on rather than as
+    something that had just happened to it.
+
+    And it is scoped. The subject row of a peer table and a hovered
+    link in the prose are STATES, not events, and they keep the
+    accent's own tint - a document with yellow in three places has a
+    yellow that means nothing.
+    """
+    sheet = theme.document_stylesheet()
+    assert "--hit: #fdeeb0" in sheet
+    for frame_ in ("@keyframes ar-hit {", "@keyframes ar-hit-edge {"):
+        block = sheet[sheet.index(frame_):]
+        block = block[: block.index("}\n")]
+        assert "var(--hit)" in block
+        assert "var(--accent-soft)" not in block
+    subject = _rule("table.ar-table tbody tr.subject td", sheet)
+    assert "var(--accent-soft)" in subject
+    assert "var(--hit)" not in subject
+
+
+def test_the_closing_band_is_not_capped_to_the_form_measure():
+    """The band reaches the window's edges by `50%` of its parent
+    against `50vw`, which only lands centred when its parent is the
+    page column. Capping the form's whole block capped the band's
+    parent to 760px, and the arithmetic put it 151px to the left of
+    where it belonged - measured in the running form screen as a band
+    running -151 to 1289 in a 1440 window.
+
+    So the measure is applied per child, and the child carrying the
+    bookend is excluded.
+    """
+    sheet = theme.stylesheet()
+    assert '> div:not(:has(.ar-close))' in sheet
+    assert (
+        '.block-container:has(.ar-form-head) > [data-testid="stVerticalBlock"] {'
+        not in sheet
+    )
+
+
+@pytest.mark.skipif(not BUILT, reason="no built notes in build/site")
+def test_a_negative_filed_record_survives_into_the_index():
+    """Priced for sets the growth the price requires against the growth
+    the filings record, and a filed record can be negative - which is
+    the case the column exists for. Lumen's compounded at -33.2% while
+    the price asks for 2.8%, and a column that dropped the sign would
+    report the opposite of the truth."""
+    lumn = next(p for p in BUILT if p.stem == "lumn")
+    row = note_index.summarise(lumn.read_text())
+    assert row["record"].startswith("-")
+    html = ui.report_rows([
+        dict(row, ticker="LUMN", company="Lumen Technologies, Inc.",
+             slug="lumn", sid="s1")
+    ])
+    assert row["record"] in html

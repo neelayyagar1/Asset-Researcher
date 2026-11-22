@@ -230,8 +230,13 @@ def test_the_form_narrows_its_fields_and_not_the_page():
     assert ".block-container:has(.ar-form-head) {" not in CSS, (
         "the form screen narrows the whole page again"
     )
+    # Per CHILD, not on the block: the closing band bleeds to the
+    # window's edges by `50%` of its parent against `50vw`, and inside
+    # a 760px parent that arithmetic put it 151px off centre. The child
+    # carrying the band is excluded, so it still measures the column.
     body = _rule('.block-container:has(.ar-form-head) > '
-                 '[data-testid="stVerticalBlock"]')
+                 '[data-testid="stVerticalBlock"]\n  '
+                 '> div:not(:has(.ar-close))')
     assert "max-width: 760px" in body
 
 
