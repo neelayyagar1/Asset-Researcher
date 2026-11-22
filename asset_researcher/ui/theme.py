@@ -812,7 +812,13 @@ header[data-testid="stHeader"] { background: transparent; }
 [data-testid="stToolbarActions"], [data-testid="stAppDeployButton"],
 [data-testid="stMainMenu"], [data-testid="stMainMenuButton"],
 [data-testid="stStatusWidget"],
-#MainMenu, footer { display: none !important; }
+/* Streamlit's own "Made with Streamlit" footer, hidden by tag - which
+   also hid OURS the moment the shell grew a real one, silently and
+   with `!important`, so the closing band rendered into the page and
+   computed to display:none. Scoped to everything that is not ours.
+   A footer is the right element for a page's ending, so the answer is
+   to narrow the rule rather than to downgrade the landmark to a div. */
+#MainMenu, footer:not(.ar-close) { display: none !important; }
 
 /* Streamlit appends an anchor to every heading it renders, shown on hover.
    On a heading inside our own markup it points at a fragment that does not
@@ -956,19 +962,80 @@ button[data-testid="stExpandSidebarButton"]:hover,
 
 /* ----------------------------------------------------- shell furniture */
 
+/* A NEAR-BLACK BAND, not a hairline on marble.
+   The page was one flat field from the first pixel to the last, so it
+   began nowhere and ended nowhere - which is most of what made it read
+   as a form rather than as a publication. A dark bookend at the top and
+   another at the foot bound the light field between them and give the
+   whole page an edge to start from. The rest of the shell keeps its
+   marble; the ink is the frame, not a theme. */
 .ar-topbar {
-  display: flex; align-items: center; gap: 28px;
-  height: 52px; margin: -26px calc(-1 * var(--shell-gut)) 24px;
-  padding: 0 var(--shell-gut);
-  border-bottom: 1px solid var(--shell-line); }
+  display: flex; align-items: center; gap: 24px;
+  height: 56px;
+  /* FULL BLEED, past the column's own edges.
+     The band is the window's frame, not the column's: a dark strip
+     that stops where the text column stops reads as a wide heading
+     inside the page rather than as the top of the application. The
+     negative inline margin reaches the viewport edge and the padding
+     puts the mark back on the column's left edge, so the type still
+     aligns with everything below it. Measured for overflow afterwards,
+     because `50vw` includes the scrollbar's width and this is the
+     usual way a page acquires a horizontal one. */
+  margin: -26px calc(50% - 50vw) 32px;
+  padding: 0 calc(50vw - 50% + var(--shell-gut));
+  background: var(--shell-ink);
+  color: var(--shell-on-ink);
+  /* The pale 22% rule that a dark field needs: a neutral hairline is
+     invisible on ink, and no edge at all lets the band bleed into the
+     page under it. */
+  border-bottom: .5px solid rgba(255, 255, 255, .22); }
 .ar-topbar .brand {
   display: flex; align-items: center; gap: 9px;
   font-size: 13.5px; font-weight: 600; letter-spacing: -.012em;
-  color: var(--shell-ink); }
+  color: var(--shell-on-ink); }
 .ar-topbar .brand i {
-  width: 16px; height: 16px; border-radius: var(--shell-r-sm);
-  background: var(--shell-ink); display: block; }
+  width: 15px; height: 15px; border-radius: 0;
+  background: var(--shell-on-ink); display: block; }
 
+
+/* The eyebrow. Uppercase, tracked, small, and the only uppercase in
+   the shell - which is what makes it read as a label rather than as
+   another heading competing with the one under it. */
+.ar-brow {
+  font-family: var(--sans); font-size: 11px; font-weight: 500;
+  letter-spacing: .14em; text-transform: uppercase;
+  color: var(--shell-mute); margin-bottom: 9px; }
+
+/* The closing bookend. Full-bleed ink, the same device as the top bar,
+   so the light page is held between two dark edges instead of fading
+   out into its own bottom padding. */
+.ar-close {
+  display: flex; align-items: flex-start; gap: 48px;
+  margin: 72px calc(50% - 50vw) -64px;
+  padding: 40px calc(50vw - 50% + var(--shell-gut)) 44px;
+  background: var(--shell-ink); color: rgba(255, 255, 255, .62);
+  border-top: .5px solid rgba(255, 255, 255, .22); }
+.ar-close .mark {
+  display: flex; align-items: center; gap: 9px; flex: 0 0 auto;
+  font-family: var(--sans); font-size: 13px; font-weight: 600;
+  letter-spacing: -.012em; color: var(--shell-on-ink); }
+.ar-close .mark i {
+  width: 15px; height: 15px; background: var(--shell-on-ink);
+  display: block; }
+.ar-close .said { max-width: 620px; }
+.ar-close .said p {
+  margin: 0 0 7px; font-family: var(--sans); font-size: 12px;
+  line-height: 1.6; color: rgba(255, 255, 255, .62); }
+.ar-close .said p:last-child { margin-bottom: 0; }
+
+/* The chassis rails: the column's own edges, drawn.
+   Every rule on the page ran horizontally, so the content column was
+   implied by alignment alone and nothing on screen said where it
+   began or ended. Two 0.5px verticals say it, and they are structure
+   rather than decoration - the same reason the rows between reports
+   are hairlines and not boxes. */
+.block-container {
+  border-inline: .5px solid var(--shell-line-2); }
 
 /* The line at the head of the download menu. Inside a popover, which
    is the shell, so it reads from the shell's tokens. */
@@ -1279,22 +1346,6 @@ table.ar-list td.find span {
   display: block; margin-top: 1px; font-size: 11.5px; line-height: 1.3;
   color: var(--shell-mute); }
 
-/* The three terms the header row cannot define, and the count the
-   archive adds up to. Printed under the table, in the shell's text
-   face, at the size of a footnote - this is reference a reader
-   consults once, not a second heading. */
-.ar-legend {
-  margin: 14px 0 0; font-family: var(--sans); font-size: 11.5px;
-  line-height: 1.55; color: var(--shell-mute); max-width: 720px; }
-.ar-legend span { display: inline-block; margin-right: 18px; }
-.ar-legend b { font-weight: 600; color: var(--shell-soft); }
-.ar-legend.total {
-  margin-top: 10px; padding-top: 10px;
-  border-top: 1px solid var(--shell-line); }
-.ar-legend.total b {
-  font-family: var(--mono); font-feature-settings: "tnum" 1, "lnum" 1;
-  color: var(--shell-ink); }
-
 table.ar-list td.co { color: var(--shell-soft); }
 table.ar-list td.tk { font-weight: 600; letter-spacing: -.01em; }
 /* Filed and Cited are context rather than the figure a reader came
@@ -1558,11 +1609,20 @@ ol.ar-steps > li.ar-step + li.ar-step { padding-left: 20px; }
    centring inside its own host column rather than sharing a row. */
 .stButton > button, .stDownloadButton > button, .stFormSubmitButton > button {
   font-family: var(--sans); font-size: 13px; letter-spacing: -.005em;
-  text-transform: none; font-weight: 500; border-radius: var(--shell-r);
+  /* SQUARE. A rounded rectangle is the default shape of every
+     framework's button and reads as one; an unrounded action reads as
+     something that was set rather than dropped in, and it is the same
+     corner the rules, the table and the two dark bands already use.
+     The radius is the single most recognisable fingerprint of a
+     generated interface, and this shell was wearing it on its one
+     most-looked-at control. */
+  text-transform: none; font-weight: 500; border-radius: 0;
   border: 1px solid var(--shell-ink); background: var(--shell-ink);
-  color: var(--shell-on-ink); width: 100%; min-height: 36px;
-  padding: 0 16px;
-  box-shadow: 0 1px 2px rgba(18, 20, 26, .16);
+  color: var(--shell-on-ink); width: 100%; min-height: 40px;
+  padding: 0 20px;
+  /* No lift either. A shadow under a flat-field button is depth the
+     page does not otherwise have. */
+  box-shadow: none;
   transition: background-color 120ms var(--ease),
     border-color 120ms var(--ease), color 120ms var(--ease); }
 .stButton > button:hover, .stFormSubmitButton > button:hover {
@@ -1570,7 +1630,7 @@ ol.ar-steps > li.ar-step + li.ar-step { padding-left: 20px; }
   border-color: var(--shell-ink-hover); }
 .stDownloadButton > button, .stButton > button[kind="secondary"] {
   background: var(--shell-panel); color: var(--shell-ink);
-  border-color: var(--shell-btn-line); box-shadow: var(--shell-shadow); }
+  border-color: var(--shell-btn-line); box-shadow: none; }
 .stDownloadButton > button:hover,
 .stButton > button[kind="secondary"]:hover {
   background: var(--shell-hover);
@@ -1839,8 +1899,9 @@ table.ar-list th.num { font-family: var(--sans); letter-spacing: .03em; }
 /* The current screen, named. Not a pill and not a tab: it is a label,
    so it is shaped like one. */
 .ar-topbar .where {
-  font-size: 13px; color: var(--shell-soft); font-weight: 500;
-  padding-left: 14px; border-left: 1px solid var(--shell-line-2); }
+  font-size: 13px; color: rgba(255, 255, 255, .62); font-weight: 500;
+  padding-left: 14px;
+  border-left: .5px solid rgba(255, 255, 255, .22); }
 
 /* On a phone the bar still has to hold the product name and the screen
    it is on without wrapping; the source line used to wrap to three and
@@ -1860,6 +1921,14 @@ table.ar-list th.num { font-family: var(--sans); letter-spacing: .03em; }
   .ar-topbar { gap: 14px; height: auto; padding-block: 10px;
     margin-bottom: 18px; }
   .ar-topbar .brand { white-space: nowrap; }
+
+  /* The closing band is a row of two: the mark, then the text. At
+     375px that row gives the text about 120px and sets it one or two
+     words to the line, which is worse than no ending at all. It
+     stacks, and the mark goes above the text it belongs to. */
+  .ar-close { flex-direction: column; gap: 18px;
+    padding-block: 30px 34px; margin-top: 48px; }
+  .ar-close .said { max-width: none; }
   .ar-topbar .where { padding-left: 10px; }
 
   /* Streamlit keeps its columns side by side at every width, so on a
@@ -1891,10 +1960,6 @@ table.ar-list th.num { font-family: var(--sans); letter-spacing: .03em; }
   table.ar-list th:nth-child(7), table.ar-list td:nth-child(7),
   table.ar-list th:nth-child(8), table.ar-list td:nth-child(8) {
     display: none; }
-  /* The legend's three terms stack rather than run on, because at
-     375px three inline blocks separated by 18px of margin read as one
-     unbroken paragraph of bold words. */
-  .ar-legend span { display: block; margin: 0 0 6px; }
 
   /* And the four steps go back to a stack: four columns of prose on a
      375px screen is one word per line. */

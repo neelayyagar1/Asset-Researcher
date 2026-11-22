@@ -244,58 +244,6 @@ def nav(labels: Sequence[str]) -> str:
     return _one_line(f'<nav class="ar-nav">{links}</nav>')
 
 
-def index_legend(rows) -> str:
-    """What the index's three unobvious columns mean, and what the
-    archive adds up to.
-
-    Three of the eight headers are terms rather than words - FCF yield,
-    FCF CAGR, Cited - and a reader meeting the table for the first time
-    is being asked to take all three on trust. A tooltip serves someone
-    who already suspects there is something to find; this is printed,
-    on the same principle as the note's own `legend`, which explains NM
-    and n.d. where they appear rather than on hover.
-
-    The total is the one claim this product exists to make, and it is
-    the only place on the home screen it is made as a number: across
-    every report listed, how many of the figures stated are traced to a
-    filing. It is COUNTED from the rows rather than written down, so it
-    cannot drift from the table above it, and it is stated as a
-    fraction rather than a percentage because 705/705 and "100%" are
-    not the same claim - the first says how much work it covers.
-
-    It also gives the provenance line a home. "SEC EDGAR - XBRL" used
-    to sit in the top bar on every screen, including the ones that have
-    read no filing. Here it is beside the count it belongs to.
-    """
-    traced = total = 0
-    for r in rows:
-        raw = (r.get("cited") or "").split("/")
-        if len(raw) == 2 and raw[0].isdigit() and raw[1].isdigit():
-            traced += int(raw[0])
-            total += int(raw[1])
-
-    terms = (
-        '<p class="ar-legend"><span><b>FCF yield</b> free cash flow for '
-        "the filed year, over market capitalisation - what the cash "
-        "costs at today's price.</span> <span><b>FCF CAGR</b> the "
-        "compound growth rate of free cash flow across the filed years, "
-        "which is what the cash has actually done.</span> "
-        "<span><b>Cited</b> figures in the report located in a filing, "
-        "out of figures stated.</span></p>"
-    )
-    if not total:
-        return _one_line(terms)
-    return _one_line(
-        terms
-        + '<p class="ar-legend total">'
-        + f"<b>{traced}/{total}</b> figures across "
-        + f"{len(rows)} report{'' if len(rows) == 1 else 's'} are "
-        + "traced to a filing, read from SEC EDGAR company facts. "
-        + "Located in the source, which is not the same as supporting "
-        + "the claim - that is what the report is for.</p>"
-    )
-
-
 def download_note() -> str:
     """One line at the top of the download menu.
 
@@ -1078,7 +1026,7 @@ def topbar(active: str = "reports") -> str:
     )
 
 
-def head(title: str, note: str = "") -> str:
+def head(title: str, note: str = "", eyebrow: str = "") -> str:
     """A section heading and its one line of context.
 
     An `h2`. This emitted `h1`, and home calls it twice under the
@@ -1088,8 +1036,47 @@ def head(title: str, note: str = "") -> str:
     nothing moves on screen.
     """
     sub = f"<p>{_text(note)}</p>" if note else ""
+    # An eyebrow above the heading, when one is given.
+    #
+    # Every section on this page announced itself the same way: one
+    # heading, one size, nothing above it. A page whose sections all
+    # begin identically has no chapters, only paragraphs - which is
+    # what made the home screen read as a form with subtitles. The
+    # eyebrow is the smallest thing that creates a second rank: a
+    # tracked 11px label that says what KIND of section this is, above
+    # a heading that says which one. It carries no colour and no
+    # device.
+    brow = f'<div class="ar-brow">{_text(eyebrow)}</div>' if eyebrow else ""
     return _one_line(
-        f'<div class="ar-head"><h2>{_text(title)}</h2>{sub}</div>'
+        f'<div class="ar-head">{brow}<h2>{_text(title)}</h2>{sub}</div>'
+    )
+
+
+def closing(lines) -> str:
+    """The page's ending: a second near-black bookend.
+
+    Every screen simply stopped. The last row of the table was followed
+    by the page's bottom padding and then nothing, which is both why the
+    foot of the screen looked unfinished and why the obvious repair -
+    putting something in the gap - kept producing filler. The gap was
+    not the problem; the page having no ending was.
+
+    So this is an ending rather than a block of content: the product
+    mark, and the two facts that belong at the foot of a research
+    document rather than at the top of a window - where the figures
+    come from, and what the reader is and is not being handed. The
+    provenance line used to ride in the top bar on every screen,
+    including the ones that have read no filing.
+
+    It takes the lines it prints, so a screen states what is true of
+    that screen and nothing states anything on a screen's behalf.
+    """
+    body = "".join(f"<p>{_text(line)}</p>" for line in lines if line)
+    return _one_line(
+        '<footer class="ar-close">'
+        '<div class="mark"><i></i>Asset Researcher</div>'
+        f'<div class="said">{body}</div>'
+        "</footer>"
     )
 
 

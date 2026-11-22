@@ -713,10 +713,43 @@ def _back_bridge() -> None:
     )
 
 
+def _drop_nav() -> None:
+    """Take the note's section index off the page when the note is gone.
+
+    `_nav_bridge` copies the index OUT of the note's document and into
+    the shell, because the frame is sized to the whole note and nothing
+    inside it can stick to anything. That puts the element outside the
+    tree Streamlit owns - which is the whole point, and also means
+    Streamlit never takes it away. Pressing Back from a report left a
+    bar of that report's section names sitting under Get started on the
+    home screen, pointing into a document that was no longer on it.
+
+    So the screens that have no note say so. Keyed on the view rather
+    than on whether a tall frame happens to be present, because the
+    frame is mounted after this runs and a check would race it.
+    """
+    components.html(
+        r"""<script>
+        (function () {
+          var doc;
+          try { doc = window.parent.document; } catch (e) { return; }
+          if (!doc) return;
+          var nav = doc.getElementById('ar-shell-nav');
+          if (nav) nav.remove();
+        })();
+        </script>""",
+        height=0,
+    )
+
+
 # Below the gate, so nothing renders for a visitor who has not got in,
 # and below the definition, which is where it has to be in a module that
 # executes top to bottom.
 _back_bridge()
+# The reading screen rebuilds the index a moment later; every other
+# screen is telling the page it has no sections.
+if st.session_state.get("view") != "samples":
+    _drop_nav()
 report = st.session_state.get("report")
 presets = load_presets()
 
@@ -1434,7 +1467,7 @@ if st.session_state["view"] == "home":
     # link does not yet know what the tool does; the four steps say so
     # in the time it takes to read them, and the archive below is then
     # evidence rather than an unexplained table.
-    write(ui.head("Get started"))
+    write(ui.head("Get started", eyebrow="How it works"))
     # No card. The four steps are already grouped by the rules between
     # their columns, so a border, a fill and a radius around them added
     # chrome that grouped nothing twice over - and made instructions
@@ -1456,18 +1489,25 @@ if st.session_state["view"] == "home":
             go("report")
 
     # The subtitle that stood here said what the table already shows.
-    write(ui.head("Reports"))
+    write(ui.head("Reports", eyebrow="Archive"))
     # No card. An index is a list of rows on the page, the way every
     # research index worth copying renders one - the hairlines between
     # the rows do the grouping, and a box around them groups it twice.
     write(ui.report_rows(rows, token=_unlock_token(), scope=_scope_for_links()))
-    # Under the table, not above it: the terms are met in the header
-    # row, and an explanation a reader passes before meeting the thing
-    # it explains is read twice or not at all.
-    write(ui.index_legend(rows))
     if st.session_state.get("samples_problem"):
         write(ui.shell_status("warning", "Samples",
                         st.session_state["samples_problem"]))
+    # The page's ending. Both lines are true of THIS screen: it lists
+    # reports built from filings, and it is an index rather than advice.
+    write(ui.closing([
+        "Figures are read from SEC EDGAR company facts, the XBRL a "
+        "company files itself, and every one in a report links back to "
+        "the filing it came from.",
+        "Research tooling, not investment advice. A citation locates a "
+        "figure in its source; whether the figure supports the claim "
+        "beside it is what the report is for, and what a reader is "
+        "meant to judge.",
+    ]))
     st.stop()
 
 

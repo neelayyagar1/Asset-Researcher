@@ -101,50 +101,46 @@ def test_the_mark_is_gone_from_the_stylesheet_too():
     )
 
 
-# -------------------------------------------------------- the index legend
+# ------------------------------------------- what the index does NOT explain
 
-ROWS = [
-    {"ticker": "ADP", "company": "Automatic Data Processing", "slug": "adp",
-     "cited": "105/105"},
-    {"ticker": "O", "company": "Realty Income", "slug": "o",
-     "cited": "98/98"},
-]
+def test_the_index_does_not_explain_its_own_columns():
+    """There was a legend under the table defining FCF yield, FCF CAGR
+    and Cited, and a line totalling the archive's citation coverage.
 
+    It went because of who reads this. The audience is a portfolio
+    manager, and free cash flow yield is not a term a portfolio manager
+    needs defined - explaining it says, in the politest possible way,
+    that the writer was unsure whether the reader would know. The
+    coverage total restated the Cited column immediately above it. Four
+    sentences of grey prose, under a table, saying what the table had
+    just said to someone who did not need it said once.
 
-def test_the_legend_defines_every_term_the_header_cannot():
-    """Three of the eight headers are terms rather than words, and a
-    reader meeting the table is being asked to take all three on
-    trust. Printed, not hovered - the note's own legend works the
-    same way, and for the same reason."""
-    out = ui.index_legend(ROWS)
-    for term in ("FCF yield", "FCF CAGR", "Cited"):
-        assert f"<b>{term}</b>" in out, term
-    assert "market capitalisation" in out
-    assert "out of figures stated" in out
+    The two columns stay. The commentary does not.
+    """
+    assert not hasattr(ui, "index_legend")
+    assert "index_legend" not in APP
 
+    from asset_researcher.ui import theme
 
-def test_the_coverage_total_is_counted_rather_than_written():
-    """It is the one claim this product exists to make, stated as a
-    number on the screen where a reader meets it. Counted from the
-    rows, so it cannot drift from the table above it."""
-    out = ui.index_legend(ROWS)
-    assert "<b>203/203</b>" in out, out
-    assert "2 reports" in out
-
-    one = ui.index_legend([ROWS[0]])
-    assert "<b>105/105</b>" in one and "1 report " in one, one
-
-
-def test_a_row_that_states_no_coverage_is_not_counted_as_zero():
-    """A note whose coverage could not be read has an unknown
-    coverage, not a coverage of nothing. Averaging it in as zero
-    would understate the only number here that matters, and
-    inventing one would be worse."""
-    mixed = ui.index_legend([ROWS[0], dict(ROWS[1], cited="")])
-    assert "<b>105/105</b>" in mixed, mixed
-
-    none = ui.index_legend([dict(r, cited="") for r in ROWS])
-    assert "figures across" not in none, (
-        "a total was claimed with nothing to total"
+    assert ".ar-legend" not in theme._APP_CSS, (
+        "the shell still styles a legend it no longer writes"
     )
-    assert "<b>FCF yield</b>" in none, "the terms should still be defined"
+    # The NOTE's own legend keeps the class and the name. It explains NM
+    # and n.d., which are notation this product invented the use of in
+    # this context, to a reader meeting them mid-table - a different
+    # thing from defining a standard ratio on an index.
+    assert ".ar-legend" in theme.document_stylesheet()
+
+
+def test_the_report_index_bar_does_not_outlive_its_report():
+    """`_nav_bridge` copies the note's section index into the SHELL,
+    outside the tree Streamlit owns, which is why it survives - and why
+    pressing Back from a report left that report's section names
+    sitting under Get started on the home screen, linking into a
+    document no longer on the page."""
+    assert "def _drop_nav(" in APP
+    assert "ar-shell-nav" in APP[APP.index("def _drop_nav("):][:1600]
+    call = APP.index('if st.session_state.get("view") != "samples":')
+    assert "_drop_nav()" in APP[call : call + 200], (
+        "the cleanup is defined but not called on the screens with no note"
+    )
