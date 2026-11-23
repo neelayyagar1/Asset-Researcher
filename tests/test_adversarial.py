@@ -93,7 +93,7 @@ def test_the_gate_never_raises(monkeypatch, value):
     at.button[0].click().run()
     assert not at.exception, f"passphrase {value!r} raised"
     # And none of them open it.
-    assert not "Get started" in page_text(at), (
+    assert not "Every figure sourced" in page_text(at), (
         f"passphrase {value!r} opened the gate"
     )
 
@@ -140,7 +140,7 @@ def test_a_tampered_unlock_token_never_raises_and_never_opens(
     at.run()
     assert not at.exception, f"?k={value!r} raised"
     text = page_text(at)
-    assert "Get started" not in text, f"?k={value!r} opened the gate"
+    assert "Every figure sourced" not in text, f"?k={value!r} opened the gate"
 
 
 # ------------------------------- the two parameters added for the index

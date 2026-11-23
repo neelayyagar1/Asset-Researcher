@@ -24,17 +24,22 @@ from asset_researcher.ui import components as ui
 from asset_researcher.ui import theme
 
 
-def test_the_instructions_do_not_promise_a_minute():
-    steps = " ".join(ui.STEPS).lower()
-    assert "about a minute" not in steps, (
-        "Get started still promises a minute for a run measured at "
+# The claim moved. It was step three of four on the home screen; the
+# steps are gone and the sentence under the opening line carries it, so
+# these read the sentence. What is tested is the claim, not where it
+# happens to be printed.
+
+def test_the_opening_screen_does_not_promise_a_minute():
+    said = ui.home().lower()
+    assert "about a minute" not in said, (
+        "the home screen still promises a minute for a run measured at "
         "five to seven"
     )
 
 
-def test_the_instructions_give_an_honest_order_of_magnitude():
-    steps = " ".join(ui.STEPS).lower()
-    assert "minutes" in steps, "the instructions no longer say how long"
+def test_the_opening_screen_gives_an_honest_order_of_magnitude():
+    said = ui.home().lower()
+    assert "minutes" in said, "the home screen no longer says how long"
 
 
 def test_the_progress_estimate_matches_the_measured_run():

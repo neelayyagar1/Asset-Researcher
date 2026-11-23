@@ -452,7 +452,7 @@ ask.
 
 ## The suite
 
-874 tests, no network, about a minute. Every fix below was
+872 tests, no network, about a minute. Every fix below was
 written as a failing test first, and the failure was watched before the
 fix was written.
 
@@ -662,6 +662,49 @@ padding declared elsewhere and did not, and Streamlit's markdown
 wrapper, which carries `margin-bottom: -1rem` of its own. Sixteen
 pixels is the difference between a page that fits the window and a page
 with a scrollbar on it.
+
+**The first screen was explaining itself.** Under the opening line sat
+Get started: four numbered steps, a third of the screen, telling a
+reader to press the button directly beneath them, naming the two fields
+the form already labels, and repeating the run length. Three of the
+four were the interface describing itself to someone who could see it.
+The opening line was no better — "Read a report, or generate a new
+one" named the two controls under it and said nothing about what is on
+the other side of them. The display line now makes the claim (research
+notes from the filings, every figure sourced) and one sentence under it
+carries the three facts the steps were actually for: what you supply,
+where the figures are read from, and how long a run takes. The steps,
+their component and their stylesheet rules are deleted rather than
+hidden. The run-length claim is still checked against the measured run,
+on the sentence that now carries it.
+
+One thing to flag rather than quietly fix: that line says *notes* and
+*the note*, while every control, the bar and the index say *report*. It
+is two words for one document. The opening reads better for it, which
+is a judgement and the owner's to make; the test that used to forbid it
+now only holds the half that is not a judgement — the word a reader is
+asked to act on.
+
+**The form sat 151px left of where a reader looks.** The generate
+screen's fields are capped to a 760px measure inside a 1120px column,
+and nothing said where in that column the form goes — so it sat at the
+column's left edge with 180px of marble on the right and none on the
+left, and the whole screen read as having slipped sideways. It is
+centred on the column, which is centred on the window, which is the
+only axis anyone can see. Measured at 1512 and at 2000: form centre and
+window centre to the pixel, band edge to edge, no horizontal overflow.
+
+**A rule that stacked the columns on a phone did the opposite.** Found
+while checking the new opening line at 375px: home scrolled 652px
+sideways. The rule that stacks Streamlit's columns was written years of
+commits ago and computed exactly as written — direction `column`, each
+child 318px — and the three children still sat at x29, x369 and x709.
+Streamlit's row ships `flex-wrap: wrap`, and a *wrapping* flex column
+does not stack: it fills the height and starts a second column beside
+the first. The stylesheet was correct, the computed styles were
+correct, and the layout was the one the rule exists to prevent, which
+is the whole argument for measuring in a phone viewport instead of
+asserting from the sheet.
 
 ### Examined and deliberately not changed
 

@@ -105,9 +105,8 @@ def test_the_gate_raises_nothing_on_any_of_these(monkeypatch):
 
 def test_the_home_button_reaches_the_form(monkeypatch):
     """Home has one primary action now. The "How it works" page was
-    deleted and its instructions moved onto home as Get started, so a
-    reader learns how to drive the tool without leaving the first
-    screen."""
+    deleted and what it said sits under the opening line, so a reader
+    learns how to drive the tool without leaving the first screen."""
     at = _unlock(_app(monkeypatch).run())
     next(b for b in at.button if b.label == START_LABEL).click().run()
     assert not at.exception
@@ -115,10 +114,19 @@ def test_the_home_button_reaches_the_form(monkeypatch):
 
 
 def test_home_carries_the_instructions_itself(monkeypatch):
+    """The "How it works" page was deleted on the reasoning that a
+    reader should not leave the first screen to learn what the tool
+    does. For a while that meant four numbered steps under the opening
+    line; the steps have since been cut down to the sentence beside
+    them, which is what has to survive - not the block that carried it.
+
+    What a reader needs before pressing the button is what they will be
+    asked for and how long they will wait. Both are on this screen.
+    """
     at = _unlock(_app(monkeypatch).run())
     text = page_text(at)
-    assert "Get started" in text
-    assert "US-listed ticker" in text
+    assert "Enter a ticker and how you invest" in text
+    assert "five minutes" in text
 
 
 def test_the_how_it_works_page_is_gone(monkeypatch):
@@ -230,3 +238,25 @@ def test_an_unknown_view_still_falls_back(monkeypatch):
     at = _unlock(at.run())
     assert not at.exception
     assert any(START_LABEL in lab for lab in _labels(at))
+
+
+def test_the_columns_stack_rather_than_wrap_beside_each_other():
+    """A wrapping flex column does not stack.
+
+    The phone rule set `flex-direction: column` on Streamlit's column
+    row and left its `flex-wrap: wrap` alone, so instead of stacking,
+    the row filled the available height and started a second column
+    beside the first. Measured on home at 375px before the fix: the
+    direction computed as `column`, each child computed as 318px wide,
+    and the three of them sat at x29, x369 and x709 - 652px of sideways
+    scroll on a 375px screen, from a rule that read as correct.
+    """
+    from asset_researcher.ui import theme
+
+    sheet = theme.stylesheet()
+    phone = sheet[sheet.index("@media (max-width: 700px)"):]
+    rule = phone[phone.index('[data-testid="stHorizontalBlock"] {'):][:200]
+    assert "flex-direction: column" in rule
+    assert "flex-wrap: nowrap" in rule, (
+        "the stacked columns can still wrap into a second column"
+    )

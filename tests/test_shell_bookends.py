@@ -190,7 +190,11 @@ def test_the_home_screen_ends_on_the_band_and_labels_its_sections():
     app = (pathlib.Path(__file__).resolve().parents[1] / "app.py").read_text(
         encoding="utf-8"
     )
-    assert 'ui.head("Get started", eyebrow="How it works")' in app
+    # One labelled section now, not two. Get started was deleted: its
+    # three load-bearing facts are the sentence under the opening line,
+    # and a numbered diagram telling a reader to press the button under
+    # it was the interface describing itself.
+    assert 'ui.head("Get started"' not in app
     assert 'ui.head("Reports", eyebrow="Archive")' in app
     assert "ui.closing([" in app
     # The provenance line the top bar used to carry on every screen,
@@ -238,6 +242,12 @@ def test_the_form_narrows_its_fields_and_not_the_page():
                  '[data-testid="stVerticalBlock"]\n  '
                  '> div:not(:has(.ar-close))')
     assert "max-width: 760px" in body
+    # And centred in it. The cap alone left the form at the column's
+    # left edge - 760px of form in 1120px of column, 180px of marble on
+    # one side and none on the other - which on a screen whose only
+    # visible axis is the window's centre reads as the page having
+    # slipped sideways.
+    assert "margin-left: auto" in body and "margin-right: auto" in body
 
 
 def test_every_screen_with_a_foot_has_an_ending():

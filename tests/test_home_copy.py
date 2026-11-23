@@ -26,6 +26,7 @@ import pathlib
 from streamlit.testing.v1 import AppTest
 
 from asset_researcher.ui import components as ui
+from asset_researcher.ui import theme
 from tests.apptest_helpers import rendered_markup
 
 APP = str(pathlib.Path(__file__).resolve().parents[1] / "app.py")
@@ -42,27 +43,65 @@ def _open(monkeypatch):
 
 # ------------------------------------------------------------- the lead
 
-def test_the_lead_calls_the_output_a_report():
-    lead = ui.home()
-    assert "research note" not in lead
-    assert "report" in lead
+def test_the_opening_and_the_controls_name_the_same_thing():
+    """This test used to forbid the words "research note" on this
+    screen, on the reasoning that the rest of the product says report
+    and one document should not have two names.
+
+    The owner chose the current opening line, which says "Research
+    notes from the filings" and then "The note". The concern is on the
+    record rather than enforced by a test: the buttons, the bar and the
+    index all still say report, so a reader does meet two words for one
+    document. It is a small split and the opening line reads better for
+    it, which is a judgement, and the judgement is his.
+
+    What the test keeps is the half that is not a judgement - the word
+    the reader is asked to ACT on. Every control names a report, and if
+    one ever drifts to "note" the screen would be offering a thing it
+    never introduced.
+    """
+    assert "report" in ui.START_LABEL.lower()
+    assert "report" in ui.NEW_LABEL.lower()
 
 
-def test_the_lead_names_both_ways_on_without_explaining_the_product():
-    """The opening line is an instruction, not a description.
+def test_the_opening_says_what_the_product_makes_and_on_what_terms():
+    """The display line is the claim, not a description of the buttons.
 
-    It used to be a three-line paragraph explaining what the tool does,
-    set left at 560px under a centred heading - two centre axes and a
-    wall of prose on the screen a reader spends four seconds on. The
-    owner's note was blunt and correct. The screen offers exactly two
-    things, so the line names exactly those two.
+    It read "Read a report, or generate a new one", which named the two
+    controls directly beneath it and said nothing about what is on the
+    other side of them. A stranger four seconds into this screen needs
+    the product's terms - filings, and every figure sourced - because
+    that is the only thing that makes the rest worth reading.
+
+    Still short. A display line that runs past a breath is a paragraph
+    set large, which is the fault the 42px rank was given to avoid.
     """
     lead = ui.home()
-    assert "Read a report" in lead
-    assert "generate a new one" in lead
-    # Short enough to be read rather than skipped.
-    text = re.sub(r"<[^>]+>", "", lead).strip()
-    assert len(text.split()) < 20, text
+    assert "Research notes from the filings" in lead
+    assert "Every figure sourced" in lead
+    said = re.search(r'<p class="lead">(.*?)</p>', lead).group(1)
+    assert len(re.sub(r"<[^>]+>", "", said).split()) < 14, said
+
+
+def test_the_opening_carries_what_the_steps_used_to_say():
+    """The three load-bearing facts from the deleted Get started block:
+    what a reader supplies, where the figures are read from, and how
+    long a run takes. Deleting a section is only safe if what it was
+    actually for survives it."""
+    sub = re.search(r'<p class="sub">(.*?)</p>', ui.home(), re.S).group(1)
+    assert "ticker" in sub and "how you invest" in sub
+    assert "SEC filings" in sub
+    assert "five minutes" in sub
+
+
+def test_the_home_screen_prints_no_numbered_instructions():
+    """Get started is gone, and so is the component that drew it. A
+    screen that still rendered the steps would be printing the same
+    three facts twice, forty pixels apart."""
+    assert not hasattr(ui, "steps"), "the steps component outlived its screen"
+    assert "ar-steps" not in theme.stylesheet(), (
+        "the stylesheet still carries rules for a block nothing renders"
+    )
 
 
 # ------------------------------------------------------- the two buttons
@@ -73,13 +112,6 @@ def test_the_home_action_and_the_form_action_have_different_names(monkeypatch):
     at.button(key="enter").click().run()
     form_label = at.button(key="inline_run").label
     assert home_label != form_label
-
-
-def test_get_started_begins_with_the_button_on_this_screen(monkeypatch):
-    at = _open(monkeypatch)
-    home_label = at.button(key="enter").label
-    first_step = ui.STEPS[0]
-    assert home_label in first_step
 
 
 # ------------------------------------------------------- the form's head
@@ -159,97 +191,3 @@ def test_the_strategy_box_is_driven_by_state_alone(monkeypatch):
         "that overrides it"
     )
 
-
-def test_the_steps_are_a_list_in_the_markup_not_only_in_the_paint():
-    """SC 1.3.1. `steps()` says in its own docstring that instructions
-    are a numbered list because that is what instructions are - and then
-    emitted four sibling divs whose numbers came only from a CSS
-    `counter()` on a `:before`.
-
-    Generated content is announced by some AT and browser pairs and not
-    others, so the order was at best unreliable and at worst four
-    unrelated paragraphs. The ordering IS the content here: step three
-    does not make sense before step two.
-    """
-    from asset_researcher.ui import components as ui
-
-    html = ui.steps(("First thing", "Second thing"))
-    assert "<ol" in html and "</ol>" in html
-    assert html.count("<li") == 2
-    # Safari strips the list role when list-style is none.
-    assert 'role="list"' in html
-
-
-def test_the_steps_do_not_wear_the_hosts_list_item_box():
-    """Making the steps a real `ol` handed the host two selectors, not one.
-
-    The first pass fixed the container: Streamlit ships
-    `.st-emotion-cache-... > ol { display: block; width: fit-content }`
-    and `ol.ar-steps` had to take `!important` to keep four columns.
-
-    It styles the ITEMS too - `margin-left: 1.15rem`, `padding-left:
-    .3rem`, `margin-block: .2rem` - and out-specifies `.ar-step` at
-    (0,1,0). Measured in the running page after the container was fixed:
-    the `ol` box started at x 28 with the opening line, both section
-    heads and the index, and all four steps sat at 46.4 inside it, so
-    step one's prose began at 51.2 - 23px right of every other left edge
-    on the page. A single left edge for the column is the one thing this
-    direction rests on, and the Get started block was the only thing
-    breaking it. `.ar-step`'s own `padding: 2px 20px 2px 0` was
-    discarded with it: computed padding-top and padding-right were 0.
-
-    `ol.ar-steps > li.ar-step` is (0,2,2), which clears the host without
-    `!important` - verified by injecting exactly this rule into the
-    running page and re-measuring at x 28.
-    """
-    from asset_researcher.ui import theme
-
-    sheet = theme.stylesheet()
-    rule = re.search(
-        r"ol\.ar-steps > li\.ar-step \{([^}]*)\}", sheet
-    )
-    assert rule, "nothing takes the host's list-item box off the steps"
-    body = rule.group(1)
-    assert "margin: 0" in body, (
-        "the steps keep the host's margin-left, which indents the whole "
-        "column group off the page's left edge"
-    )
-    assert "padding: 2px 20px 2px 0" in body, (
-        "the step's own padding is not restored, so the column gutter "
-        "the design declares is not applied"
-    )
-
-
-def test_the_phone_step_rules_can_still_win():
-    """The fix above raised the base rule to (0,2,2), so the narrow
-    viewport block had to follow it up. A bare `.ar-step` there at
-    (0,1,0) now loses, and the four steps would stack while keeping
-    their desktop gutters - a regression introduced by a fix, which is
-    the pattern this file keeps catching."""
-    from asset_researcher.ui import theme
-
-    sheet = theme.stylesheet()
-    phone = sheet[sheet.index("grid-template-columns: minmax(0, 1fr)"):]
-    phone = phone[:1200]
-    assert "ol.ar-steps > li.ar-step { padding-right: 0" in phone, (
-        "the phone rule is written at a specificity the base rule beats"
-    )
-
-
-def test_each_step_is_a_list_item_to_a_screen_reader():
-    """`role="list"` on the container was half the fix.
-
-    WebKit drops the `listitem` role from an `li` whose `display` is not
-    `list-item`, and `.ar-step` is `display: grid` so the number and the
-    prose can stack. A role on the container with none on the items is a
-    list announced with no members - the original defect wearing an ARIA
-    attribute, and it reads as fixed, which is worse.
-    """
-    from asset_researcher.ui import components
-
-    markup = components.steps(["one", "two", "three", "four"])
-    assert markup.count('role="listitem"') == 4, (
-        "the steps are a list whose items carry no role, which WebKit "
-        "strips because they are display: grid"
-    )
-    assert 'role="list"' in markup

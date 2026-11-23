@@ -848,10 +848,27 @@ def home() -> str:
     one screen makes it look unedited. The name stays as a heading for
     the document outline and for a screen reader, and is not drawn
     twice.
+
+    Two lines now, and they absorbed the Get started block that used to
+    sit under them. "Read a report, or generate a new one" named the
+    two buttons, which the two buttons already do; it said nothing
+    about what the thing on the other side of them IS. The display line
+    says what the product makes and on what terms - the filings, and
+    every figure sourced - which is the whole claim, and the only claim
+    a stranger needs before deciding whether to look further.
+
+    Under it, the three facts the four numbered steps were spending a
+    third of the screen to deliver: what you supply, where the note is
+    read from, and how long it takes. A reader does not need a
+    four-column diagram to be told to press the button that is directly
+    beneath it.
     """
     return _one_line(
         '<div class="ar-head ar-open"><h1 class="ar-sr">Asset Researcher</h1>'
-        '<p class="lead">Read a report, or generate a new one.</p>'
+        '<p class="lead">Research notes from the filings. '
+        "Every figure sourced.</p>"
+        '<p class="sub">Enter a ticker and how you invest. The note is '
+        "read from SEC filings and takes about five minutes.</p>"
         "</div>"
     )
 
@@ -1114,59 +1131,12 @@ START_LABEL = "Start a report"
 # the whole thing.
 NEW_LABEL = "Generate a new report"
 
-STEPS = (
-    f"Press <b>{START_LABEL}</b>, below.",
-    "Enter a US-listed ticker, how you invest, and any public URLs "
-    "you want read alongside the filings.",
-    # "About five minutes", not "about a minute". Measured tonight
-    # against the real APIs: eighteen sample notes across three
-    # rebuilds at five to seven minutes each, and two reports driven
-    # through this interface at about seven, timed from the click to
-    # the file landing on disk. A reader who presses the button on a
-    # one-minute promise and is still waiting six minutes later
-    # concludes it has hung.
-    "Press <b>Generate report</b>. It reads the filings and writes "
-    "the report, which takes about five minutes.",
-    "Read it. Every figure links back to the filing it came from "
-    "&mdash; located in the source, which is not the same as "
-    "supporting the claim.",
-)
-
-
-def steps(items) -> str:
-    """Get Started: numbered actions, not claims.
-
-    The screen this replaces carried three guarantees about the product
-    and no instructions for using it, so a first-time reader learned
-    what it promised and not what to do. Instructions are a numbered
-    list because that is what instructions are.
-
-    An `ol`, because the sentence above is only true if the markup says
-    it. This emitted four sibling `div`s and got its numbers from a CSS
-    `counter()` on a `:before` - so the order existed in the paint and
-    nowhere else. Generated content is announced by some screen reader
-    and browser pairs and not others, which made the sequence at best
-    unreliable and at worst four unrelated paragraphs. The ordering is
-    the content here: step three does not mean anything before step two.
-
-    `role="list"` is not redundant. Safari drops the list role from any
-    `ol` whose `list-style` is `none`, which this one's is, and the
-    visible numbers come from the counter rather than from the marker.
-
-    And `role="listitem"` on each step, for the same reason one step
-    further down. WebKit drops the `listitem` role from an `li` whose
-    `display` is not `list-item`, and `.ar-step` is `display: grid` so
-    that the step's number and its prose stack. A role on the container
-    with none on the items is a list announced with no members, which is
-    the original defect wearing an ARIA attribute: the first review of
-    this change caught it, because `role="list"` alone reads as fixed.
-    """
-    rows = "".join(
-        f'<li class="ar-step" role="listitem"><div class="t">{body}</div></li>'
-        for body in items
-    )
-    return _one_line(f'<ol class="ar-steps" role="list">{rows}</ol>')
-
+# The four numbered steps and their constant lived here. The home
+# screen no longer prints instructions: what they carried that a reader
+# actually needed - what you supply, where the figures come from, how
+# long a run takes - is the sentence under the opening line in `home`,
+# and the rest was the interface describing itself. The run-length
+# claim is checked against the measured run there instead.
 
 def report_rows(rows, token: str = "", scope: str = "") -> str:
     """The notes that exist, as a table.

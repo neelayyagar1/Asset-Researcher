@@ -129,7 +129,7 @@ def test_the_samples_screen_can_be_left_in_both_directions(
 
     next(b for b in at.button if b.label == "Back").click().run()
     assert not at.exception
-    assert "Get started" in page_text(at)
+    assert "Every figure sourced" in page_text(at)
 
 
 def test_home_lists_the_notes_with_their_own_headline_figure(
@@ -271,7 +271,7 @@ def test_the_report_screen_can_be_left_without_the_browser(
 
     next(b for b in at.button if b.label == "Home").click().run()
     assert not at.exception
-    assert "Get started" in page_text(at), (
+    assert "Every figure sourced" in page_text(at), (
         "Home did not leave the report screen"
     )
 
@@ -294,7 +294,7 @@ def test_home_offers_the_way_back_to_a_report_it_still_holds(
     next(b for b in at.button if b.label == "Home").click().run()
     # On home, not still on the report: otherwise "New report" satisfies
     # a loose match and the test proves nothing.
-    assert "Get started" in page_text(at)
+    assert "Every figure sourced" in page_text(at)
     assert any(b.label == "Return to report" for b in at.button), (
         f"no way back to the held report; buttons were {_labels(at)}"
     )

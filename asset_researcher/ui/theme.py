@@ -1122,7 +1122,16 @@ button[data-testid="stExpandSidebarButton"]:hover,
    except the one carrying the bookend, and the block stays 1120. */
 .block-container:has(.ar-form-head) > [data-testid="stVerticalBlock"]
   > div:not(:has(.ar-close)) {
-  max-width: 760px; }
+  max-width: 760px;
+  /* CENTRED in the column, which is itself centred in the window - so
+     the form is centred on the window, which is the only axis a reader
+     can see. Without these it sat at the column's left edge: 760px of
+     form inside 1120px of column, 180px of marble on the right and
+     none on the left, and the whole screen read as having slipped
+     sideways. The column is wider than the form on purpose (the band
+     and the bar both use its full measure), so the form has to say
+     where in it the form goes. */
+  margin-left: auto; margin-right: auto; }
 
 /* ----------------------------------------------------- shell furniture */
 
@@ -1366,6 +1375,24 @@ button[data-testid="stExpandSidebarButton"]:hover,
      accident at exactly the moment the page is making its case. */
   text-wrap: balance; }
 
+/* The line under the display line, which carries what the four
+   numbered steps used to: what a reader supplies, where the figures
+   come from, and how long a run takes. Reading size rather than the
+   12.5px caption `.ar-head p` sets, because it is the screen's second
+   sentence and not a footnote to the first - a caption under a 42px
+   display line reads as small print, and small print under a claim is
+   where a reader looks for the catch.
+
+   Measured to the display line's own 720px so the two share an edge on
+   the right as well as the left. `pretty` rather than `balance`: this
+   one is prose and may wrap to three lines, where balance evens every
+   line and leaves the last one short. */
+.ar-head.ar-open p.sub {
+  font-family: var(--shell-text);
+  font-size: 15px; line-height: 1.55;
+  color: var(--shell-soft); max-width: 720px;
+  margin: 14px 0 0; text-wrap: pretty; }
+
 .ar-card {
   background: var(--shell-panel); border: 1px solid var(--shell-line-2);
   border-radius: var(--shell-r-lg); box-shadow: var(--shell-shadow);
@@ -1580,84 +1607,6 @@ table.ar-list th.num, table.ar-list td.num {
 .ar-kv b {
   color: var(--shell-ink); font-weight: 500; font-family: var(--mono);
   font-size: 12px; font-feature-settings: "tnum" 1; }
-
-/* Numbered steps. Get Started is instructions, so it is a list of
-   actions and not a row of marketing claims. */
-/* Four steps across, not four stacked. They lived in a rail beside
-   the table; the table now takes the full measure and the
-   instructions sit under it, where a stacked list would be a thin
-   column of text under a wide one. Across, each step is a short
-   paragraph in its own band and the whole thing is four lines deep
-   instead of sixteen. */
-/* No card around this. It had one - a hairline border, a white fill and
-   a radius - and the card failed its own test: take the border, fill
-   and radius away and nothing about the four steps becomes harder to
-   read or to act on, because the rules BETWEEN the columns already do
-   the grouping. A container that groups things the content already
-   groups is the most common decoration in generated interfaces, and on
-   this page it was also what made the steps read as a widget sitting on
-   the page rather than as part of it.
-
-   What replaces it is one hairline along the top, which is the
-   structural move the reference material uses for exactly this: a
-   column group announced by a rule, not boxed by a border. */
-.ar-steps {
-  counter-reset: step; display: grid; gap: 0;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  border-top: 1px solid var(--shell-line-2);
-  padding-top: 18px; margin-top: 14px;
-  list-style: none; }
-/* The host out-specifies the line above.
-   Streamlit ships `.st-emotion-cache-… > ul, … > ol { display: block;
-   width: fit-content }` - a child combinator on a class, (0,2,0),
-   against `.ar-steps` at (0,1,0). So the moment these steps became a
-   real `ol` for screen readers, the host collapsed the four columns
-   into a stacked, indented list. The semantics fix broke the layout,
-   which is the whole reason this is verified in the browser and not in
-   the stylesheet.
-   Declared with `!important` rather than by escalating the selector,
-   because the emotion class is a build hash and any selector written
-   against it is wrong at the next Streamlit release. */
-ol.ar-steps {
-  display: grid !important; width: auto !important;
-  list-style: none !important; }
-/* ...and the same fight one level down, which the first pass missed.
-   The host styles the ITEMS too - `margin-left: 1.15rem`,
-   `padding-left: .3rem`, `margin-block: .2rem` - and out-specifies
-   `.ar-step` at (0,1,0). Measured after the ol was fixed: the ol's box
-   started at x 28 with the lead, both section heads and the index, and
-   all four steps sat at 46.4 inside it, so the first step's prose began
-   at 51.2 - 23px right of every other left edge on the page, which is
-   the one commitment this direction rests on. `.ar-step`'s own
-   `padding: 2px 20px 2px 0` was discarded wholesale with it: computed
-   padding-top and padding-right were both 0.
-   No `!important` here. `ol.ar-steps > li.ar-step` is (0,2,2), which
-   clears the host on specificity alone - verified by injecting exactly
-   this rule into the running page and re-measuring, and it is the form
-   the phone rules below have to take for the same reason. */
-ol.ar-steps > li.ar-step {
-  margin: 0; padding: 2px 20px 2px 0; }
-ol.ar-steps > li.ar-step + li.ar-step { padding-left: 20px; }
-.ar-step {
-  display: grid; grid-template-rows: auto 1fr; gap: 7px;
-  align-content: start; padding: 2px 20px 2px 0; }
-.ar-step + .ar-step {
-  border-top: 0; border-left: 1px solid var(--shell-line);
-  padding-left: 20px; }
-.ar-step:before {
-  counter-increment: step; content: counter(step, decimal-leading-zero);
-  font-family: var(--mono); font-size: 11px; color: var(--shell-mute); }
-.ar-step .t { font-size: 13px; color: var(--shell-ink); line-height: 1.5; }
-.ar-step .t span { color: var(--shell-soft); }
-/* The chip ends its line. Padding on an inline element puts visible
-   space between it and whatever follows, so a comma or a full stop
-   after one reads as a typo - "AAPL , say". Keep punctuation off its
-   right-hand side rather than fighting the box model. */
-.ar-step code {
-  font-family: var(--mono); font-size: 12px;
-  background: var(--shell-chip);
-  border-radius: var(--shell-r-sm); padding: 1px 5px;
-  color: var(--shell-ink); }
 
 .ar-empty {
   padding: 28px 16px; text-align: center; color: var(--shell-mute);
@@ -2103,12 +2052,12 @@ hr { border-color: var(--rule); margin: var(--s5) 0; }
    monospace - and a third family is a Layer 2 fluency defect a reader
    registers without being able to name it. */
 .ar-topbar, .ar-topbar *, .ar-head, .ar-head *, .ar-card, .ar-card *,
-.ar-step, .ar-step *, .ar-empty, .ar-kv, .ar-kv span, .ar-lbl,
+.ar-empty, .ar-kv, .ar-kv span, .ar-lbl,
 table.ar-list, table.ar-list th, table.ar-list td, .ar-gate, .ar-gate * {
   font-family: var(--sans); }
 /* Figures are monospace; the headings above them are not. A column
    header set in mono AND tracked reads as "V a l u e". */
-.ar-step code, .ar-kv b, table.ar-list td.num { font-family: var(--mono); }
+.ar-kv b, table.ar-list td.num { font-family: var(--mono); }
 table.ar-list th.num { font-family: var(--sans); letter-spacing: .03em; }
 
 /* The current screen, named. Not a pill and not a tab: it is a label,
@@ -2121,17 +2070,6 @@ table.ar-list th.num { font-family: var(--sans); letter-spacing: .03em; }
 /* On a phone the bar still has to hold the product name and the screen
    it is on without wrapping; the source line used to wrap to three and
    overlap what was under it. */
-/* Between a phone and a laptop, four columns of prose measure about
-   170px each and read as four narrow gutters. Two and two keeps the
-   same object and gives each step a line it can finish. */
-@media (max-width: 980px) and (min-width: 701px) {
-  .ar-steps { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-  .ar-step:nth-child(odd) { border-left: 0; padding-left: 0; }
-  .ar-step:nth-child(n + 3) {
-    border-top: 1px solid var(--shell-line); padding-top: 13px;
-    margin-top: 11px; }
-}
-
 @media (max-width: 700px) {
   .ar-topbar { gap: 14px; height: auto; padding-block: 10px;
     margin-bottom: 0; }
@@ -2151,10 +2089,23 @@ table.ar-list th.num { font-family: var(--sans); letter-spacing: .03em; }
   .ar-topbar .where { padding-left: 10px; }
 
   /* Streamlit keeps its columns side by side at every width, so on a
-     phone the right rail was about 100px wide and Get started set one
-     word per line. The row stacks instead, in source order, which puts
-     the notes above the instructions and the primary action last. */
-  [data-testid="stHorizontalBlock"] { flex-direction: column; gap: 22px; }
+     phone the right rail was about 100px wide and the text in it set
+     one word per line. The row stacks instead, in source order, which
+     puts the primary action last.
+
+     `flex-wrap: nowrap` is the half that was missing, and without it
+     this rule did the opposite of what it says. Streamlit's row ships
+     `flex-wrap: wrap`, and a wrapping flex COLUMN does not stack - it
+     fills the available height and then starts a second column beside
+     the first. Measured on home at 375px: the direction computed as
+     `column` and each child computed as 318px wide, exactly as written
+     here, and the three of them still sat at x29, x369 and x709, with
+     652px of horizontal scroll on a 375px screen. The rule read as
+     correct, the computed styles read as correct, and the layout was
+     the one being fixed - which is why this is measured in a phone
+     viewport rather than asserted from the stylesheet. */
+  [data-testid="stHorizontalBlock"] {
+    flex-direction: column; flex-wrap: nowrap; gap: 22px; }
   [data-testid="stColumn"] { width: 100% !important; flex: 1 1 100%; }
 
   /* Seven columns do not fit 375px, and four did not either: on the
@@ -2180,19 +2131,6 @@ table.ar-list th.num { font-family: var(--sans); letter-spacing: .03em; }
   table.ar-list td.said { width: auto; }
   table.ar-list td.said span { max-width: none; }
 
-  /* And the four steps go back to a stack: four columns of prose on a
-     375px screen is one word per line. */
-  /* Written as `ol.ar-steps > li.ar-step` rather than `.ar-step`,
-     because the rule that takes the host's list box off the steps is
-     (0,2,2) and a bare `.ar-step` at (0,1,0) would now lose to it - so
-     the stack would keep the desktop gutters. The selector follows the
-     base rule up rather than reaching for `!important`. */
-  .ar-steps { grid-template-columns: minmax(0, 1fr); }
-  ol.ar-steps > li.ar-step { padding-right: 0; }
-  ol.ar-steps > li.ar-step + li.ar-step {
-    border-left: 0; padding-left: 0;
-    border-top: 1px solid var(--shell-line); padding-top: 13px;
-    margin-top: 2px; }
   /* The padding moved onto the row link, so the phone rule has to
      follow it there or the rows keep their desktop height. */
   table.ar-list th { padding: 9px 10px; }
