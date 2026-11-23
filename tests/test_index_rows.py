@@ -73,7 +73,7 @@ def test_the_whole_row_is_the_hit_target_not_one_word():
 
 
 def test_an_empty_index_still_says_so():
-    assert "No notes yet" in ui.report_rows([], token="tok")
+    assert "No reports yet" in ui.report_rows([], token="tok")
 
 
 # ----------------------------------------------------- end to end, no money
@@ -167,7 +167,7 @@ def test_the_reading_screen_does_not_call_a_readers_own_report_a_sample(
     at.query_params["view"] = "samples"
     at = _unlock(at)
     text = page_text(at)
-    assert "Sample notes" not in text
+    assert "Sample reports" not in text
 
 
 def test_the_bar_distinguishes_the_index_from_a_report(monkeypatch, tmp_path):

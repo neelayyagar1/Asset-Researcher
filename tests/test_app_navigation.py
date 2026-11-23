@@ -218,7 +218,7 @@ def test_the_samples_view_survives_having_no_samples(monkeypatch):
     assert not at.exception, "the samples view raised with no archive"
 
     text = page_text(at)
-    assert "No sample notes shipped" in text
+    assert "No sample reports shipped" in text
     # And it offers a way on, rather than being a dead end.
     assert any(NEW_LABEL in b.label for b in at.button)
 

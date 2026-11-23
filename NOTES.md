@@ -678,12 +678,18 @@ their component and their stylesheet rules are deleted rather than
 hidden. The run-length claim is still checked against the measured run,
 on the sentence that now carries it.
 
-One thing to flag rather than quietly fix: that line says *notes* and
-*the note*, while every control, the bar and the index say *report*. It
-is two words for one document. The opening reads better for it, which
-is a judgement and the owner's to make; the test that used to forbid it
-now only holds the half that is not a judgement — the word a reader is
-asked to act on.
+That line first went out saying *notes* and *the note*, while every
+control, the bar and the index said *report*. It was flagged here as a
+judgement call and left alone; the owner read it on the deployed site
+and said plainly that the product generates reports. He is right, and
+the flag was the wrong call — a reader meets the document twice before
+touching it and is told it is two things. The word is swept now:
+the opening line, the form's two captions, the download filenames and
+help text, the samples screen, the empty index and the spending-cap
+message. The one *note* left on any screen is "a broker note", which
+is somebody else's document and is meant to read as one. Both halves
+are tested — what the screen calls the document and what the controls
+call it — because the fault was the gap between them.
 
 **The form sat 151px left of where a reader looks.** The generate
 screen's fields are capped to a 760px measure inside a 1120px column,

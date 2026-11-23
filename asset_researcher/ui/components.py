@@ -857,6 +857,12 @@ def home() -> str:
     every figure sourced - which is the whole claim, and the only claim
     a stranger needs before deciding whether to look further.
 
+    One document, one word for it. The first draft of this line said
+    "Research notes" and "The note", which left the opening of the
+    product using one word while every control, the bar and the index
+    used another - a reader meets the thing twice before touching it
+    and is told it is two things. It is a report everywhere now.
+
     Under it, the three facts the four numbered steps were spending a
     third of the screen to deliver: what you supply, where the note is
     read from, and how long it takes. A reader does not need a
@@ -865,9 +871,9 @@ def home() -> str:
     """
     return _one_line(
         '<div class="ar-head ar-open"><h1 class="ar-sr">Asset Researcher</h1>'
-        '<p class="lead">Research notes from the filings. '
+        '<p class="lead">Research reports from the filings. '
         "Every figure sourced.</p>"
-        '<p class="sub">Enter a ticker and how you invest. The note is '
+        '<p class="sub">Enter a ticker and how you invest. The report is '
         "read from SEC filings and takes about five minutes.</p>"
         "</div>"
     )
@@ -960,8 +966,8 @@ def samples_empty() -> str:
     thing that can happen on a credibility artifact.
     """
     return _one_line(
-        '<div class="ar-head"><h1>Sample notes</h1></div>'
-        '<div class="ar-card"><div class="ar-empty">No sample notes '
+        '<div class="ar-head"><h1>Sample reports</h1></div>'
+        '<div class="ar-card"><div class="ar-empty">No sample reports '
         "shipped with this build. Generate a report and it will be built "
         "from live filings.</div></div>"
     )
@@ -1154,7 +1160,7 @@ def report_rows(rows, token: str = "", scope: str = "") -> str:
     """
     if not rows:
         return _one_line(
-            '<div class="ar-empty">No notes yet. Generate one and it '
+            '<div class="ar-empty">No reports yet. Generate one and it '
             "appears here.</div>"
         )
     # Seven columns, each read out of the built note. The index used to

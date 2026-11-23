@@ -528,7 +528,7 @@ def _samples():
     except ValueError:
         st.session_state["samples_problem"] = (
             "SAMPLES_KEY does not open the sample archive. It must be the "
-            "key the notes were packed under, not the demo passphrase."
+            "key the reports were packed under, not the demo passphrase."
         )
         return []
 
@@ -835,12 +835,12 @@ def _download_row(slug: str, html: str, key: str,
     save dialog, and the one it can reach is the one the reader's own
     browser opens when "Ask where to save each file" is on. The
     filename is the part that IS ours, so each format carries the
-    ticker and the words research-note rather than a hash.
+    ticker and the words research-report rather than a hash.
 
-    HTML is the note itself - the file this product actually builds,
-    with its live citations back to EDGAR.
+    HTML is the report itself - the file this product actually
+    builds, with its live citations back to EDGAR.
 
-    PDF is the BROWSER'S, not a server renderer's. The note carries a
+    PDF is the BROWSER'S, not a server renderer's. The report carries a
     complete print stylesheet, so the browser lays it out with the real
     typography and keeps every citation clickable; every PDF engine
     installable without system libraries would re-flow it worse and
@@ -879,9 +879,9 @@ def _download_row(slug: str, html: str, key: str,
                     icon=":material/download:"):
         write(ui.download_note())
         st.download_button(
-            "HTML", data=html, file_name=f"{slug}-research-note.html",
+            "HTML", data=html, file_name=f"{slug}-research-report.html",
             mime="text/html", use_container_width=True,
-            help="The note itself, with its citations live to EDGAR.",
+            help="The report itself, with its citations live to EDGAR.",
             key=f"{key}_dl_html")
         if st.button("PDF", use_container_width=True,
                      help="Opens your print dialog, where you choose the "
@@ -890,7 +890,7 @@ def _download_row(slug: str, html: str, key: str,
             st.session_state["print_note"] = True
         st.download_button(
             "Word", data=convert.to_docx(html, _sample_label_plain(slug, html)),
-            file_name=f"{slug}-research-note.docx",
+            file_name=f"{slug}-research-report.docx",
             mime=("application/vnd.openxmlformats-officedocument"
                   ".wordprocessingml.document"),
             use_container_width=True,
@@ -899,7 +899,7 @@ def _download_row(slug: str, html: str, key: str,
         st.download_button(
             "PowerPoint",
             data=convert.to_pptx(html, _sample_label_plain(slug, html)),
-            file_name=f"{slug}-research-note.pptx",
+            file_name=f"{slug}-research-report.pptx",
             mime=("application/vnd.openxmlformats-officedocument"
                   ".presentationml.presentation"),
             use_container_width=True,
@@ -908,7 +908,7 @@ def _download_row(slug: str, html: str, key: str,
         if markdown_text:
             st.download_button(
                 "Markdown", data=markdown_text,
-                file_name=f"{slug}-research-note.md", mime="text/markdown",
+                file_name=f"{slug}-research-report.md", mime="text/markdown",
                 use_container_width=True,
                 help="Plain text, for a repository or a notes app.",
                 key=f"{key}_dl_md")
@@ -1201,7 +1201,7 @@ def _controls(key: str) -> tuple[str, str, str, bool]:
     # word they would use themselves.
     st.caption(
         "Horizon, what you hold, and what would make you sell. This "
-        "changes which findings the note leads with and in what order. It "
+        "changes which findings the report leads with and in what order. It "
         "does not change a single reported figure, a citation, or which "
         "disagreements with management get disclosed."
     )
@@ -1220,7 +1220,7 @@ def _controls(key: str) -> tuple[str, str, str, bool]:
     # and says so only in the one case where it has to - when a run is
     # refused, which is the only moment the figure explains anything.
     st.caption(
-        "Leave this empty and the note is built from SEC filings alone. "
+        "Leave this empty and the report is built from SEC filings alone. "
         "Paste a public web page - a transcript, a press release, a broker "
         "note - and it is read alongside them. Anything found this way is "
         "labelled as a secondary source and attributed as opinion, never "
@@ -1387,7 +1387,7 @@ def _failure_message(exc: BaseException) -> str:
     if "budget" in text or "cap" in text or "spend" in text:
         return (
             "The spending cap for this demo has been reached, so no new "
-            "report can be built. The sample notes are still available and "
+            "report can be built. The sample reports are still available and "
             "cost nothing."
         )
     if any(word in text for word in ("timeout", "timed out", "connection",

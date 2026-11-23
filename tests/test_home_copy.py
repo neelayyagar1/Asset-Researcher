@@ -44,22 +44,21 @@ def _open(monkeypatch):
 # ------------------------------------------------------------- the lead
 
 def test_the_opening_and_the_controls_name_the_same_thing():
-    """This test used to forbid the words "research note" on this
-    screen, on the reasoning that the rest of the product says report
-    and one document should not have two names.
+    """One document, one word for it.
 
-    The owner chose the current opening line, which says "Research
-    notes from the filings" and then "The note". The concern is on the
-    record rather than enforced by a test: the buttons, the bar and the
-    index all still say report, so a reader does meet two words for one
-    document. It is a small split and the opening line reads better for
-    it, which is a judgement, and the judgement is his.
+    The opening line went out saying "Research notes" and "The note"
+    while every control, the bar and the index said report. It was
+    caught on the deployed site by the person it was written for, which
+    is the right outcome arriving by the wrong route: a reader meets
+    the thing twice before touching it and is told it is two things.
 
-    What the test keeps is the half that is not a judgement - the word
-    the reader is asked to ACT on. Every control names a report, and if
-    one ever drifts to "note" the screen would be offering a thing it
-    never introduced.
+    Both halves are tested now - what the screen calls the document,
+    and what the controls call it - because the fault was the gap
+    between them rather than either one on its own.
     """
+    said = ui.home().lower()
+    assert "note" not in said, "the opening screen calls the report a note"
+    assert "report" in said
     assert "report" in ui.START_LABEL.lower()
     assert "report" in ui.NEW_LABEL.lower()
 
@@ -77,7 +76,7 @@ def test_the_opening_says_what_the_product_makes_and_on_what_terms():
     set large, which is the fault the 42px rank was given to avoid.
     """
     lead = ui.home()
-    assert "Research notes from the filings" in lead
+    assert "Research reports from the filings" in lead
     assert "Every figure sourced" in lead
     said = re.search(r'<p class="lead">(.*?)</p>', lead).group(1)
     assert len(re.sub(r"<[^>]+>", "", said).split()) < 14, said
@@ -91,6 +90,11 @@ def test_the_opening_carries_what_the_steps_used_to_say():
     sub = re.search(r'<p class="sub">(.*?)</p>', ui.home(), re.S).group(1)
     assert "ticker" in sub and "how you invest" in sub
     assert "SEC filings" in sub
+    # One word for one document. The first draft said "The note" here
+    # and "Research notes" above, while every control, the bar and the
+    # index say report - so a reader met the thing twice under two
+    # names before touching it.
+    assert "note" not in sub.lower()
     assert "five minutes" in sub
 
 
