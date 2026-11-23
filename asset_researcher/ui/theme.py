@@ -1364,10 +1364,23 @@ button[data-testid="stExpandSidebarButton"]:hover,
   line-height: 1.1;
   letter-spacing: -.02em;
   color: var(--shell-ink);
-  /* Wide enough that the sentence does not break, narrow enough that a
-     longer one would wrap before the column edge rather than running
-     the full 1120px, which no display line should. */
-  max-width: 720px;
+  /* No cap. This was 720px, on the reasoning that no display line
+     should run the column's full 1120px - and the reasoning was
+     sound for the line it was written for. The line it now holds
+     measures 892px at 42px in Newsreader 300, so the cap broke it
+     across two rows in the middle of a sentence ("Research reports
+     from the / filings. Every figure sourced."), which is the one
+     thing a display line must not do: the break fell between the
+     subject and its verb and the page opened on half a thought.
+
+     The column itself is the cap, and it is 1064px of content at the
+     1120px measure - so the line sits inside the limit the 720px was
+     reaching for, with 172px to spare, and nothing had to be set
+     smaller to fit. It holds one row down to about a 690px window;
+     below that it wraps on its own, which is correct and is what the
+     phone layout wants. Measured, not estimated - and a longer line
+     written here will need measuring again. */
+  max-width: none;
   margin: 2px 0 0;
   font-optical-sizing: auto;
   font-synthesis-weight: none;

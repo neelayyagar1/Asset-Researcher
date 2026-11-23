@@ -195,3 +195,29 @@ def test_the_strategy_box_is_driven_by_state_alone(monkeypatch):
         "that overrides it"
     )
 
+
+
+def test_the_opening_line_is_not_capped_below_its_own_measure():
+    """It has to hold one row on a desktop window.
+
+    The display line carried `max-width: 720px`, written when it was a
+    shorter sentence, on the sound reasoning that no display line
+    should run the column's full 1120px. The line it holds now
+    measures 892px at 42px in Newsreader 300, so the cap broke it in
+    the middle of a sentence - "Research reports from the / filings."
+    - and the page opened on half a thought, with the break falling
+    between the subject and its verb.
+
+    The column is the cap instead, at 1064px of content, so the line
+    sits inside the limit the 720px was reaching for with 172px to
+    spare. Measured in the running page at 1512, 1280, 1024 and 768:
+    one row at every one of them, three rows at 375 where wrapping is
+    what the phone layout wants, and no horizontal overflow at any.
+    """
+    sheet = theme.stylesheet()
+    rule = sheet[sheet.index(".ar-head.ar-open p.lead {"):]
+    rule = rule[:rule.index("}")]
+    assert "max-width: none" in rule, (
+        "the opening line is capped again; anything under 892px breaks "
+        "it across two rows"
+    )

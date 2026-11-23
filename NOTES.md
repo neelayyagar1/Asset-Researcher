@@ -452,7 +452,7 @@ ask.
 
 ## The suite
 
-872 tests, no network, about a minute. Every fix below was
+873 tests, no network, about a minute. Every fix below was
 written as a failing test first, and the failure was watched before the
 fix was written.
 
@@ -711,6 +711,19 @@ the first. The stylesheet was correct, the computed styles were
 correct, and the layout was the one the rule exists to prevent, which
 is the whole argument for measuring in a phone viewport instead of
 asserting from the sheet.
+
+**The opening line broke in the middle of a sentence.** The display
+line carried a 720px cap, written for a shorter line and for a sound
+reason — no display line should run the column's full 1120px. The line
+it holds now measures 892px at 42px in Newsreader 300, so the cap put
+"Research reports from the" on one row and "filings. Every figure
+sourced." on the next: the break fell between the subject and its verb,
+and the first screen opened on half a thought. The column is the cap
+instead, at 1064px of content, which is still inside the limit the
+720px was reaching for, with 172px to spare and nothing set smaller to
+fit. One row at 1512, 1280, 1024 and 768; three rows at 375, where
+wrapping is what the phone layout wants; no horizontal overflow at any
+of them.
 
 ### Examined and deliberately not changed
 
